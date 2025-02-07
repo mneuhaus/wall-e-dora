@@ -28,6 +28,6 @@ nodes:
   - id: tracks
     path: tracks/tracks/main.py
     inputs:
-      tick: dora/timer/millis/3000
+      tick: dora/timer/millis/100
     outputs:
       - my_output_id
