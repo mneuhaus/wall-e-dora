@@ -9,8 +9,11 @@ from aiohttp import web
 web_input_queue = queue.Queue()
 
 def process_web_inputs(node):
-    while not web_input_queue.empty():
-        web_event = web_input_queue.get()
+    while True:
+        try:
+            web_event = web_input_queue.get_nowait()
+        except queue.Empty:
+            break
         print("Received web input:", web_event)
         if web_event.get("action") == "button":
             node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
