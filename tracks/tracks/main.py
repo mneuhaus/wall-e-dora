@@ -20,21 +20,16 @@ def main():
     # Directly output serial logs from firmware
     direct_serial_logs()
     node = Node()
+    print('woot')
 
     for event in node:
         if event["type"] == "INPUT":
-            if event["id"] == "TICK":
+            if event["id"] == "tick":
                 print(
                     f"""Node received:
-                id: {event["id"]},
-                value: {event["value"]},
-                metadata: {event["metadata"]}"""
-                )
-
-            elif event["id"] == "my_input_id":
-                # Warning: Make sure to add my_output_id and my_input_id within the dataflow.
-                node.send_output(
-                    output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={}
+                    id: {event["id"]},
+                    value: {event["value"]},
+                    metadata: {event["metadata"]}"""
                 )
 
 
