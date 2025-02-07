@@ -13,7 +13,7 @@ def process_web_inputs(node):
         try:
             web_event = web_input_queue.get_nowait()
         except queue.Empty:
-            break
+            return
         print("Received web input:", web_event)
         if web_event.get("action") == "button":
             node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
@@ -93,22 +93,13 @@ def main():
     node = Node()
 
     for event in node:
-        # Process any web input events
-        process_web_inputs(node)
         if event["type"] == "INPUT":
-            if event["id"] == "TICK":
-                print(
-                    f"""Node received:
-                id: {event["id"]},
-                value: {event["value"]},
-                metadata: {event["metadata"]}"""
-                )
-
-            elif event["id"] == "my_input_id":
-                # Warning: Make sure to add my_output_id and my_input_id within the dataflow.
-                node.send_output(
-                    output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={}
-                )
+            if event["id"] == "tick":
+                # Process any web input events
+                process_web_inputs(node)
+                # node.send_output(
+                #     output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={}
+                # )
 
 
 if __name__ == "__main__":

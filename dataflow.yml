@@ -16,6 +16,11 @@ nodes:
     inputs:
       tick: dora/timer/secs/10
 
+  - id: web
+    path: web/web/main.py
+    inputs:
+      tick: dora/timer/millis/100
+
   # - id: tracks
   #   path: tracks/tracks/main.py
   #   inputs:
