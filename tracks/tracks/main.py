@@ -23,13 +23,12 @@ def main():
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 direct_serial_logs()
-                pass
-                # print(
-                #     f"""Node received:
-                #     id: {event["id"]},
-                #     value: {event["value"]},
-                #     metadata: {event["metadata"]}"""
-                # )
+                print(
+                    f"""Node received:
+                    id: {event["id"]},
+                    value: {event["value"]},
+                    metadata: {event["metadata"]}"""
+                )
 
 
 if __name__ == "__main__":
