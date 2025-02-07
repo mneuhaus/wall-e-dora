@@ -6,11 +6,9 @@ import os
 
 def direct_serial_logs():
     try:
-        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0.1)
-        while True:
+        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0)
+        while ser.in_waiting:
             line = ser.readline().decode('utf-8', errors='replace')
-            if not line:
-                break
             print(line, end='')
         ser.close()
     except Exception as e:
