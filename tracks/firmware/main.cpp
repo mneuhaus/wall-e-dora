@@ -58,6 +58,11 @@ void setup_gpio() {
 int main() {
     stdio_init_all();
     printf("Firmware started.\n");
+    // Optional: Initialize UART0 for debug output (if using hardware UART)
+    uart_init(uart0, 115200);
+    gpio_set_function(0, GPIO_FUNC_UART);
+    gpio_set_function(1, GPIO_FUNC_UART);
+    printf("UART0 initialized at 115200 baud.\n");
     setup_gpio();
 
     // Setup PWM slices and channels for right and left motors
@@ -99,6 +104,8 @@ int main() {
                 pwm_set_gpio_level(LEFT_PWM_PIN, pwm_left);
 
                 printf("Right PWM: %d, Left PWM: %d\n", pwm_right, pwm_left);
+            } else {
+                printf("DEBUG: Received unrecognized command: %s\n", buffer);
             }
         }
         busy_wait_us_32((uint32_t)(dt * 1000000));
