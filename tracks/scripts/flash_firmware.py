@@ -19,6 +19,10 @@ def flash_firmware(device_path: str) -> None:
         print(f"Firmware file not found: {firmware_file}")
         sys.exit(1)
     print(f"Flashing firmware from {firmware_file} to {device_path}...")
+    stat_info = os.stat(device_path)
+    major_num = os.major(stat_info.st_rdev)
+    minor_num = os.minor(stat_info.st_rdev)
+    print(f"Detected device: Bus {major_num}, Device {minor_num}")
     try:
         subprocess.run(["picotool", "load", firmware_file, "-f"], check=True)
         print("Firmware flashed successfully!")
