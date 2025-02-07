@@ -4,9 +4,6 @@ import serial
 import time
 import os
 
-
-
-
 def direct_serial_logs():
     try:
         ser = serial.Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0.1)
