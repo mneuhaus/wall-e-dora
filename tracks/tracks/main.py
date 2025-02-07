@@ -19,6 +19,11 @@ def background_serial_reader():
     except Exception as e:
         print(f"Error reading serial port in background thread: {e}")
 
+def flush_serial_buffer():
+    while not serial_buffer.empty():
+        line = serial_buffer.get()
+        print(line, end='')
+
 def main():
     bg_thread = threading.Thread(target=background_serial_reader, daemon=True)
     bg_thread.start()
