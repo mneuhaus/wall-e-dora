@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Change your executable name to something creative!
-set(NAME tracks) # <-- Name your project/executable here!
+set(NAME tracks_firmware) # <-- Name your project/executable here!
 
 include(pico_sdk_import.cmake)
 
@@ -23,8 +23,6 @@ target_link_libraries(${NAME}
     pico_stdlib
     hardware_pwm
     hardware_uart
-    pimoroni_i2c
-    pico_explorer # <-- List libraries here!
 )
 
 # create map/bin/hex file etc.
