@@ -36,18 +36,11 @@ def main():
     start_background_thread()
     
     node = Node()
-    print('woot')
 
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 flush_serial_buffer()
-                print(
-                    f"""Node received:
-                    id: {event["id"]},
-                    value: {event["value"]},
-                    metadata: {event["metadata"]}"""
-                )
 
 
 if __name__ == "__main__":
