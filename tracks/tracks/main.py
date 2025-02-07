@@ -17,20 +17,21 @@ def direct_serial_logs():
         print(f"Error reading serial port: {e}")
 
 def main():
-    # Directly output serial logs from firmware
-    direct_serial_logs()
+
     node = Node()
     print('woot')
 
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                print(
-                    f"""Node received:
-                    id: {event["id"]},
-                    value: {event["value"]},
-                    metadata: {event["metadata"]}"""
-                )
+                direct_serial_logs()
+                pass
+                # print(
+                #     f"""Node received:
+                #     id: {event["id"]},
+                #     value: {event["value"]},
+                #     metadata: {event["metadata"]}"""
+                # )
 
 
 if __name__ == "__main__":
