@@ -7,6 +7,9 @@ from aiohttp import web
 
 
 global_web_inputs = []
+latest_power_metrics = {}
+ws_clients = set()
+web_loop = None
 
 def flush_web_inputs(node):
     global global_web_inputs
@@ -27,17 +30,21 @@ def flush_web_inputs(node):
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    async for msg in ws:
-        if msg.type == web.WSMsgType.TEXT:
-            try:
-                # Expect messages in the format "button" or "slider:<value>"
-                data = msg.data.strip().split(":")
-                if data[0] == "button":
-                    global_web_inputs.append({"action": "button"})
-                elif data[0] == "slider" and len(data) > 1:
-                    global_web_inputs.append({"action": "slider", "value": data[1]})
-            except Exception as e:
-                print("Error processing websocket message", e)
+    ws_clients.add(ws)
+    try:
+        async for msg in ws:
+            if msg.type == web.WSMsgType.TEXT:
+                try:
+                    # Expect messages in the format "button" or "slider:<value>"
+                    data = msg.data.strip().split(":")
+                    if data[0] == "button":
+                        global_web_inputs.append({"action": "button"})
+                    elif data[0] == "slider" and len(data) > 1:
+                        global_web_inputs.append({"action": "slider", "value": data[1]})
+                except Exception as e:
+                    print("Error processing websocket message", e)
+    finally:
+        ws_clients.discard(ws)
     return ws
 
 async def index(request):
@@ -55,6 +62,10 @@ async def index(request):
                 border-radius: 50%;
                 margin-left: 10px;
             }
+            #metrics {
+                margin-top: 20px;
+                font-family: monospace;
+            }
         </style>
     </head>
     <body>
@@ -62,6 +73,7 @@ async def index(request):
         <button onclick="sendButton()">Press me</button>
         <br><br>
         <input type="range" min="0" max="100" value="50" id="slider" oninput="sendSlider(this.value)">
+        <div id="metrics">No power data yet.</div>
         <script>
             var ws;
             function connect() {
@@ -81,6 +93,17 @@ async def index(request):
                 };
                 ws.onmessage = function(event) {
                     console.log('Message from server:', event.data);
+                    try {
+                        var metrics = JSON.parse(event.data);
+                        var html = "Voltage: " + metrics.voltage + " V<br>" +
+                                   "Current: " + metrics.current + " A<br>" +
+                                   "Power: " + metrics.power + " W<br>" +
+                                   "SoC: " + metrics.soc + " %<br>" +
+                                   "Runtime: " + metrics.runtime + " s";
+                        document.getElementById('metrics').innerHTML = html;
+                    } catch(e) {
+                        console.log("Failed to parse metrics:", e);
+                    }
                 };
             }
             connect();
@@ -111,7 +134,9 @@ def start_background_webserver():
         await site.start()
 
     def run_loop():
+        global web_loop
         loop = asyncio.new_event_loop()
+        web_loop = loop
         asyncio.set_event_loop(loop)
         loop.run_until_complete(init_app())
         loop.run_forever()
@@ -124,7 +149,12 @@ def main():
     node = Node()
 
     for event in node:
-        if event["type"] == "INPUT":
+        if event["type"] == "OUTPUT":
+            if event["id"] in ("voltage", "current", "power", "soc", "runtime"):
+                latest_power_metrics[event["id"]] = event["data"].to_pylist()[0]
+                if web_loop is not None:
+                    asyncio.run_coroutine_threadsafe(broadcast_power_metrics(), web_loop)
+        elif event["type"] == "INPUT":
             if event["id"] == "tick":
                 flush_web_inputs(node)
 

@@ -155,6 +155,11 @@ def main():
 
                 print(f'Power: {voltage:.4f}V ({percentage:.1f}%) {current:.4f}A {power:.4f}W | '
                       f'Avg: {avg_power:.4f}W | Runtime: {time_str}')
+                node.send_output(output_id="voltage", data=pa.array([voltage]), metadata={})
+                node.send_output(output_id="current", data=pa.array([current]), metadata={})
+                node.send_output(output_id="power", data=pa.array([power]), metadata={})
+                node.send_output(output_id="soc", data=pa.array([percentage]), metadata={})
+                node.send_output(output_id="runtime", data=pa.array([remaining_seconds]), metadata={})
 
                 if percentage < 10.0:
                     print("CRITICAL: Battery below 10%! Initiating shutdown...")
