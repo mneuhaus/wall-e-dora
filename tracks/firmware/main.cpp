@@ -57,6 +57,7 @@ void setup_gpio() {
 
 int main() {
     stdio_init_all();
+    printf("Firmware started.\n");
     setup_gpio();
 
     // Setup PWM slices and channels for right and left motors
