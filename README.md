@@ -1,40 +1,32 @@
-# Project README
+# wall-e-dora
 
-## Git Hooks
+wall-e-dora is a multi-node project based on the Dora framework designed for robotics and embedded systems integration. It brings together several components ranging from gamepad input handling to motor control firmware on Raspberry Pi Pico.
 
-This project uses a Git hook to push the main branch automatically after each commit.
+## Components
 
-### Setup
+- **Gamepad Node**: Interfaces with various gamepad devices and sends input events.
+- **Talker Nodes**: Broadcast messages upon receiving triggers, implemented in talker-1 and talker-2.
+- **Listener Node**: Processes speech and other input messages, implemented in listener-1.
+- **Tracks Firmware**: Embedded firmware for motor control using PID, with configuration for right and left motors.
+- **Tracks Node**: Manages serial log processing and interacts with the firmware.
 
-1. Create a file called `.git/hooks/post-commit` in the repository.
-2. Add the following content:
+## Building and Flashing Firmware
 
-```sh
-#!/bin/sh
-echo "Post-commit hook: Pushing main branch automatically..."
-git push origin main
-```
+Use the provided Makefile targets:
+- make tracks/build
+- make tracks/flash
+- make tracks/update
 
-3. Make the hook executable:
+## Development and Testing
 
-```bash
-chmod +x .git/hooks/post-commit
-```
+- Install dependencies using pip.
+- Format code using ruff.
+- Run tests with pytest.
 
-Note: This hook pushes the `main` branch regardless of the active branch. Adjust the script if your workflow requires different behavior.
+## Dataflow and Deployment
 
-## Firmware Node Details
+Node dataflow is defined in dataflow.yml to orchestrate inter-node communication using the Dora framework.
 
-The firmware is built from tracks/firmware/main.cpp, and the main entry point for running on the device is tracks/tracks/__main__.py.
+## Contributing
 
-The following table summarizes the pin configuration used in the firmware:
-
-| Motor  | VCC Pin | PWM Pin | DIR Pin |
-| ------ | ------- | ------- | ------- |
-| Right  |    2    |    3    |    4    |
-| Left   |    6    |    7    |    8    |
-
-## Tracks Node Details
-
-The Tracks node is responsible for interfacing with the firmware and processing serial logs and events.
-It is executed from tracks/tracks/__main__.py and utilizes additional logic from tracks/tracks/main.py.
+Follow the guidelines in CONVENTIONS.md for coding style and commit messages. Contributions are licensed under the MIT License.
