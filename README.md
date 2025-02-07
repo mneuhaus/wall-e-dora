@@ -22,3 +22,14 @@ chmod +x .git/hooks/post-commit
 ```
 
 Note: This hook pushes the `main` branch regardless of the active branch. Adjust the script if your workflow requires different behavior.
+
+## Firmware Node Details
+
+The firmware is built from tracks/firmware/main.cpp, and the main entry point for running on the device is tracks/tracks/__main__.py.
+
+The following table summarizes the pin configuration used in the firmware:
+
+| Motor  | VCC Pin | PWM Pin | DIR Pin |
+| ------ | ------- | ------- | ------- |
+| Right  |    2    |    3    |    4    |
+| Left   |    6    |    7    |    8    |
