@@ -7,11 +7,17 @@ def main():
     node = Node()
     gp = Gamepad()
 
-    while True:
+    for event in node:
+        if event["type"] == "INPUT":
+            if event["id"] == "TICK":
+                print(
+                    f"""Node received:
+                id: {event["id"]},
+                value: {event["value"]},
+                metadata: {event["metadata"]}"""
+                )
         event = gp.getNextEvent()
-        if event is None:
-            time.sleep(0.01)
-            continue
+
         print(f"Publishing gamepad event: {event}")
         node.send_output(
             output_id="gamepad_input", data=pa.array([str(event)]), metadata={}

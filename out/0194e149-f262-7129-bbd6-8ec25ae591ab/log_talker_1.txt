@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/home/mneuhaus/wall-e-dora/talker-1/talker_1/main.py", line 20, in <module>
+    main()
+  File "/home/mneuhaus/wall-e-dora/talker-1/talker_1/main.py", line 6, in main
+    node = Node()
+           ^^^^^^
+RuntimeError: Could not initiate node from environment variable. For dynamic node, please add a node id in the initialization function.
+
+Caused by:
+   0: failed to init event stream
+   1: subscribe failed: Node gamepad exited before initializing dora. For more information, run `dora logs 0194e149-f262-7129-bbd6-8ec25ae591ab gamepad`.
+
+Location:
+    apis/rust/node/src/event_stream/mod.rs:138:17

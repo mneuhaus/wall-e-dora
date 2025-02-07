@@ -1,0 +1,20 @@
+Node received:
+            id: tick,
+            value: 0 nulls,
+            metadata: {'open_telemetry_context': ''}
+Node received:
+            id: tick,
+            value: 0 nulls,
+            metadata: {'open_telemetry_context': ''}
+Node received:
+            id: tick,
+            value: 0 nulls,
+            metadata: {'open_telemetry_context': ''}
+Node received:
+            id: tick,
+            value: 0 nulls,
+            metadata: {'open_telemetry_context': ''}
+Node received:
+            id: tick,
+            value: 0 nulls,
+            metadata: {'open_telemetry_context': ''}
