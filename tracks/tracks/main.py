@@ -24,10 +24,17 @@ def flush_serial_buffer():
         line = serial_buffer.get()
         print(line, end='')
 
-def main():
-    bg_thread = threading.Thread(target=background_serial_reader, daemon=True)
-    bg_thread.start()
+bg_thread = None
 
+def start_background_thread():
+    global bg_thread
+    if bg_thread is None or not bg_thread.is_alive():
+        bg_thread = threading.Thread(target=background_serial_reader, daemon=True)
+        bg_thread.start()
+
+def main():
+    start_background_thread()
+    
     node = Node()
     print('woot')
 
