@@ -124,7 +124,7 @@ def main():
     time.sleep(0.1)
 
     for event in node:
-        if event["type"] == "INPUT" and event["id"] == "TICK":
+        if event["type"] == "INPUT" and event["id"] == "tick":
             try:
                 voltage_raw = read_register(bus, address, 0x02)
                 # Bus voltage LSB is 1.25mV

@@ -1,22 +1,8 @@
 nodes:
-  # - id: talker_1
-  #   path: talker-1/talker_1/main.py
+  # - id: listener_1
+  #   path: listener-1/listener_1/main.py
   #   inputs:
-  #     tick: dora/timer/millis/100
-  #   outputs:
-  #     - speech
-
-  # - id: talker_2
-  #   path: talker-2/talker_2/main.py
-  #   inputs:
-  #     tick: dora/timer/secs/2
-  #   outputs:
-  #     - speech
-
-  - id: listener_1
-    path: listener-1/listener_1/main.py
-    inputs:
-      speech-2: tracks/my_output_id
+  #     speech-2: tracks/my_output_id
 
   # - id: gamepad
   #   path: gamepad/gamepad/main.py
@@ -25,9 +11,14 @@ nodes:
   #   outputs:
   #     - gamepad_input
 
-  - id: tracks
-    path: tracks/tracks/main.py
+  - id: power
+    path: power/power/main.py
     inputs:
-      tick: dora/timer/millis/100
-    outputs:
-      - my_output_id
+      tick: dora/timer/secs/10
+
+  # - id: tracks
+  #   path: tracks/tracks/main.py
+  #   inputs:
+  #     tick: dora/timer/millis/100
+  #   outputs:
+  #     - my_output_id
