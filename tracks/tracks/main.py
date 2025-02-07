@@ -3,18 +3,25 @@ import pyarrow as pa
 from serial import Serial
 import time
 import os
+import threading
+import queue
 
-def direct_serial_logs():
+serial_buffer = queue.Queue()
+
+def background_serial_reader():
     try:
         ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0)
-        while ser.in_waiting:
-            line = ser.readline().decode('utf-8', errors='replace')
-            print(line, end='')
-        ser.close()
+        while True:
+            if ser.in_waiting:
+                line = ser.readline().decode('utf-8', errors='replace')
+                serial_buffer.put(line)
+            time.sleep(0.1)
     except Exception as e:
-        print(f"Error reading serial port: {e}")
+        print(f"Error reading serial port in background thread: {e}")
 
 def main():
+    bg_thread = threading.Thread(target=background_serial_reader, daemon=True)
+    bg_thread.start()
 
     node = Node()
     print('woot')
@@ -22,7 +29,7 @@ def main():
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                direct_serial_logs()
+                flush_serial_buffer()
                 print(
                     f"""Node received:
                     id: {event["id"]},
