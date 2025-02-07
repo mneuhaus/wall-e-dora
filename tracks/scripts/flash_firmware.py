@@ -19,10 +19,26 @@ def flash_firmware(device_path: str) -> None:
         print(f"Firmware file not found: {firmware_file}")
         sys.exit(1)
     print(f"Flashing firmware from {firmware_file} to {device_path}...")
-    stat_info = os.stat(device_path)
-    major_num = os.major(stat_info.st_rdev)
-    minor_num = os.minor(stat_info.st_rdev)
-    print(f"Detected device: Bus {major_num}, Device {minor_num}")
+    try:
+        cmd = f"udevadm info -a -p $(udevadm info -q path -n {device_path})"
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running udevadm: {e}")
+        sys.exit(1)
+    busnum = None
+    devnum = None
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith('ATTRS{busnum}'):
+            busnum = line.split('==')[1].strip().strip('"')
+        elif line.startswith('ATTRS{devnum}'):
+            devnum = line.split('==')[1].strip().strip('"')
+        if busnum and devnum:
+            break
+    if busnum and devnum:
+        print(f"Detected device: Bus {busnum}, Device {devnum}")
+    else:
+        print("Could not determine bus and device numbers from udev info.")
     try:
         subprocess.run(["picotool", "load", firmware_file, "-f"], check=True)
         print("Firmware flashed successfully!")
