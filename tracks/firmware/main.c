@@ -72,17 +72,20 @@ int main() {
 
     while (true) {
         if (fgets(buffer, sizeof(buffer), stdin)) {
-            // Expect command in the form: "cmd_val <right_setpoint> <left_setpoint>\n"
-            float setpoint_right = 0.0f, setpoint_left = 0.0f;
-            if (sscanf(buffer, "cmd_val %f %f", &setpoint_right, &setpoint_left) == 2) {
+            // Expect command in the ros2 Twist message format:
+            // "linear: x: <lin>, y: <val>, z: <val> angular: x: <val>, y: <val>, z: <ang>"
+            float lin = 0.0f, ang = 0.0f;
+            if (sscanf(buffer, "linear: x: %f, y: %*f, z: %*f angular: x: %*f, y: %*f, z: %f", &lin, &ang) == 2) {
+                float setpoint_right = lin + ang;
+                float setpoint_left  = lin - ang;
                 // In absence of sensor feedback, we assume measurement is zero.
                 float output_right = pid_update(&pid_right, setpoint_right, 0.0f, dt);
-                float output_left  = pid_update(&pid_left,  setpoint_left,  0.0f, dt);
-
+                float output_left  = pid_update(&pid_left, setpoint_left,  0.0f, dt);
+                
                 // Determine the direction based on the sign of the output
                 uint pwm_right = (uint)(output_right < 0 ? -output_right : output_right);
-                uint pwm_left  = (uint)(output_left  < 0 ? -output_left  : output_left);
-
+                uint pwm_left  = (uint)(output_left  < 0 ? -output_left : output_left);
+                
                 gpio_put(RIGHT_DIR_PIN, output_right < 0 ? 1 : 0);
                 gpio_put(LEFT_DIR_PIN,  output_left  < 0 ? 1 : 0);
 
