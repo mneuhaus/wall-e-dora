@@ -72,6 +72,7 @@ int main() {
     char buffer[64];
 
     while (true) {
+        printf("waiting for commands.\n");
         if (fgets(buffer, sizeof(buffer), stdin)) {
             // Expect command in the ros2 Twist message format:
             // "linear: x: <lin>, y: <val>, z: <val> angular: x: <val>, y: <val>, z: <ang>"
