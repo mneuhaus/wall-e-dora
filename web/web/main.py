@@ -14,6 +14,12 @@ def process_web_inputs(node):
         print("Received web input:", web_event)
         if web_event.get("action") == "button":
             node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
+        elif web_event.get("action") == "slider":
+            try:
+                slider_value = int(web_event.get("value"))
+                node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
+            except ValueError:
+                print("Invalid slider value received:", web_event.get("value"))
 
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
