@@ -123,6 +123,13 @@ async def index(request):
     """
     return web.Response(text=html_content, content_type='text/html')
 
+async def broadcast_power_metrics():
+    for ws in ws_clients.copy():
+        if not ws.closed:
+            await ws.send_json(latest_power_metrics)
+        else:
+            ws_clients.discard(ws)
+
 def start_background_webserver():
     async def init_app():
         app = web.Application()
