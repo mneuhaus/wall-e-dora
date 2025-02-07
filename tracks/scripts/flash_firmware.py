@@ -40,7 +40,7 @@ def flash_firmware(device_path: str) -> None:
     else:
         print("Could not determine bus and device numbers from udev info.")
     try:
-        subprocess.run(["picotool", "load", firmware_file, "-f"], check=True)
+        subprocess.run(["picotool", "load", firmware_file, "-f", '--bus', busnum, '--address', devnum], check=True)
         print("Firmware flashed successfully!")
     except subprocess.CalledProcessError as e:
         print(f"Error flashing firmware: {e}")

@@ -18,6 +18,7 @@ add_executable(${NAME}
     main.cpp # <-- Add source files here!
 )
 
+
 # Don't forget to link the libraries you need!
 target_link_libraries(${NAME}
     pico_stdlib
@@ -27,6 +28,7 @@ target_link_libraries(${NAME}
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(${NAME})
+pico_enable_stdio_usb(${NAME} 1)
 
 # Set up files for the release packages
 install(FILES
