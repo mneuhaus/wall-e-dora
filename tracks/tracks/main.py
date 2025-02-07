@@ -1,12 +1,12 @@
 from dora import Node
 import pyarrow as pa
-import serial
+from serial import Serial
 import time
 import os
 
 def direct_serial_logs():
     try:
-        ser = serial.Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0.1)
+        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0.1)
         while True:
             line = ser.readline().decode('utf-8', errors='replace')
             if not line:
