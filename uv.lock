@@ -1,0 +1,63 @@
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "dora-rs"
+version = "0.3.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyarrow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/46/1bba92b1e44d1344fad40554efec3149fd6ec814f4765c8292bcf0ab507b/dora_rs-0.3.9.tar.gz", hash = "sha256:050c297065490f9cc447b259628a433d6a238bac5ff00660f07b9df7e52d22d6", size = 218883 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/fd/db37a69d33e0423543a2cf0addb10897ec9902a46903a7fd637fc6ab342a/dora_rs-0.3.9-cp37-abi3-macosx_10_12_x86_64.whl", hash = "sha256:f67b664120682f8a26a1740af60ec77099ea17860a95d67212a3b92158de1708", size = 7133365 },
+    { url = "https://files.pythonhosted.org/packages/f6/eb/82daa9f58198622cd3637c964b17d0e46d8d24e47d15ff1a57e6d006567e/dora_rs-0.3.9-cp37-abi3-macosx_11_0_arm64.whl", hash = "sha256:b3f934176a989a43e8b8f7b9d9db29b23904dc7a3bc579da47879bf8c8ea5720", size = 6853776 },
+    { url = "https://files.pythonhosted.org/packages/36/0f/d8a65444cbf05453900ce23dbab38e79c03a9027326215e56a2e6d7350ff/dora_rs-0.3.9-cp37-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:c9743d9bc6c925ca5c49bd05c301d259f834eefa8d81b66b6a083b395e5073a9", size = 6253735 },
+    { url = "https://files.pythonhosted.org/packages/9d/37/e11a0c967c16496a516c15758bd558591a3f5fa091521e48c5ce80f026b2/dora_rs-0.3.9-cp37-abi3-manylinux_2_28_armv7l.whl", hash = "sha256:6f7ede8828ec32f352e553ce7cbabca5057cca0c905673772e83e4151f5d8829", size = 5794495 },
+    { url = "https://files.pythonhosted.org/packages/fa/0e/165613e3d9430c40860d43c345350980cd6469575cf73acd4300be8b80b3/dora_rs-0.3.9-cp37-abi3-manylinux_2_28_i686.whl", hash = "sha256:08065fdf7e468d1557bfe574d02f642247961dbaae21cb46c93fc855de8373bd", size = 7068567 },
+    { url = "https://files.pythonhosted.org/packages/e1/75/00ed36cbf20ed874d063d2a5eba273e847edf93fa6d6e394dd07de7ddd54/dora_rs-0.3.9-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:94e17600a1eba6a23ff5131895a9abf5dcaab3dbe5e9df414c54e74483e44e2e", size = 6669592 },
+    { url = "https://files.pythonhosted.org/packages/9a/7f/d84bfbc2372aef3fcf159154f4cca25eea54287c5e075514c2b0beb6552f/dora_rs-0.3.9-cp37-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:7e072bba9808eea867b4fed2106a09a22169c90def6250b1ff43046b3861f741", size = 8226557 },
+    { url = "https://files.pythonhosted.org/packages/78/2c/6d81059281468aebcb444bddd283f5e13db8ce54d08104e8dfb5e4191ce2/dora_rs-0.3.9-cp37-abi3-musllinux_1_2_armv7l.whl", hash = "sha256:836d28449c5ca5aa1136a71655c78e9a296b534820ebccb998ee1a73eb1c95c8", size = 7887479 },
+    { url = "https://files.pythonhosted.org/packages/2e/bf/8278f31ee402f6bc987dafeb488ab7746736af86d4d3b0bfef2f71f63828/dora_rs-0.3.9-cp37-abi3-musllinux_1_2_i686.whl", hash = "sha256:a6ef64c0e9c6d0015bfa4f3b3729bbea74648f02702fffa3acde897335ddb105", size = 8123211 },
+    { url = "https://files.pythonhosted.org/packages/dc/2d/4e862a0a2f1a7098bbf007be0e0409aabb314eafcbaf17deb4ab9449dadc/dora_rs-0.3.9-cp37-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:cae4aca698e29d21b1cc6b9c0242eef7375bb11e1d45faeaac0af2565c79c1af", size = 8282235 },
+    { url = "https://files.pythonhosted.org/packages/7e/0f/c2f060d6192d85cb7070ac1fb089853ef1a4ed2bb1253185d2a26e563152/dora_rs-0.3.9-cp37-abi3-win_amd64.whl", hash = "sha256:4c3c94066838eae07048ceb1e2a87e6d6704d53e0bad7d0304f2b2de7ca8709f", size = 6283644 },
+]
+
+[[package]]
+name = "pyarrow"
+version = "19.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/01/fe1fd04744c2aa038e5a11c7a4adb3d62bce09798695e54f7274b5977134/pyarrow-19.0.0.tar.gz", hash = "sha256:8d47c691765cf497aaeed4954d226568563f1b3b74ff61139f2d77876717084b", size = 1129096 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/2e/152885f5ef421e80dae68b9c133ab261934f93a6d5e16b61d79c0ed597fb/pyarrow-19.0.0-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:a7bbe7109ab6198688b7079cbad5a8c22de4d47c4880d8e4847520a83b0d1b68", size = 30667964 },
+    { url = "https://files.pythonhosted.org/packages/80/c2/08bbee9a8610a47c9a1466845f405baf53a639ddd947c5133d8ba13544b6/pyarrow-19.0.0-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:4624c89d6f777c580e8732c27bb8e77fd1433b89707f17c04af7635dd9638351", size = 32125039 },
+    { url = "https://files.pythonhosted.org/packages/d2/56/06994df823212f5688d3c8bf4294928b12c9be36681872853655724d28c6/pyarrow-19.0.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2b6d3ce4288793350dc2d08d1e184fd70631ea22a4ff9ea5c4ff182130249d9b", size = 41140729 },
+    { url = "https://files.pythonhosted.org/packages/94/65/38ad577c98140a9db71e9e1e594b6adb58a7478a5afec6456a8ca2df7f70/pyarrow-19.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:450a7d27e840e4d9a384b5c77199d489b401529e75a3b7a3799d4cd7957f2f9c", size = 42202267 },
+    { url = "https://files.pythonhosted.org/packages/b6/1f/966b722251a7354114ccbb71cf1a83922023e69efd8945ebf628a851ec4c/pyarrow-19.0.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:a08e2a8a039a3f72afb67a6668180f09fddaa38fe0d21f13212b4aba4b5d2451", size = 40505858 },
+    { url = "https://files.pythonhosted.org/packages/3b/5e/6bc81aa7fc9affc7d1c03b912fbcc984ca56c2a18513684da267715dab7b/pyarrow-19.0.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:f43f5aef2a13d4d56adadae5720d1fed4c1356c993eda8b59dace4b5983843c1", size = 42084973 },
+    { url = "https://files.pythonhosted.org/packages/53/c3/2f56da818b6a4758cbd514957c67bd0f078ebffa5390ee2e2bf0f9e8defc/pyarrow-19.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:2f672f5364b2d7829ef7c94be199bb88bf5661dd485e21d2d37de12ccb78a136", size = 25241976 },
+    { url = "https://files.pythonhosted.org/packages/f5/b9/ba07ed3dd6b6e4f379b78e9c47c50c8886e07862ab7fa6339ac38622d755/pyarrow-19.0.0-cp313-cp313-macosx_12_0_arm64.whl", hash = "sha256:cf3bf0ce511b833f7bc5f5bb3127ba731e97222023a444b7359f3a22e2a3b463", size = 30651291 },
+    { url = "https://files.pythonhosted.org/packages/ad/10/0d304243c8277035298a68a70807efb76199c6c929bb3363c92ac9be6a0d/pyarrow-19.0.0-cp313-cp313-macosx_12_0_x86_64.whl", hash = "sha256:4d8b0c0de0a73df1f1bf439af1b60f273d719d70648e898bc077547649bb8352", size = 32100461 },
+    { url = "https://files.pythonhosted.org/packages/8a/61/bcfc5182e11831bca3f849945b9b106e09fd10ded773dff466658e972a45/pyarrow-19.0.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a92aff08e23d281c69835e4a47b80569242a504095ef6a6223c1f6bb8883431d", size = 41132491 },
+    { url = "https://files.pythonhosted.org/packages/8e/87/2915a29049ec352dc69a967fbcbd76b0180319233de0daf8bd368df37099/pyarrow-19.0.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c3b78eff5968a1889a0f3bc81ca57e1e19b75f664d9c61a42a604bf9d8402aae", size = 42192529 },
+    { url = "https://files.pythonhosted.org/packages/48/18/44e5542b2707a8afaf78b5b88c608f261871ae77787eac07b7c679ca6f0f/pyarrow-19.0.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:b34d3bde38eba66190b215bae441646330f8e9da05c29e4b5dd3e41bde701098", size = 40495363 },
+    { url = "https://files.pythonhosted.org/packages/ba/d6/5096deb7599bbd20bc2768058fe23bc725b88eb41bee58303293583a2935/pyarrow-19.0.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:5418d4d0fab3a0ed497bad21d17a7973aad336d66ad4932a3f5f7480d4ca0c04", size = 42074075 },
+    { url = "https://files.pythonhosted.org/packages/2c/df/e3c839c04c284c9ec3d62b02a8c452b795d9b07b04079ab91ce33484d4c5/pyarrow-19.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:e82c3d5e44e969c217827b780ed8faf7ac4c53f934ae9238872e749fa531f7c9", size = 25239803 },
+    { url = "https://files.pythonhosted.org/packages/6a/d3/a6d4088e906c7b5d47792256212606d2ae679046dc750eee0ae167338e5c/pyarrow-19.0.0-cp313-cp313t-macosx_12_0_arm64.whl", hash = "sha256:f208c3b58a6df3b239e0bb130e13bc7487ed14f39a9ff357b6415e3f6339b560", size = 30695401 },
+    { url = "https://files.pythonhosted.org/packages/94/25/70040fd0e397dd1b937f459eaeeec942a76027357491dca0ada09d1322af/pyarrow-19.0.0-cp313-cp313t-macosx_12_0_x86_64.whl", hash = "sha256:c751c1c93955b7a84c06794df46f1cec93e18610dcd5ab7d08e89a81df70a849", size = 32104680 },
+    { url = "https://files.pythonhosted.org/packages/4e/f9/92783290cc0d80ca16d34b0c126305bfacca4b87dd889c8f16c6ef2a8fd7/pyarrow-19.0.0-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:b903afaa5df66d50fc38672ad095806443b05f202c792694f3a604ead7c6ea6e", size = 41076754 },
+    { url = "https://files.pythonhosted.org/packages/05/46/2c9870f50a495c72e2b8982ae29a9b1680707ea936edc0de444cec48f875/pyarrow-19.0.0-cp313-cp313t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a22a4bc0937856263df8b94f2f2781b33dd7f876f787ed746608e06902d691a5", size = 42163133 },
+    { url = "https://files.pythonhosted.org/packages/7b/2f/437922b902549228fb15814e8a26105bff2787ece466a8d886eb6699efad/pyarrow-19.0.0-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:5e8a28b918e2e878c918f6d89137386c06fe577cd08d73a6be8dafb317dc2d73", size = 40452210 },
+    { url = "https://files.pythonhosted.org/packages/36/ef/1d7975053af9d106da973bac142d0d4da71b7550a3576cc3e0b3f444d21a/pyarrow-19.0.0-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:29cd86c8001a94f768f79440bf83fee23963af5e7bc68ce3a7e5f120e17edf89", size = 42077618 },
+]
+
+[[package]]
+name = "wall-e-dora"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "dora-rs" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "dora-rs", specifier = ">=0.3.9" }]
