@@ -33,3 +33,8 @@ The following table summarizes the pin configuration used in the firmware:
 | ------ | ------- | ------- | ------- |
 | Right  |    2    |    3    |    4    |
 | Left   |    6    |    7    |    8    |
+
+## Tracks Node Details
+
+The Tracks node is responsible for interfacing with the firmware and processing serial logs and events.
+It is executed from tracks/tracks/__main__.py and utilizes additional logic from tracks/tracks/main.py.
