@@ -46,22 +46,53 @@ async def index(request):
     <html>
     <head>
         <title>Web Control</title>
+        <style>
+            #status {
+                width: 20px;
+                height: 20px;
+                display: inline-block;
+                border: 1px solid #000;
+                border-radius: 50%;
+                margin-left: 10px;
+            }
+        </style>
     </head>
     <body>
-        <h1>Web Control</h1>
+        <h1>Web Control <span id="status" style="background-color: red;"></span></h1>
         <button onclick="sendButton()">Press me</button>
         <br><br>
         <input type="range" min="0" max="100" value="50" id="slider" oninput="sendSlider(this.value)">
         <script>
-            const ws = new WebSocket('ws://' + location.host + '/ws');
-            ws.onopen = function() {
-                console.log('WebSocket connection established');
-            };
+            var ws;
+            function connect() {
+                ws = new WebSocket('ws://' + location.host + '/ws');
+                ws.onopen = function() {
+                    console.log('WebSocket connection established');
+                    document.getElementById('status').style.backgroundColor = 'green';
+                };
+                ws.onclose = function() {
+                    console.log('WebSocket connection closed, retrying...');
+                    document.getElementById('status').style.backgroundColor = 'red';
+                    setTimeout(connect, 1000);
+                };
+                ws.onerror = function(error) {
+                    console.log('WebSocket error:', error);
+                    ws.close();
+                };
+                ws.onmessage = function(event) {
+                    console.log('Message from server:', event.data);
+                };
+            }
+            connect();
             function sendButton() {
-                ws.send('button');
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('button');
+                }
             }
             function sendSlider(value) {
-                ws.send('slider:' + value);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('slider:' + value);
+                }
             }
         </script>
     </body>
@@ -93,13 +124,12 @@ def main():
     node = Node()
 
     for event in node:
+        # Process web input events on every iteration
+        process_web_inputs(node)
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                # Process any web input events
-                process_web_inputs(node)
-                # node.send_output(
-                #     output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={}
-                # )
+                # Process tick events or other input as needed
+                pass
 
 
 if __name__ == "__main__":
