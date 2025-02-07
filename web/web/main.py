@@ -6,15 +6,14 @@ import queue
 from aiohttp import web
 
 
-web_input_queue = queue.Queue()
+global_web_inputs = []
 
-def process_web_inputs(node):
-    while True:
-        try:
-            web_event = web_input_queue.get_nowait()
-        except queue.Empty:
-            return
-        print("Received web input (non-blocking):", web_event)
+def flush_web_inputs(node):
+    global global_web_inputs
+    if not global_web_inputs:
+        return
+    for web_event in global_web_inputs:
+        print("Processing web input:", web_event)
         if web_event.get("action") == "button":
             node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
         elif web_event.get("action") == "slider":
@@ -23,22 +22,7 @@ def process_web_inputs(node):
                 node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
             except ValueError:
                 print("Invalid slider value received:", web_event.get("value"))
-
-def web_input_worker(node):
-    while True:
-        try:
-            web_event = web_input_queue.get(timeout=1)
-            print("Received web input (blocking worker):", web_event)
-            if web_event.get("action") == "button":
-                node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
-            elif web_event.get("action") == "slider":
-                try:
-                    slider_value = int(web_event.get("value"))
-                    node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
-                except ValueError:
-                    print("Invalid slider value received:", web_event.get("value"))
-        except queue.Empty:
-            continue
+    global_web_inputs = []
 
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
@@ -49,9 +33,9 @@ async def websocket_handler(request):
                 # Expect messages in the format "button" or "slider:<value>"
                 data = msg.data.strip().split(":")
                 if data[0] == "button":
-                    web_input_queue.put({"action": "button"})
+                    global_web_inputs.append({"action": "button"})
                 elif data[0] == "slider" and len(data) > 1:
-                    web_input_queue.put({"action": "slider", "value": data[1]})
+                    global_web_inputs.append({"action": "slider", "value": data[1]})
             except Exception as e:
                 print("Error processing websocket message", e)
     return ws
@@ -139,15 +123,10 @@ def main():
     start_background_webserver()
     node = Node()
 
-    # Start a dedicated background thread to process web inputs
-    web_thread = threading.Thread(target=web_input_worker, args=(node,), daemon=True)
-    web_thread.start()
-
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                # Process tick events or other input as needed
-                pass
+                flush_web_inputs(node)
 
 
 if __name__ == "__main__":
