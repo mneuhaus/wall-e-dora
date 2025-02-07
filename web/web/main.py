@@ -14,7 +14,7 @@ def process_web_inputs(node):
             web_event = web_input_queue.get_nowait()
         except queue.Empty:
             return
-        print("Received web input:", web_event)
+        print("Received web input (non-blocking):", web_event)
         if web_event.get("action") == "button":
             node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
         elif web_event.get("action") == "slider":
@@ -23,6 +23,22 @@ def process_web_inputs(node):
                 node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
             except ValueError:
                 print("Invalid slider value received:", web_event.get("value"))
+
+def web_input_worker(node):
+    while True:
+        try:
+            web_event = web_input_queue.get(timeout=1)
+            print("Received web input (blocking worker):", web_event)
+            if web_event.get("action") == "button":
+                node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
+            elif web_event.get("action") == "slider":
+                try:
+                    slider_value = int(web_event.get("value"))
+                    node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
+                except ValueError:
+                    print("Invalid slider value received:", web_event.get("value"))
+        except queue.Empty:
+            continue
 
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
@@ -123,9 +139,11 @@ def main():
     start_background_webserver()
     node = Node()
 
+    # Start a dedicated background thread to process web inputs
+    web_thread = threading.Thread(target=web_input_worker, args=(node,), daemon=True)
+    web_thread.start()
+
     for event in node:
-        # Process web input events on every iteration
-        process_web_inputs(node)
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 # Process tick events or other input as needed
