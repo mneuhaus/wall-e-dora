@@ -21,6 +21,8 @@ add_executable(${NAME}
 # Don't forget to link the libraries you need!
 target_link_libraries(${NAME}
     pico_stdlib
+    hardware_pwm
+    hardware_uart
     pimoroni_i2c
     pico_explorer # <-- List libraries here!
 )
