@@ -10,6 +10,24 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 import aiohttp_debugtoolbar
 
+bg_log_queue = queue.Queue()
+
+class QueueHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            bg_log_queue.put(msg)
+        except Exception:
+            self.handleError(record)
+
+def flush_bg_logs():
+    while True:
+        try:
+            msg = bg_log_queue.get(timeout=1)
+            print("BG_LOG:", msg)
+        except queue.Empty:
+            continue
+
 global_web_inputs = []
 latest_power_metrics = {}
 latest_available_sounds = []
@@ -106,6 +124,8 @@ def start_background_webserver():
 
 def main():
     start_background_webserver()
+    bg_thread = threading.Thread(target=flush_bg_logs, daemon=True)
+    bg_thread.start()
     node = Node()
     
     for event in node:
