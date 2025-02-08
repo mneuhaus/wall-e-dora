@@ -145,13 +145,8 @@
             }
           }
         };
-        function sendSound(sound) {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            // Fallback: send as text message
-            ws.send('sound_click:' + sound);
-          }
-        }
       }
+      // Moved sendSound to global scope
       function updateStatus(connected) {
         var statusIcon = document.getElementById('status-icon');
         if (connected) {
@@ -162,11 +157,14 @@
           statusIcon.style.color = "red";
         }
       }
+      function sendSound(sound) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send('sound_click:' + sound);
+        }
+      }
       function sendButton() {
         if (ws && ws.readyState === WebSocket.OPEN) {
-          // Example of sending an Arrow formatted message for a button action
-          const fb = arrow.RecordBatchWriter.throughDOMStream();
-          // For simplicity, we'll send a JSON fallback here.
+          // For simplicity, send a JSON fallback
           ws.send('button');
         }
       }

@@ -22,7 +22,7 @@ def flush_web_inputs(node):
     for web_event in global_web_inputs:
         print("Processing web input:", web_event)
         if web_event.get("action") == "button":
-            node.send_output(output_id="my_output_id", data=pa.array([4, 5, 6]), metadata={})
+            node.send_output(output_id="play_requested_sound", data=pa.array(["default_sound.mp3"]), metadata={})
         elif web_event.get("action") == "slider":
             try:
                 slider_value = int(web_event.get("value"))
