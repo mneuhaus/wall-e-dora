@@ -10,7 +10,7 @@ def setup_hardware():
     pygame.mixer.music.set_volume(1.0)
     for i in range(pygame.mixer.get_num_channels()):
         pygame.mixer.Channel(i).set_volume(1.0)
-    # Assume 'sounds' directory is located one level up from this file inside the 'sounds' folder.
+    # Assume 'sounds' directory is located at nodes/audio/sounds/ relative to this file.
     sounds_dir = os.path.join(os.path.dirname(__file__), "..", "sounds")
     return sounds_dir
 
