@@ -53,6 +53,16 @@ int main() {
                 buf[buf_index] = '\0';
                 if (strcmp(buf, "heartbeat") == 0) {
                     last_heartbeat = get_absolute_time();
+                } else if (strncmp(buf, "left ", 5) == 0) {
+                    int speed = atoi(buf + 5);
+                    if (speed < 0) speed = 0;
+                    if (speed > 100) speed = 100;
+                    pwm_set_chan_level(slice_num_left, chan_left, speed);
+                } else if (strncmp(buf, "right ", 6) == 0) {
+                    int speed = atoi(buf + 6);
+                    if (speed < 0) speed = 0;
+                    if (speed > 100) speed = 100;
+                    pwm_set_chan_level(slice_num_right, chan_right, speed);
                 }
                 buf_index = 0;
             } else {
