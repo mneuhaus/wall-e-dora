@@ -7,6 +7,7 @@ from aiohttp import web
 import aiohttp_debugtoolbar
 import json
 import logging
+import pyarrow as pa
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -20,7 +21,10 @@ def flush_web_inputs(node):
         return
     import json
     for web_event in global_web_inputs:
-        node.send_output(output_id="web_input", data=json.dumps(web_event, default=str), metadata={})
+        print(web_event)
+        node.send_output(
+            output_id=web_event["output_id"], data=pa.array(web_event["data"]), metadata=web_event["metadata"]
+        )
     global_web_inputs = []
 
 async def websocket_handler(request):
@@ -101,6 +105,7 @@ def main():
     
     for event in node:
         if event["type"] == "INPUT" and not ("id" in event and (event["id"] == "tick" or event["id"] == "runtime")):
+            event['value'] = event['value'].to_pylist()
             serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)

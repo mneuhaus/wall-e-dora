@@ -75,10 +75,7 @@
     <script type="module">
       import { Node } from './js/Node.js';
       const node = new Node();
-      node.send_output = function(output_id, data, metadata = {}) {
-          sendJsonMessage({ action: output_id, value: data });
-      };
-      var ws;
+
       function updateMetrics(metrics) {
         document.getElementById('voltage').innerText = metrics.voltage + " V";
         document.getElementById('current').innerText = metrics.current + " A";
@@ -99,7 +96,7 @@
           headline.innerText = displayName;
           item.appendChild(headline);
           item.style.cursor = 'pointer';
-          item.onclick = function() { sendSound(sound); };
+          item.onclick = function() { node.send_output('play_sound', [sound]); };
           soundsList.appendChild(item);
         });
       }
@@ -113,61 +110,14 @@
           document.getElementById('volume').value = data.volume;
         }
       }
-      function connect() {
-        ws = new WebSocket('ws://' + location.host + '/ws');
-        ws.binaryType = 'arraybuffer';
-        ws.onopen = function() {
-          updateStatus(true);
-          console.debug("Template: WebSocket connection opened");
-        };
-        ws.onclose = function() {
-          updateStatus(false);
-          setTimeout(connect, 1000);
-        };
-        ws.onerror = function(error) {
-          ws.close();
-        };
-        ws.onmessage = function(event) {
-          console.debug("Template: WebSocket message received:", event);
-          try {
-              let rawData = event.data;
-              if (typeof rawData !== "string") {
-                  rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
-              }
-              var data = JSON.parse(rawData);
-              console.debug("Template: Parsed message:", data);
-              updateUI(data);
-          } catch(e) {
-              console.log("Failed to parse JSON metrics:", e);
-          }
-        };
-      }
-      function sendJsonMessage(message) {
-          ws.send(JSON.stringify(message));
-      }
-      function updateStatus(connected) {
-        var statusIcon = document.getElementById('status-icon');
-        if (connected) {
-          statusIcon.innerText = "cloud";
-          statusIcon.style.color = "green";
-        } else {
-          statusIcon.innerText = "cloud_off";
-          statusIcon.style.color = "red";
+
+      node.next((event) => {
+        // console.log(event.value);
+        if (event.id == 'available_sounds') {
+          updateSoundList(event.value);
         }
-      }
-      function sendSound(sound) {
-          node.send_output("sound_click", sound);
-      }
-      function sendButton() {
-          node.send_output("button", "");
-      }
-      function sendSlider(value) {
-          node.send_output("slider", value);
-      }
-      function sendVolume(value) {
-          node.send_output("set_volume", value);
-      }
-      connect();
+      })
+
     </script>
   </body>
 </html>

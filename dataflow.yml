@@ -31,12 +31,12 @@ nodes:
       available_sounds: audio/available_sounds
     outputs:
       - slider_input
-      - play_requested_sound
+      - play_sound
 
   - id: audio
     path: nodes/audio/audio/main.py
     inputs:
-      play_sound: web/play_requested_sound
+      play_sound: web/play_sound
       scan_sounds: dora/timer/secs/3
       volume_tick: dora/timer/secs/1
     outputs:
