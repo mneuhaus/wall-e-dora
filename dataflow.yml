@@ -1,8 +1,8 @@
 nodes:
-  # - id: listener_1
-  #   path: listener-1/listener_1/main.py
-  #   inputs:
-  #     speech-2: tracks/my_output_id
+  - id: listener_1
+    path: listener-1/listener_1/main.py
+    inputs:
+      speech-2: web/my_output_id
 
   # - id: gamepad
   #   path: gamepad/gamepad/main.py
@@ -20,6 +20,8 @@ nodes:
     path: web/web/main.py
     inputs:
       tick: dora/timer/millis/100
+    outputs:
+      - my_output_id
 
   # - id: tracks
   #   path: tracks/tracks/main.py
