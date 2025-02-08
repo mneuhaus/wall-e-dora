@@ -57,7 +57,7 @@ async def index(request):
 async def broadcast_bytes(data_bytes):
     for ws in ws_clients.copy():
         if not ws.closed:
-            await ws.send_bytes(data_bytes)
+            await ws.send_str(data_bytes.decode("utf-8"))
         else:
             ws_clients.discard(ws)
 
