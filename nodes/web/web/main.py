@@ -40,7 +40,7 @@ def flush_web_inputs(node):
         return
     import json
     for web_event in global_web_inputs:
-        node.send_output(output_id="web_input", data=json.dumps(web_event), metadata={})
+        node.send_output(output_id="web_input", data=json.dumps(web_event, default=str), metadata={})
     global_web_inputs = []
 
 async def websocket_handler(request):
@@ -130,7 +130,7 @@ def main():
     for event in node:
         if event["type"] == "INPUT":
             import json
-            serialized = json.dumps(event).encode('utf-8')
+            serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
         elif "id" in event and event["id"] == "tick":
