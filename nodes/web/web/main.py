@@ -52,7 +52,7 @@ async def websocket_handler(request):
                         global_web_inputs.append({"action": "sound_click", "value": data[1]})
                 except Exception as e:
                     print("Error processing text websocket message", e)
-            } else if msg.type == web.WSMsgType.BINARY:
+            elif msg.type == web.WSMsgType.BINARY:
                 try:
                     import pyarrow as pa
                     buf = pa.BufferReader(msg.data)
