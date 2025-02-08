@@ -5,6 +5,7 @@ import time
 import os
 import threading
 import queue
+import sys
 
 serial_buffer = queue.Queue()
 
@@ -24,6 +25,14 @@ def flush_serial_buffer():
         line = serial_buffer.get()
         print(line, end='')
 
+def move_tracks():
+    "Move left and right tracks at 10% speed for 5 seconds"
+    print("Setting left track to 10% speed")
+    print("Setting right track to 10% speed")
+    time.sleep(5)
+    print("Stopping left track")
+    print("Stopping right track")
+
 bg_thread = None
 
 def start_background_thread():
@@ -33,10 +42,15 @@ def start_background_thread():
         bg_thread.start()
 
 def main():
+    # Check for 'move' command line argument to move tracks
+    if len(sys.argv) > 1 and sys.argv[1] == "move":
+        move_tracks()
+        return
+
     start_background_thread()
     
     node = Node()
-
+    
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
