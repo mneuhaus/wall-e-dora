@@ -96,19 +96,19 @@
       }
 
       node.next((event) => {
-        if (event.id === 'audio/available_sounds') {
+        if (event.id === 'available_sounds') {
           updateSoundList(event.value);
-        } else if (event.id === 'power/voltage') {
+        } else if (event.id === 'voltage') {
           document.getElementById('voltage').innerText = event.value + " V";
-        } else if (event.id === 'power/current') {
+        } else if (event.id === 'current') {
           document.getElementById('current').innerText = event.value + " A";
-        } else if (event.id === 'power/power') {
+        } else if (event.id === 'power') {
           document.getElementById('power').innerText = event.value + " W";
-        } else if (event.id === 'power/soc') {
+        } else if (event.id === 'soc') {
           document.getElementById('soc').innerText = event.value + " %";
-        } else if (event.id === 'power/runtime') {
+        } else if (event.id === 'runtime') {
           document.getElementById('runtime').innerText = event.value + " s";
-        } else if (event.id === 'power/shutdown') {
+        } else if (event.id === 'shutdown') {
           console.log('Shutdown event received:', event.value);
         }
       })
