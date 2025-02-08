@@ -4,6 +4,7 @@ class Node {
     this.outputQueue = [];
     // Initialization logic: connect to backend if needed
     console.log("JS Node initialized");
+    this.connectWebSocket();
   }
 
   // Simulate receiving the next event from the DORA stack
@@ -37,6 +38,35 @@ class Node {
       let msg = this.outputQueue.shift();
       this.ws.send(JSON.stringify(msg));
     }
+  }
+
+  connectWebSocket() {
+    this.ws = new WebSocket('ws://' + location.host + '/ws');
+    this.ws.binaryType = 'arraybuffer';
+    this.ws.onopen = () => {
+      console.log("WebSocket connection opened");
+      this.setWebsocket(this.ws);
+    };
+    this.ws.onclose = () => {
+      console.log("WebSocket connection closed, retrying in 1s");
+      setTimeout(() => this.connectWebSocket(), 1000);
+    };
+    this.ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      this.ws.close();
+    };
+    this.ws.onmessage = (event) => {
+      try {
+        let rawData = event.data;
+        if (typeof rawData !== "string") {
+          rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
+        }
+        const data = JSON.parse(rawData);
+        this.push_event(data);
+      } catch (e) {
+        console.log("Failed to parse message:", e);
+      }
+    };
   }
 
   // For testing: method to simulate receiving an event
