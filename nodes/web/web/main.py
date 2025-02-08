@@ -42,18 +42,16 @@ async def websocket_handler(request):
         async for msg in ws:
             if msg.type == web.WSMsgType.TEXT:
                 try:
-                    // Fallback for text messages
-                    let data = msg.data.trim().split(":");
-                    if (data[0] === "button") {
-                        global_web_inputs.append({"action": "button"});
-                    } else if (data[0] === "slider" && data.length > 1) {
-                        global_web_inputs.append({"action": "slider", "value": data[1]});
-                    } else if (data[0] === "sound_click" && data.length > 1) {
-                        global_web_inputs.append({"action": "sound_click", "value": data[1]});
-                    }
-                } catch (e) {
-                    print("Error processing text websocket message", e);
-                }
+                    # Fallback for text messages
+                    data = msg.data.strip().split(":")
+                    if data[0] == "button":
+                        global_web_inputs.append({"action": "button"})
+                    elif data[0] == "slider" and len(data) > 1:
+                        global_web_inputs.append({"action": "slider", "value": data[1]})
+                    elif data[0] == "sound_click" and len(data) > 1:
+                        global_web_inputs.append({"action": "sound_click", "value": data[1]})
+                except Exception as e:
+                    print("Error processing text websocket message", e)
             } else if msg.type == web.WSMsgType.BINARY:
                 try:
                     import pyarrow as pa
