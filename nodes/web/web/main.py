@@ -38,9 +38,9 @@ def flush_web_inputs(node):
     global global_web_inputs
     if not global_web_inputs:
         return
-    import json, pyarrow as pa
+    import json
     for web_event in global_web_inputs:
-        node.send_output(output_id="web_input", data=pa.array([json.dumps(web_event)]), metadata={})
+        node.send_output(output_id="web_input", data=json.dumps(web_event), metadata={})
     global_web_inputs = []
 
 async def websocket_handler(request):
