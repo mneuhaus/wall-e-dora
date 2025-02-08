@@ -1,36 +1,16 @@
 from dora import Node
 import threading
 import asyncio
-import queue
 import os
 import jinja2
 from aiohttp import web
-import logging
-logging.basicConfig(level=logging.DEBUG)
 import aiohttp_debugtoolbar
+import json
+import logging
 
-bg_log_queue = queue.Queue()
-
-class QueueHandler(logging.Handler):
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            bg_log_queue.put(msg)
-        except Exception:
-            self.handleError(record)
-
-def flush_bg_logs():
-    while True:
-        try:
-            msg = bg_log_queue.get(timeout=1)
-            print("BG_LOG:", msg)
-        except queue.Empty:
-            continue
+logging.basicConfig(level=logging.DEBUG)
 
 global_web_inputs = []
-latest_power_metrics = {}
-latest_available_sounds = []
-latest_volume = 1.0
 ws_clients = set()
 web_loop = None
 
@@ -98,12 +78,6 @@ def start_background_webserver():
             app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
         else:
             print("DEBUG: Static JS files NOT found at: " + str(js_path))
-        js_path = os.path.join(os.path.dirname(__file__), "..", "resources/node_modules")
-        if os.path.exists(js_path):
-            print("DEBUG: Static node_modules files found at: " + str(js_path))
-            app.router.add_static('/node_modules/', path=js_path, name='node_modules', show_index=True, append_version=True)
-        else:
-            print("DEBUG: Static JS files NOT found at: " + str(js_path))
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
@@ -123,13 +97,10 @@ def start_background_webserver():
 
 def main():
     start_background_webserver()
-    bg_thread = threading.Thread(target=flush_bg_logs, daemon=True)
-    bg_thread.start()
     node = Node()
     
     for event in node:
         if event["type"] == "INPUT":
-            import json
             serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
