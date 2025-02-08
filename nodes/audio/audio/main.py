@@ -54,6 +54,8 @@ def main():
     play_startup_sound(sounds_dir)
     node = Node()
     print("Audio node started")
+    available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
+    node.send_output("available_sounds", pa.array(available), metadata={})
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "play_sound":

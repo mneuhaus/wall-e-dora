@@ -25,6 +25,8 @@ def flush_web_inputs(node):
                 node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
             except ValueError:
                 print("Invalid slider value received:", web_event.get("value"))
+        elif web_event.get("action") == "sound_click":
+            node.send_output(output_id="play_requested_sound", data=pa.array([web_event.get("value")]), metadata={})
     global_web_inputs = []
 
 async def websocket_handler(request):
@@ -147,12 +149,33 @@ async def index(request):
             };
             ws.onmessage = function(event) {
               try {
-                var metrics = JSON.parse(event.data);
-                updateMetrics(metrics);
+                var data = JSON.parse(event.data);
+                if (data.hasOwnProperty("available_sounds")) {
+                  updateSoundList(data.available_sounds);
+                }
+                if (data.hasOwnProperty("voltage")) {
+                  updateMetrics(data);
+                }
               } catch(e) {
                 console.log("Failed to parse metrics:", e);
               }
             };
+            function updateSoundList(sounds) {
+              var soundsList = document.getElementById('sounds');
+              soundsList.innerHTML = '';
+              sounds.forEach(function(sound) {
+                var li = document.createElement('li');
+                li.innerText = sound;
+                li.style.cursor = 'pointer';
+                li.onclick = function() { sendSound(sound); };
+                soundsList.appendChild(li);
+              });
+            }
+            function sendSound(sound) {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('sound_click:' + sound);
+              }
+            }
           }
           connect();
           function sendButton() {

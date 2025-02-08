@@ -33,14 +33,15 @@ nodes:
       soc: power/soc
       runtime: power/runtime
       shutdown: power/shutdown
+      available_sounds: audio/available_sounds
     outputs:
-      - my_output_id
       - slider_input
+      - play_requested_sound
 
   - id: audio
     path: nodes/audio/audio/main.py
     inputs:
-      play_sound: web/my_output_id
+      play_sound: web/play_requested_sound
 
   # - id: tracks
   #   path: nodes/tracks/tracks/main.py
