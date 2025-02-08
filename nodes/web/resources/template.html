@@ -118,6 +118,7 @@
         ws.binaryType = 'arraybuffer';
         ws.onopen = function() {
           updateStatus(true);
+          console.debug("Template: WebSocket connection opened");
         };
         ws.onclose = function() {
           updateStatus(false);
@@ -127,12 +128,14 @@
           ws.close();
         };
         ws.onmessage = function(event) {
+          console.debug("Template: WebSocket message received:", event);
           try {
               let rawData = event.data;
               if (typeof rawData !== "string") {
                   rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
               }
               var data = JSON.parse(rawData);
+              console.debug("Template: Parsed message:", data);
               updateUI(data);
           } catch(e) {
               console.log("Failed to parse JSON metrics:", e);

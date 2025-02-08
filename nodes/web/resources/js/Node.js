@@ -46,6 +46,7 @@ class Node {
     this.ws.onopen = () => {
       console.log("WebSocket connection opened");
       this.setWebsocket(this.ws);
+      console.debug("WebSocket debug: connected to", this.ws.url);
     };
     this.ws.onclose = () => {
       console.log("WebSocket connection closed, retrying in 1s");
@@ -56,12 +57,14 @@ class Node {
       this.ws.close();
     };
     this.ws.onmessage = (event) => {
+      console.debug("WebSocket message received:", event);
       try {
         let rawData = event.data;
         if (typeof rawData !== "string") {
           rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
         }
         const data = JSON.parse(rawData);
+        console.debug("Parsed message:", data);
         this.push_event(data);
       } catch (e) {
         console.log("Failed to parse message:", e);
