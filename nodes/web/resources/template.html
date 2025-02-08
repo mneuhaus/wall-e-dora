@@ -146,7 +146,16 @@
           }
         };
       }
-      // Moved sendSound to global scope
+      // Utility function to send messages in Arrow format
+      function sendArrowMessage(message) {
+        const table = arrow.tableFromJSON([message]);
+        arrow.RecordBatchWriter.writeAll(table).then(writer => {
+          const bytes = writer.toUint8Array();
+          ws.send(bytes.buffer);
+        }).catch(error => {
+          console.log("Error sending Arrow message:", error);
+        });
+      }
       function updateStatus(connected) {
         var statusIcon = document.getElementById('status-icon');
         if (connected) {
@@ -159,24 +168,22 @@
       }
       function sendSound(sound) {
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send('sound_click:' + sound);
+          sendArrowMessage({ action: "sound_click", value: sound });
         }
       }
       function sendButton() {
         if (ws && ws.readyState === WebSocket.OPEN) {
-          // For simplicity, send a JSON fallback
-          ws.send('button');
+          sendArrowMessage({ action: "button" });
         }
       }
       function sendSlider(value) {
         if (ws && ws.readyState === WebSocket.OPEN) {
-          // Example: send as text fallback
-          ws.send('slider:' + value);
+          sendArrowMessage({ action: "slider", value: value });
         }
       }
       function sendVolume(value) {
         if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send('set_volume:' + value);
+          sendArrowMessage({ action: "set_volume", value: value });
         }
       }
       connect();
