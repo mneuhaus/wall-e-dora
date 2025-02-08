@@ -180,9 +180,15 @@ async def index(request):
     return web.Response(text=html_content, content_type='text/html')
 
 async def broadcast_power_metrics():
+    safe_metrics = {}
+    for key, value in latest_power_metrics.items():
+        if isinstance(value, float) and (value == float("inf") or value != value):
+            safe_metrics[key] = "Infinity"
+        else:
+            safe_metrics[key] = value
     for ws in ws_clients.copy():
         if not ws.closed:
-            await ws.send_json(latest_power_metrics)
+            await ws.send_json(safe_metrics)
         else:
             ws_clients.discard(ws)
 
