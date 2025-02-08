@@ -94,9 +94,19 @@ def main():
     for event in node:
         if event["type"] == "INPUT":
             import pyarrow as pa
+            from dora import NodeCleanupHandle
             def convert(val):
-                return val.as_py() if hasattr(val, "as_py") else val
-            event_converted = {k: convert(v) for k, v in event.items()}
+                if hasattr(val, "__class__") and val.__class__.__name__ == "NodeCleanupHandle":
+                    return None
+                if hasattr(val, "as_py"):
+                    try:
+                        return val.as_py()
+                    except Exception:
+                        return str(val)
+                if isinstance(val, (int, float, str, bool)):
+                    return val
+                return str(val)
+            event_converted = {k: cv for k, cv in ((k, convert(v)) for k, v in event.items()) if cv is not None}
             batch = pa.RecordBatch.from_pydict({ k: [event_converted[k]] for k in event_converted })
             serialized = pa.ipc.serialize_record_batch(batch).to_buffer().to_pybytes()
             if web_loop is not None:
