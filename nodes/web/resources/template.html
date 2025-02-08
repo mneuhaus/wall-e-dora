@@ -74,8 +74,8 @@
     <script src="https://cdn.jsdelivr.net/npm/apache-arrow@11.0.0/dist/arrow.umd.min.js"></script>
     <script type="module">
       import { Node } from './js/Node.js';
-      const jsNode = new Node();
-      jsNode.send_output = function(output_id, data, metadata = {}) {
+      const node = new Node();
+      node.send_output = function(output_id, data, metadata = {}) {
           sendArrowMessage({ action: output_id, value: data });
       };
       var ws;
@@ -172,16 +172,16 @@
         }
       }
       function sendSound(sound) {
-          jsNode.send_output("sound_click", sound);
+          node.send_output("sound_click", sound);
       }
       function sendButton() {
-          jsNode.send_output("button", "");
+          node.send_output("button", "");
       }
       function sendSlider(value) {
-          jsNode.send_output("slider", value);
+          node.send_output("slider", value);
       }
       function sendVolume(value) {
-          jsNode.send_output("set_volume", value);
+          node.send_output("set_volume", value);
       }
       connect();
     </script>
