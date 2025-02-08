@@ -89,6 +89,7 @@
       function updateSoundList(sounds) {
         var soundsList = document.getElementById('sounds');
         soundsList.innerHTML = '';
+        if (!sounds || !Array.isArray(sounds)) return;
         sounds.forEach(function(sound) {
           var displayName = sound.replace(/\.mp3$/i, '');
           var item = document.createElement('md-list-item');
