@@ -42,19 +42,24 @@ def start_background_thread():
         bg_thread.start()
 
 def main():
-    # Check for 'move' command line argument to move tracks
-    if len(sys.argv) > 1 and sys.argv[1] == "move":
-        move_tracks()
+    try:
+        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_E6612483CB1A9621-if00', 115200, timeout=0)
+    except Exception as e:
+        print("Error opening serial port for writing:", e)
         return
 
     start_background_thread()
-    
+
     node = Node()
     
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 flush_serial_buffer()
+            elif event["id"] == "command":
+                cmd = event.get("command", "")
+                if cmd:
+                    ser.write((cmd + "\n").encode("utf-8"))
 
 
 if __name__ == "__main__":
