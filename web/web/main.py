@@ -52,86 +52,128 @@ async def index(request):
     <!DOCTYPE html>
     <html>
     <head>
-        <title>Web Control</title>
-        <style>
-            #status {
-                width: 20px;
-                height: 20px;
-                display: inline-block;
-                border: 1px solid #000;
-                border-radius: 50%;
-                margin-left: 10px;
-            }
-            #metrics {
-                margin-top: 20px;
-                font-family: monospace;
-            }
-        </style>
+      <title>Web Control</title>
+      <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        .status-bar {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-left {
+            display: flex;
+            align-items: center;
+        }
+        .status-icon {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: red;
+            margin-right: 10px;
+        }
+        .metrics-table {
+            color: #fff;
+            font-size: 14px;
+        }
+        .controls {
+            padding: 20px;
+        }
+        .metrics-table table {
+            border-collapse: collapse;
+        }
+        .metrics-table td {
+            padding: 2px 5px;
+        }
+      </style>
     </head>
     <body>
-        <h1>Web Control <span id="status" style="background-color: red;"></span></h1>
+      <div class="status-bar">
+        <div class="status-left">
+          <div id="status" class="status-icon"></div>
+          <div>Web Control</div>
+        </div>
+        <div class="metrics-table">
+          <table>
+            <tr>
+              <td>Voltage:</td>
+              <td id="voltage">-- V</td>
+            </tr>
+            <tr>
+              <td>Current:</td>
+              <td id="current">-- A</td>
+            </tr>
+            <tr>
+              <td>Power:</td>
+              <td id="power">-- W</td>
+            </tr>
+            <tr>
+              <td>SoC:</td>
+              <td id="soc">-- %</td>
+            </tr>
+            <tr>
+              <td>Runtime:</td>
+              <td id="runtime">-- s</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div class="controls">
         <button onclick="sendButton()">Press me</button>
         <br><br>
         <input type="range" min="0" max="100" value="50" id="slider" oninput="sendSlider(this.value)">
-        <div id="metrics">
-            <table border="1">
-                <tr>
-                    <th>Metric</th>
-                    <th>Value</th>
-                </tr>
-                <tr><td>Voltage</td><td id="voltage">--</td></tr>
-                <tr><td>Current</td><td id="current">--</td></tr>
-                <tr><td>Power</td><td id="power">--</td></tr>
-                <tr><td>SoC</td><td id="soc">--</td></tr>
-                <tr><td>Runtime</td><td id="runtime">--</td></tr>
-            </table>
-        </div>
-        <script>
-            var ws;
-            function updateMetrics(metrics) {
-                document.getElementById('voltage').innerText = metrics.voltage + " V";
-                document.getElementById('current').innerText = metrics.current + " A";
-                document.getElementById('power').innerText = metrics.power + " W";
-                document.getElementById('soc').innerText = metrics.soc + " %";
-                document.getElementById('runtime').innerText = metrics.runtime + " s";
-            }
-            function connect() {
-                ws = new WebSocket('ws://' + location.host + '/ws');
-                ws.onopen = function() {
-                    console.log('WebSocket connection established');
-                    document.getElementById('status').style.backgroundColor = 'green';
-                };
-                ws.onclose = function() {
-                    console.log('WebSocket connection closed, retrying...');
-                    document.getElementById('status').style.backgroundColor = 'red';
-                    setTimeout(connect, 1000);
-                };
-                ws.onerror = function(error) {
-                    console.log('WebSocket error:', error);
-                    ws.close();
-                };
-                ws.onmessage = function(event) {
-                    console.log('Message from server:', event.data);
-                    try {
-                        var metrics = JSON.parse(event.data);
-                        updateMetrics(metrics);
-                    } catch(e) {
-                        console.log("Failed to parse metrics:", e);
-                    }
-                };
-            }
-            connect();
-            function sendButton() {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send('button');
+      </div>
+      <script>
+        var ws;
+        function updateMetrics(metrics) {
+            document.getElementById('voltage').innerText = metrics.voltage + " V";
+            document.getElementById('current').innerText = metrics.current + " A";
+            document.getElementById('power').innerText = metrics.power + " W";
+            document.getElementById('soc').innerText = metrics.soc + " %";
+            document.getElementById('runtime').innerText = metrics.runtime + " s";
+        }
+        function connect() {
+            ws = new WebSocket('ws://' + location.host + '/ws');
+            ws.onopen = function() {
+                console.log('WebSocket connection established');
+                document.getElementById('status').style.backgroundColor = 'green';
+            };
+            ws.onclose = function() {
+                console.log('WebSocket connection closed, retrying...');
+                document.getElementById('status').style.backgroundColor = 'red';
+                setTimeout(connect, 1000);
+            };
+            ws.onerror = function(error) {
+                console.log('WebSocket error:', error);
+                ws.close();
+            };
+            ws.onmessage = function(event) {
+                console.log('Message from server:', event.data);
+                try {
+                    var metrics = JSON.parse(event.data);
+                    updateMetrics(metrics);
+                } catch(e) {
+                    console.log("Failed to parse metrics:", e);
                 }
+            };
+        }
+        connect();
+        function sendButton() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('button');
             }
-            function sendSlider(value) {
-                if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send('slider:' + value);
-                }
+        }
+        function sendSlider(value) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('slider:' + value);
             }
-        </script>
+        }
+      </script>
     </body>
     </html>
     """
