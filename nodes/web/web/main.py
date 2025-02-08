@@ -115,6 +115,10 @@ async def index(request):
               <md-slider id="slider" min="0" max="100" value="50" discrete onchange="sendSlider(this.value)"></md-slider>
             </div>
           </section>
+          <section id="sound-list">
+            <h2>Available Sounds</h2>
+            <ul id="sounds"></ul>
+          </section>
         </main>
         <script>
           var ws;
