@@ -73,9 +73,28 @@ async def index(request):
         <button onclick="sendButton()">Press me</button>
         <br><br>
         <input type="range" min="0" max="100" value="50" id="slider" oninput="sendSlider(this.value)">
-        <div id="metrics">No power data yet.</div>
+        <div id="metrics">
+            <table border="1">
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+                <tr><td>Voltage</td><td id="voltage">--</td></tr>
+                <tr><td>Current</td><td id="current">--</td></tr>
+                <tr><td>Power</td><td id="power">--</td></tr>
+                <tr><td>SoC</td><td id="soc">--</td></tr>
+                <tr><td>Runtime</td><td id="runtime">--</td></tr>
+            </table>
+        </div>
         <script>
             var ws;
+            function updateMetrics(metrics) {
+                document.getElementById('voltage').innerText = metrics.voltage + " V";
+                document.getElementById('current').innerText = metrics.current + " A";
+                document.getElementById('power').innerText = metrics.power + " W";
+                document.getElementById('soc').innerText = metrics.soc + " %";
+                document.getElementById('runtime').innerText = metrics.runtime + " s";
+            }
             function connect() {
                 ws = new WebSocket('ws://' + location.host + '/ws');
                 ws.onopen = function() {
@@ -95,12 +114,7 @@ async def index(request):
                     console.log('Message from server:', event.data);
                     try {
                         var metrics = JSON.parse(event.data);
-                        var html = "Voltage: " + metrics.voltage + " V<br>" +
-                                   "Current: " + metrics.current + " A<br>" +
-                                   "Power: " + metrics.power + " W<br>" +
-                                   "SoC: " + metrics.soc + " %<br>" +
-                                   "Runtime: " + metrics.runtime + " s";
-                        document.getElementById('metrics').innerHTML = html;
+                        updateMetrics(metrics);
                     } catch(e) {
                         console.log("Failed to parse metrics:", e);
                     }
