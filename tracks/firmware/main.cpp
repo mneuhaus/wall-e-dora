@@ -1,5 +1,6 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
+#include "hardware/pwm.h"
 
 int main() {
     stdio_init_all();
