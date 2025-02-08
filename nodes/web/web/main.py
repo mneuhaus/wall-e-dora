@@ -67,7 +67,7 @@ def start_background_webserver():
         app = web.Application()
         import os
         import jinja2
-        aiohttp_debugtoolbar.setup(app)
+        aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
         template_path = os.path.join(os.path.dirname(__file__), "..", "resources")
         app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
         app.router.add_get('/', index)
