@@ -104,9 +104,14 @@
         });
       }
       function updateUI(data) {
+        if (data.action) {
+          data = data.value;
+        }
         updateMetrics(data);
         updateSoundList(data.available_sounds);
-        document.getElementById('volume').value = data.volume;
+        if (data.volume !== undefined) {
+          document.getElementById('volume').value = data.volume;
+        }
       }
       function connect() {
         ws = new WebSocket('ws://' + location.host + '/ws');
