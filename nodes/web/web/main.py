@@ -1,5 +1,4 @@
 from dora import Node
-import pyarrow as pa
 import threading
 import asyncio
 import queue
@@ -130,25 +129,8 @@ def main():
     
     for event in node:
         if event["type"] == "INPUT":
-            import pyarrow as pa
-            def convert(val):
-                if "NodeCleanupHandle" in str(type(val)):
-                    return None
-                if hasattr(val, "as_py"):
-                    try:
-                        return val.as_py()
-                    except Exception:
-                        return str(val)
-                if isinstance(val, (int, float, str, bool)):
-                    return val
-                return str(val)
-            event_converted = {k: cv for k, cv in ((k, convert(v)) for k, v in event.items()) if cv is not None}
-            batch = pa.RecordBatch.from_pydict({ k: [event_converted[k]] for k in event_converted })
-            sink = pa.BufferOutputStream()
-            writer = pa.ipc.RecordBatchStreamWriter(sink, batch.schema)
-            writer.write_batch(batch)
-            writer.close()
-            serialized = sink.getvalue().to_pybytes()
+            import json
+            serialized = json.dumps(event).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
         elif "id" in event and event["id"] == "tick":

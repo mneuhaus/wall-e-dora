@@ -72,7 +72,6 @@
         <md-list id="sounds"></md-list>
       </section>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/apache-arrow@11.0.0/dist/arrow.umd.min.js"></script>
     <script type="module">
       import { Node } from './js/Node.js';
       import * as arrow from './node_modules/apache-arrow/Arrow.mjs';
@@ -123,33 +122,11 @@
           ws.close();
         };
         ws.onmessage = function(event) {
-          if (typeof event.data === "string") {
-            // Fallback: process as JSON
-            try {
+          try {
               var data = JSON.parse(event.data);
               updateUI(data);
-            } catch(e) {
+          } catch(e) {
               console.log("Failed to parse JSON metrics:", e);
-            }
-          } else {
-            // Process binary Arrow formatted message
-            try {
-              var bytes = new Uint8Array(event.data);
-              arrow.RecordBatchFileReader.from(bytes).then(function(reader) {
-                let batches = [];
-                for (const batch of reader) {
-                  batches.push(batch);
-                }
-                if (batches.length > 0) {
-                  let obj = batches[0].toObjects()[0];
-                  updateUI(obj);
-                }
-              }).catch(function(e) {
-                console.log("Failed to parse Arrow message:", e);
-              });
-            } catch(e) {
-              console.log("Error processing binary message:", e);
-            }
           }
         };
       }
