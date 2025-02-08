@@ -71,6 +71,19 @@ def main():
             if event["id"] == "scan_sounds":
                 available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
                 node.send_output("available_sounds", pa.array(available), metadata={})
+            elif event["id"] == "set_volume":
+                try:
+                    if hasattr(event["value"], "to_pylist"):
+                        vol = float(event["value"].to_pylist()[0])
+                    else:
+                        vol = float(event["value"])
+                    vol = max(0.0, min(1.0, vol))
+                    pygame.mixer.music.set_volume(vol)
+                    for i in range(pygame.mixer.get_num_channels()):
+                        pygame.mixer.Channel(i).set_volume(vol)
+                    node.send_output("volume", pa.array([vol]), metadata={})
+                except Exception as e:
+                    print("Error setting volume:", e)
 
 if __name__ == "__main__":
     main()
