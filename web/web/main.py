@@ -52,26 +52,45 @@ async def index(request):
     <!DOCTYPE html>
     <html>
       <head>
-        <!--Import Google Icon Font-->
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-        <!--Import materialize.css-->
-        <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.2.0/dist/css/materialize.min.css" media="screen,projection"/>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+        <script type="importmap">
+          {
+            "imports": {
+              "@material/web/": "https://esm.run/@material/web/"
+            }
+          }
+        </script>
+        <script type="module">
+          import '@material/web/all.js';
+          import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
+          document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+        </script>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Power Metrics</title>
+        <style>
+          body { margin:0; font-family: Roboto, sans-serif; }
+          .status-bar { display: flex; align-items: center; justify-content: space-between; background-color: #6200ee; color: white; padding: 10px 16px; }
+          .status-indicator { display: flex; align-items: center; }
+          .status-indicator span { margin-left: 8px; }
+          .metrics-table { margin: 16px 0; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { padding: 8px 12px; border-bottom: 1px solid #ddd; }
+          .controls { margin: 16px 0; }
+        </style>
       </head>
       <body>
-        <nav>
-          <div class="nav-wrapper teal">
-            <a href="#!" class="brand-logo center">Power Metrics</a>
-            <ul id="nav-mobile" class="right">
-              <li><span id="status" class="new badge red" data-badge-caption="Offline"></span></li>
-            </ul>
+        <header class="status-bar">
+          <div class="status-indicator">
+            <md-icon style="color: white;">power</md-icon>
+            <span>Power Metrics</span>
           </div>
-        </nav>
-        <div class="container">
-          <div class="section">
-            <h5>Metrics</h5>
-            <table class="highlight">
+          <div id="connection-status">
+            <md-icon id="status-icon" style="color: red;">cloud_off</md-icon>
+          </div>
+        </header>
+        <main class="container" style="padding: 16px;">
+          <section class="metrics-table">
+            <table>
               <thead>
                 <tr>
                   <th>Metric</th>
@@ -79,91 +98,72 @@ async def index(request):
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Voltage</td>
-                  <td id="voltage">-- V</td>
-                </tr>
-                <tr>
-                  <td>Current</td>
-                  <td id="current">-- A</td>
-                </tr>
-                <tr>
-                  <td>Power</td>
-                  <td id="power">-- W</td>
-                </tr>
-                <tr>
-                  <td>SoC</td>
-                  <td id="soc">-- %</td>
-                </tr>
-                <tr>
-                  <td>Runtime</td>
-                  <td id="runtime">-- s</td>
-                </tr>
+                <tr><td>Voltage</td><td id="voltage">-- V</td></tr>
+                <tr><td>Current</td><td id="current">-- A</td></tr>
+                <tr><td>Power</td><td id="power">-- W</td></tr>
+                <tr><td>SoC</td><td id="soc">-- %</td></tr>
+                <tr><td>Runtime</td><td id="runtime">-- s</td></tr>
               </tbody>
             </table>
-          </div>
-          <div class="section">
-            <h5>Controls</h5>
-            <a class="waves-effect waves-light btn" onclick="sendButton()">Press me</a>
-            <br><br>
-            <p class="range-field">
-              <input type="range" id="slider" min="0" max="100" value="50" onchange="sendSlider(this.value)"/>
-            </p>
-          </div>
-        </div>
-        <!--Import jQuery before materialize.js-->
-        <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.2.0/dist/js/materialize.min.js"></script>
+          </section>
+          <section class="controls">
+            <md-outlined-button onclick="sendButton()">Press me</md-outlined-button>
+            <div style="margin-top: 16px;">
+              <label for="slider">Adjust value:</label>
+              <md-slider id="slider" min="0" max="100" value="50" discrete onchange="sendSlider(this.value)"></md-slider>
+            </div>
+          </section>
+        </main>
         <script>
           var ws;
           function updateMetrics(metrics) {
-              document.getElementById('voltage').innerText = metrics.voltage + " V";
-              document.getElementById('current').innerText = metrics.current + " A";
-              document.getElementById('power').innerText = metrics.power + " W";
-              document.getElementById('soc').innerText = metrics.soc + " %";
-              document.getElementById('runtime').innerText = metrics.runtime + " s";
+            document.getElementById('voltage').innerText = metrics.voltage + " V";
+            document.getElementById('current').innerText = metrics.current + " A";
+            document.getElementById('power').innerText = metrics.power + " W";
+            document.getElementById('soc').innerText = metrics.soc + " %";
+            document.getElementById('runtime').innerText = metrics.runtime + " s";
           }
           function updateStatus(connected) {
-              var statusElem = document.getElementById('status');
-              if (connected) {
-                  statusElem.className = "new badge green";
-                  statusElem.setAttribute("data-badge-caption", "Online");
-              } else {
-                  statusElem.className = "new badge red";
-                  statusElem.setAttribute("data-badge-caption", "Offline");
-              }
+            var statusIcon = document.getElementById('status-icon');
+            if (connected) {
+              statusIcon.innerText = "cloud";
+              statusIcon.style.color = "green";
+            } else {
+              statusIcon.innerText = "cloud_off";
+              statusIcon.style.color = "red";
+            }
           }
           function connect() {
-              ws = new WebSocket('ws://' + location.host + '/ws');
-              ws.onopen = function() {
-                  updateStatus(true);
-              };
-              ws.onclose = function() {
-                  updateStatus(false);
-                  setTimeout(connect, 1000);
-              };
-              ws.onerror = function(error) {
-                  ws.close();
-              };
-              ws.onmessage = function(event) {
-                  try {
-                      var metrics = JSON.parse(event.data);
-                      updateMetrics(metrics);
-                  } catch(e) {
-                      console.log("Failed to parse metrics:", e);
-                  }
-              };
+            ws = new WebSocket('ws://' + location.host + '/ws');
+            ws.onopen = function() {
+              updateStatus(true);
+            };
+            ws.onclose = function() {
+              updateStatus(false);
+              setTimeout(connect, 1000);
+            };
+            ws.onerror = function(error) {
+              ws.close();
+            };
+            ws.onmessage = function(event) {
+              try {
+                var metrics = JSON.parse(event.data);
+                updateMetrics(metrics);
+              } catch(e) {
+                console.log("Failed to parse metrics:", e);
+              }
+            };
           }
           connect();
           function sendButton() {
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                  ws.send('button');
-              }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send('button');
+            }
           }
           function sendSlider(value) {
-              if (ws && ws.readyState === WebSocket.OPEN) {
-                  ws.send('slider:' + value);
-              }
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send('slider:' + value);
+            }
           }
         </script>
       </body>
