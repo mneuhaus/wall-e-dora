@@ -129,15 +129,8 @@
           }
         };
       }
-      // Utility function to send messages in Arrow format
-      function sendArrowMessage(message) {
-        const table = arrow.tableFromJSON([message]);
-        arrow.RecordBatchWriter.writeAll(table).then(writer => {
-          const bytes = writer.toUint8Array();
-          ws.send(bytes.buffer);
-        }).catch(error => {
-          console.log("Error sending Arrow message:", error);
-        });
+      function sendJsonMessage(message) {
+          ws.send(JSON.stringify(message));
       }
       function updateStatus(connected) {
         var statusIcon = document.getElementById('status-icon');
