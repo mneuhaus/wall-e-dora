@@ -73,9 +73,9 @@ def start_background_webserver():
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
-        js_path = os.path.join(os.path.dirname(__file__), "js")
+        js_path = os.path.join(os.path.dirname(__file__), "..", "js")
         if os.path.exists(js_path):
-            app.router.add_static('/js/', path=js_path, name='js')
+            app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
