@@ -79,6 +79,12 @@ def start_background_webserver():
             app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
         else:
             print("DEBUG: Static JS files NOT found at:", js_path)
+        static_path = os.path.join(os.path.dirname(__file__), "..", "static")
+        if os.path.exists(static_path):
+            print("DEBUG: Static files found at:", static_path)
+            app.router.add_static('/static', path=static_path, name='static')
+        else:
+            print("DEBUG: Static files NOT found at:", static_path)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
