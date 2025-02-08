@@ -56,8 +56,8 @@ class Node {
       console.error("WebSocket error:", error);
       this.ws.close();
     };
-    this.ws.onmessage = (event) => {
-      console.debug("WebSocket message received:", event);
+    this.ws.addEventListener('message', (event) => {
+      console.debug("WebSocket message received via addEventListener:", event);
       try {
         let rawData = event.data;
         if (typeof rawData !== "string") {
@@ -69,7 +69,7 @@ class Node {
       } catch (e) {
         console.log("Failed to parse message:", e);
       }
-    };
+    });
   }
 
   // For testing: method to simulate receiving an event
