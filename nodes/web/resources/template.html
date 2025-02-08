@@ -64,7 +64,7 @@
       </section>
       <section id="sound-list">
         <h2>Available Sounds</h2>
-        <ul id="sounds"></ul>
+        <md-list id="sounds"></md-list>
       </section>
     </main>
     <script>
@@ -115,11 +115,16 @@
           var soundsList = document.getElementById('sounds');
           soundsList.innerHTML = '';
           sounds.forEach(function(sound) {
-            var li = document.createElement('li');
-            li.innerText = sound;
-            li.style.cursor = 'pointer';
-            li.onclick = function() { sendSound(sound); };
-            soundsList.appendChild(li);
+            var displayName = sound.replace(/\.mp3$/i, '');
+            var item = document.createElement('md-list-item');
+            item.setAttribute('type', 'button');
+            var headline = document.createElement('div');
+            headline.setAttribute('slot', 'headline');
+            headline.innerText = displayName;
+            item.appendChild(headline);
+            item.style.cursor = 'pointer';
+            item.onclick = function() { sendSound(sound); };
+            soundsList.appendChild(item);
           });
         }
         function sendSound(sound) {
