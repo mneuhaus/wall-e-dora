@@ -122,7 +122,11 @@
         };
         ws.onmessage = function(event) {
           try {
-              var data = JSON.parse(event.data);
+              let rawData = event.data;
+              if (typeof rawData !== "string") {
+                  rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
+              }
+              var data = JSON.parse(rawData);
               updateUI(data);
           } catch(e) {
               console.log("Failed to parse JSON metrics:", e);
