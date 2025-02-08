@@ -51,130 +51,122 @@ async def index(request):
     html_content = """
     <!DOCTYPE html>
     <html>
-    <head>
-      <title>Web Control</title>
-      <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
-        .status-bar {
-            background-color: #333;
-            color: #fff;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .status-left {
-            display: flex;
-            align-items: center;
-        }
-        .status-icon {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            background-color: red;
-            margin-right: 10px;
-        }
-        .metrics-table {
-            color: #fff;
-            font-size: 14px;
-        }
-        .controls {
-            padding: 20px;
-        }
-        .metrics-table table {
-            border-collapse: collapse;
-        }
-        .metrics-table td {
-            padding: 2px 5px;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="status-bar">
-        <div class="status-left">
-          <div id="status" class="status-icon"></div>
-          <div>Web Control</div>
+      <head>
+        <!--Import Google Icon Font-->
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <!--Import materialize.css-->
+        <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.2.0/dist/css/materialize.min.css" media="screen,projection"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Power Metrics</title>
+      </head>
+      <body>
+        <nav>
+          <div class="nav-wrapper teal">
+            <a href="#!" class="brand-logo center">Power Metrics</a>
+            <ul id="nav-mobile" class="right">
+              <li><span id="status" class="new badge red" data-badge-caption="Offline"></span></li>
+            </ul>
+          </div>
+        </nav>
+        <div class="container">
+          <div class="section">
+            <h5>Metrics</h5>
+            <table class="highlight">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Voltage</td>
+                  <td id="voltage">-- V</td>
+                </tr>
+                <tr>
+                  <td>Current</td>
+                  <td id="current">-- A</td>
+                </tr>
+                <tr>
+                  <td>Power</td>
+                  <td id="power">-- W</td>
+                </tr>
+                <tr>
+                  <td>SoC</td>
+                  <td id="soc">-- %</td>
+                </tr>
+                <tr>
+                  <td>Runtime</td>
+                  <td id="runtime">-- s</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="section">
+            <h5>Controls</h5>
+            <a class="waves-effect waves-light btn" onclick="sendButton()">Press me</a>
+            <br><br>
+            <p class="range-field">
+              <input type="range" id="slider" min="0" max="100" value="50" onchange="sendSlider(this.value)"/>
+            </p>
+          </div>
         </div>
-        <div class="metrics-table">
-          <table>
-            <tr>
-              <td>Voltage:</td>
-              <td id="voltage">-- V</td>
-            </tr>
-            <tr>
-              <td>Current:</td>
-              <td id="current">-- A</td>
-            </tr>
-            <tr>
-              <td>Power:</td>
-              <td id="power">-- W</td>
-            </tr>
-            <tr>
-              <td>SoC:</td>
-              <td id="soc">-- %</td>
-            </tr>
-            <tr>
-              <td>Runtime:</td>
-              <td id="runtime">-- s</td>
-            </tr>
-          </table>
-        </div>
-      </div>
-      <div class="controls">
-        <button onclick="sendButton()">Press me</button>
-        <br><br>
-        <input type="range" min="0" max="100" value="50" id="slider" oninput="sendSlider(this.value)">
-      </div>
-      <script>
-        var ws;
-        function updateMetrics(metrics) {
-            document.getElementById('voltage').innerText = metrics.voltage + " V";
-            document.getElementById('current').innerText = metrics.current + " A";
-            document.getElementById('power').innerText = metrics.power + " W";
-            document.getElementById('soc').innerText = metrics.soc + " %";
-            document.getElementById('runtime').innerText = metrics.runtime + " s";
-        }
-        function connect() {
-            ws = new WebSocket('ws://' + location.host + '/ws');
-            ws.onopen = function() {
-                console.log('WebSocket connection established');
-                document.getElementById('status').style.backgroundColor = 'green';
-            };
-            ws.onclose = function() {
-                console.log('WebSocket connection closed, retrying...');
-                document.getElementById('status').style.backgroundColor = 'red';
-                setTimeout(connect, 1000);
-            };
-            ws.onerror = function(error) {
-                console.log('WebSocket error:', error);
-                ws.close();
-            };
-            ws.onmessage = function(event) {
-                console.log('Message from server:', event.data);
-                try {
-                    var metrics = JSON.parse(event.data);
-                    updateMetrics(metrics);
-                } catch(e) {
-                    console.log("Failed to parse metrics:", e);
-                }
-            };
-        }
-        connect();
-        function sendButton() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('button');
-            }
-        }
-        function sendSlider(value) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('slider:' + value);
-            }
-        }
-      </script>
-    </body>
+        <!--Import jQuery before materialize.js-->
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@materializecss/materialize@2.2.0/dist/js/materialize.min.js"></script>
+        <script>
+          var ws;
+          function updateMetrics(metrics) {
+              document.getElementById('voltage').innerText = metrics.voltage + " V";
+              document.getElementById('current').innerText = metrics.current + " A";
+              document.getElementById('power').innerText = metrics.power + " W";
+              document.getElementById('soc').innerText = metrics.soc + " %";
+              document.getElementById('runtime').innerText = metrics.runtime + " s";
+          }
+          function updateStatus(connected) {
+              var statusElem = document.getElementById('status');
+              if (connected) {
+                  statusElem.className = "new badge green";
+                  statusElem.setAttribute("data-badge-caption", "Online");
+              } else {
+                  statusElem.className = "new badge red";
+                  statusElem.setAttribute("data-badge-caption", "Offline");
+              }
+          }
+          function connect() {
+              ws = new WebSocket('ws://' + location.host + '/ws');
+              ws.onopen = function() {
+                  updateStatus(true);
+              };
+              ws.onclose = function() {
+                  updateStatus(false);
+                  setTimeout(connect, 1000);
+              };
+              ws.onerror = function(error) {
+                  ws.close();
+              };
+              ws.onmessage = function(event) {
+                  try {
+                      var metrics = JSON.parse(event.data);
+                      updateMetrics(metrics);
+                  } catch(e) {
+                      console.log("Failed to parse metrics:", e);
+                  }
+              };
+          }
+          connect();
+          function sendButton() {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send('button');
+              }
+          }
+          function sendSlider(value) {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                  ws.send('slider:' + value);
+              }
+          }
+        </script>
+      </body>
     </html>
     """
     return web.Response(text=html_content, content_type='text/html')
