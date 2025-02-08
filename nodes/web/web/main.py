@@ -11,6 +11,7 @@ from aiohttp import web
 global_web_inputs = []
 latest_power_metrics = {}
 latest_available_sounds = []
+latest_volume = 1.0
 ws_clients = set()
 web_loop = None
 
@@ -68,6 +69,7 @@ async def broadcast_power_metrics():
         else:
             safe_metrics[key] = value
     safe_metrics["available_sounds"] = latest_available_sounds
+    safe_metrics["volume"] = latest_volume
     for ws in ws_clients.copy():
         if not ws.closed:
             await ws.send_json(safe_metrics)
@@ -112,6 +114,11 @@ def main():
             elif event["id"] == "available_sounds":
                 global latest_available_sounds
                 latest_available_sounds = event["value"].to_pylist()
+                if web_loop is not None:
+                    asyncio.run_coroutine_threadsafe(broadcast_power_metrics(), web_loop)
+            elif event["id"] == "volume":
+                global latest_volume
+                latest_volume = event["value"][0].as_py()
                 if web_loop is not None:
                     asyncio.run_coroutine_threadsafe(broadcast_power_metrics(), web_loop)
             elif event["id"] == "tick":

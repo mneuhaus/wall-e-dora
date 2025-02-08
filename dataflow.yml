@@ -38,8 +38,10 @@ nodes:
     inputs:
       play_sound: web/play_requested_sound
       scan_sounds: dora/timer/secs/3
+      volume_tick: dora/timer/secs/1
     outputs:
       - available_sounds
+      - volume
 
   # - id: tracks
   #   path: nodes/tracks/tracks/main.py

@@ -84,6 +84,9 @@ def main():
                     node.send_output("volume", pa.array([vol]), metadata={})
                 except Exception as e:
                     print("Error setting volume:", e)
+            elif event["id"] == "volume_tick":
+                vol = pygame.mixer.music.get_volume()
+                node.send_output("volume", pa.array([vol]), metadata={})
 
 if __name__ == "__main__":
     main()
