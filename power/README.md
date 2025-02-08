@@ -27,40 +27,25 @@ The power package provides battery monitoring and power management for the Wall-
 | Capacity         | 2.5Ah | Per cell capacity        |
 | Shutdown Threshold| 10%   | Auto shutdown trigger    |
 
-## ROS2 Interface
+## DORA Node Information
 
-### Node: power_monitor
-The main node providing power monitoring functionality.
+The power package includes a dora node that monitors battery status using an INA226 sensor. It publishes data outputs for:
+- Voltage (V)
+- Current (A)
+- Power (W)
+- State of Charge (SOC)
+- Estimated runtime in seconds
 
-### Published Topics
-| Topic           | Type                  | Description          |
-|-----------------|----------------------|---------------------|
-| /battery_state  | sensor_msgs/BatteryState | Battery status info |
-
-### Parameters
-None currently implemented.
-
-### Services Used
-| Service    | Type            | Description        |
-|-----------|-----------------|-------------------|
-| /shutdown | std_srvs/Trigger| System shutdown    |
-
-## Usage
-
-1. Start the power monitor:
+To run the node, use the provided script:
 ```bash
-ros2 run power power_monitor
+power
+```
+or
+```bash
+python -m power.main
 ```
 
-2. Monitor battery state:
-```bash
-ros2 topic echo /battery_state
-```
-
-3. View power statistics:
-```bash
-ros2 topic hz /battery_state
-```
+The node is integrated into the Dora dataflow framework and communicates with other nodes via Apache Arrow arrays.
 
 ## Battery State Message
 The node publishes BatteryState messages with:
