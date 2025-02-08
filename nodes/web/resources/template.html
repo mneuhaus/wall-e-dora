@@ -74,10 +74,9 @@
     </main>
     <script type="module">
       import { Node } from './js/Node.js';
-      import * as arrow from './node_modules/apache-arrow/Arrow.mjs';
       const node = new Node();
       node.send_output = function(output_id, data, metadata = {}) {
-          sendArrowMessage({ action: output_id, value: data });
+          sendJsonMessage({ action: output_id, value: data });
       };
       var ws;
       function updateMetrics(metrics) {
