@@ -72,7 +72,12 @@
       </section>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/apache-arrow@11.0.0/dist/arrow.umd.min.js"></script>
-    <script>
+    <script type="module">
+      import { Node } from './js/Node.js';
+      const jsNode = new Node();
+      jsNode.send_output = function(output_id, data, metadata = {}) {
+          sendArrowMessage({ action: output_id, value: data });
+      };
       var ws;
       function updateMetrics(metrics) {
         document.getElementById('voltage').innerText = metrics.voltage + " V";
@@ -167,24 +172,16 @@
         }
       }
       function sendSound(sound) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          sendArrowMessage({ action: "sound_click", value: sound });
-        }
+          jsNode.send_output("sound_click", sound);
       }
       function sendButton() {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          sendArrowMessage({ action: "button" });
-        }
+          jsNode.send_output("button", "");
       }
       function sendSlider(value) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          sendArrowMessage({ action: "slider", value: value });
-        }
+          jsNode.send_output("slider", value);
       }
       function sendVolume(value) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          sendArrowMessage({ action: "set_volume", value: value });
-        }
+          jsNode.send_output("set_volume", value);
       }
       connect();
     </script>
