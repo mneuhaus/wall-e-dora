@@ -8,6 +8,7 @@ from aiohttp import web
 
 global_web_inputs = []
 latest_power_metrics = {}
+latest_available_sounds = []
 ws_clients = set()
 web_loop = None
 
@@ -205,6 +206,7 @@ async def broadcast_power_metrics():
             safe_metrics[key] = "Infinity"
         else:
             safe_metrics[key] = value
+    safe_metrics["available_sounds"] = latest_available_sounds
     for ws in ws_clients.copy():
         if not ws.closed:
             await ws.send_json(safe_metrics)
@@ -240,6 +242,11 @@ def main():
         if event["type"] == "INPUT":
             if event["id"] in ("voltage", "current", "power", "soc", "runtime"):
                 latest_power_metrics[event["id"]] = event["value"][0].as_py()
+                if web_loop is not None:
+                    asyncio.run_coroutine_threadsafe(broadcast_power_metrics(), web_loop)
+            elif event["id"] == "available_sounds":
+                global latest_available_sounds
+                latest_available_sounds = event["value"].to_pylist()
                 if web_loop is not None:
                     asyncio.run_coroutine_threadsafe(broadcast_power_metrics(), web_loop)
             elif event["id"] == "tick":
