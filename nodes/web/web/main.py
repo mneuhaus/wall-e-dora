@@ -84,7 +84,6 @@ async def broadcast_bytes(data_bytes):
 
 def start_background_webserver():
     async def init_app():
-        print('woop')
         app = web.Application()
         import os
         import jinja2
@@ -94,18 +93,13 @@ def start_background_webserver():
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
-        js_path = os.path.join(os.path.dirname(__file__), "..", "js")
+        js_path = os.path.join(os.path.dirname(__file__), "..", "resources/js")
+        print(js_path)
         if os.path.exists(js_path):
             print("DEBUG: Static JS files found at: " + str(js_path))
             app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
         else:
             print("DEBUG: Static JS files NOT found at: " + str(js_path))
-        static_path = os.path.join(os.path.dirname(__file__), "..", "static")
-        if os.path.exists(static_path):
-            print("DEBUG: Static files found at: " + str(static_path))
-            app.router.add_static('/static', path=static_path, name='static')
-        else:
-            print("DEBUG: Static files NOT found at: " + str(static_path))
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
