@@ -170,13 +170,12 @@ def main():
     node = Node()
 
     for event in node:
-        if event["type"] == "OUTPUT":
+        if event["type"] == "INPUT":
             if event["id"] in ("voltage", "current", "power", "soc", "runtime"):
-                latest_power_metrics[event["id"]] = event["data"].to_pylist()[0]
+                latest_power_metrics[event["id"]] = event["value"][0].as_py()
                 if web_loop is not None:
                     asyncio.run_coroutine_threadsafe(broadcast_power_metrics(), web_loop)
-        elif event["type"] == "INPUT":
-            if event["id"] == "tick":
+            elif event["id"] == "tick":
                 flush_web_inputs(node)
 
 
