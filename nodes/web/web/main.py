@@ -95,9 +95,8 @@ def main():
     for event in node:
         if event["type"] == "INPUT":
             import pyarrow as pa
-            from dora import NodeCleanupHandle
             def convert(val):
-                if hasattr(val, "__class__") and val.__class__.__name__ == "NodeCleanupHandle":
+                if "NodeCleanupHandle" in str(type(val)):
                     return None
                 if hasattr(val, "as_py"):
                     try:
