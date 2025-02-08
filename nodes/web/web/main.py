@@ -47,6 +47,8 @@ async def websocket_handler(request):
                         global_web_inputs.append({"action": "button"})
                     elif data[0] == "slider" and len(data) > 1:
                         global_web_inputs.append({"action": "slider", "value": data[1]})
+                    elif data[0] == "sound_click" and len(data) > 1:
+                        global_web_inputs.append({"action": "sound_click", "value": data[1]})
                 except Exception as e:
                     print("Error processing websocket message", e)
     finally:
