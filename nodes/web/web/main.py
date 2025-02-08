@@ -100,7 +100,7 @@ def main():
     node = Node()
     
     for event in node:
-        if event["type"] == "INPUT" and not ("id" in event and event["id"] == "tick"):
+        if event["type"] == "INPUT" and not ("id" in event and (event["id"] == "tick" or event["id"] == "runtime")):
             serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
