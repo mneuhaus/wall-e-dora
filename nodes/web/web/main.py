@@ -6,7 +6,7 @@ import queue
 import os
 import jinja2
 from aiohttp import web
-
+import aiohttp_debugtoolbar
 
 global_web_inputs = []
 latest_power_metrics = {}
@@ -67,6 +67,7 @@ def start_background_webserver():
         app = web.Application()
         import os
         import jinja2
+        aiohttp_debugtoolbar.setup(app)
         template_path = os.path.join(os.path.dirname(__file__), "..", "resources")
         app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
         app.router.add_get('/', index)
