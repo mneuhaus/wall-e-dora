@@ -1,18 +1,18 @@
 nodes:
   - id: listener_1
-    path: listener-1/listener_1/main.py
+    path: nodes/listener-1/listener_1/main.py
     inputs:
       speech-2: web/my_output_id
 
   # - id: gamepad
-  #   path: gamepad/gamepad/main.py
+  #   path: nodes/gamepad/gamepad/main.py
   #   inputs:
   #     tick: dora/timer/millis/100
   #   outputs:
   #     - gamepad_input
 
   - id: power
-    path: power/power/main.py
+    path: nodes/power/power/main.py
     inputs:
       tick: dora/timer/secs/10
     outputs:
@@ -24,7 +24,7 @@ nodes:
       - shutdown
 
   - id: web
-    path: web/web/main.py
+    path: nodes/web/web/main.py
     inputs:
       tick: dora/timer/millis/100
       voltage: power/voltage
@@ -38,7 +38,7 @@ nodes:
       - slider_input
 
   # - id: tracks
-  #   path: tracks/tracks/main.py
+  #   path: nodes/tracks/tracks/main.py
   #   inputs:
   #     tick: dora/timer/millis/100
   #   outputs:
