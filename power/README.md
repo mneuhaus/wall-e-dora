@@ -120,3 +120,47 @@ The power monitoring system uses the following LED patterns:
 2. Monitor temperature during high current draw
 3. Ensure proper ventilation
 4. Regular calibration checks recommended
+
+## Example Dataflow Configuration
+
+Below is an example dataflow configuration integrating the power node, web node, and listener node:
+
+```yaml
+nodes:
+  - id: listener_1
+    path: listener-1/listener_1/main.py
+    inputs:
+      speech-2: web/my_output_id
+
+  - id: power
+    path: power/power/main.py
+    inputs:
+      tick: dora/timer/secs/10
+    outputs:
+      - voltage
+      - current
+      - power
+      - soc
+      - runtime
+      - shutdown
+
+  - id: web
+    path: web/web/main.py
+    inputs:
+      tick: dora/timer/millis/100
+      voltage: power/voltage
+      current: power/current
+      power: power/power
+      soc: power/soc
+      runtime: power/runtime
+      shutdown: power/shutdown
+    outputs:
+      - my_output_id
+      - slider_input
+```
+
+You can run this configuration with:
+
+```bash
+dora run dataflow.yml --name my_power_flow
+```
