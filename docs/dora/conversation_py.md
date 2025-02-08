@@ -165,3 +165,96 @@ sidebar_position: 1
 7. Conclusion
 
    Well done reaching the end of this tutorial! You've learned to create and run a custom Dora dataflow, integrating a talker and listener node. This setup forms the foundation for more complex dataflows. For further exploration, consider experimenting with different data types or exploring Dora's advanced features. More tutorials coming soon!
+
+8. Example
+
+## PID Controller
+
+```yaml
+nodes:
+  - id: oasis_agent
+    custom:
+      inputs:
+        control: pid_control_op/control
+        tick: dora/timer/millis/400
+      outputs:
+        - position
+        - speed
+        - image
+        - objective_waypoints
+        - lidar_pc
+        - opendrive
+      source: shell
+      # args: >
+      #   python3 $SIMULATE --output
+      #   --oasJson --criteriaConfig $CRITERIA
+      #   --openscenario $XOSC
+      #   --agent $TEAM_AGENT
+      #   --agentConfig $TEAM_AGENT_CONF
+      #   --destination $DESTINATION
+      #
+      # or for Carla Standalone:
+      #
+      args: python3 ../../carla/carla_source_node.py
+
+  - id: carla_gps_op
+    operator:
+      python: ../../carla/carla_gps_op.py
+      outputs:
+        - gps_waypoints
+      inputs:
+        opendrive: oasis_agent/opendrive
+        objective_waypoints: oasis_agent/objective_waypoints
+        position: oasis_agent/position
+
+  - id: yolov5
+    operator:
+      outputs:
+        - bbox
+      inputs:
+        image: oasis_agent/image
+      python: ../../operators/yolov5_op.py
+
+  - id: obstacle_location_op
+    operator:
+      outputs:
+        - obstacles
+      inputs:
+        lidar_pc: oasis_agent/lidar_pc
+        obstacles_bbox: yolov5/bbox
+        position: oasis_agent/position
+      python: ../../operators/obstacle_location_op.py
+
+  - id: fot_op
+    operator:
+      python: ../../operators/fot_op.py
+      outputs:
+        - waypoints
+      inputs:
+        position: oasis_agent/position
+        speed: oasis_agent/speed
+        obstacles: obstacle_location_op/obstacles
+        gps_waypoints: carla_gps_op/gps_waypoints
+
+  - id: pid_control_op
+    operator:
+      python: ../../operators/pid_control_op.py
+      outputs:
+        - control
+      inputs:
+        position: oasis_agent/position
+        speed: oasis_agent/speed
+        waypoints: fot_op/waypoints
+
+  - id: plot
+    operator:
+      python: ../../operators/plot.py
+      inputs:
+        image: oasis_agent/image
+        obstacles_bbox: yolov5/bbox
+        obstacles: obstacle_location_op/obstacles
+        gps_waypoints: carla_gps_op/gps_waypoints
+        position: oasis_agent/position
+        waypoints: fot_op/waypoints
+        control: pid_control_op/control
+```
