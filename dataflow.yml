@@ -27,6 +27,12 @@ nodes:
     path: web/web/main.py
     inputs:
       tick: dora/timer/millis/100
+      voltage: power/voltage
+      current: power/current
+      power: power/power
+      soc: power/soc
+      runtime: power/runtime
+      shutdown: power/shutdown
     outputs:
       - my_output_id
       - slider_input
