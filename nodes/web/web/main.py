@@ -108,7 +108,11 @@ def main():
                 return str(val)
             event_converted = {k: cv for k, cv in ((k, convert(v)) for k, v in event.items()) if cv is not None}
             batch = pa.RecordBatch.from_pydict({ k: [event_converted[k]] for k in event_converted })
-            serialized = pa.ipc.serialize_record_batch(batch).to_buffer().to_pybytes()
+            sink = pa.BufferOutputStream()
+            writer = pa.ipc.RecordBatchStreamWriter(sink, batch.schema)
+            writer.write_batch(batch)
+            writer.close()
+            serialized = sink.getvalue().to_pybytes()
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
         elif event["id"] == "tick":
