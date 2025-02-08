@@ -42,16 +42,32 @@ async def websocket_handler(request):
         async for msg in ws:
             if msg.type == web.WSMsgType.TEXT:
                 try:
-                    # Expect messages in the format "button" or "slider:<value>"
-                    data = msg.data.strip().split(":")
-                    if data[0] == "button":
+                    // Fallback for text messages
+                    let data = msg.data.trim().split(":");
+                    if (data[0] === "button") {
+                        global_web_inputs.append({"action": "button"});
+                    } else if (data[0] === "slider" && data.length > 1) {
+                        global_web_inputs.append({"action": "slider", "value": data[1]});
+                    } else if (data[0] === "sound_click" && data.length > 1) {
+                        global_web_inputs.append({"action": "sound_click", "value": data[1]});
+                    }
+                } catch (e) {
+                    print("Error processing text websocket message", e);
+                }
+            } else if msg.type == web.WSMsgType.BINARY:
+                try:
+                    import pyarrow as pa
+                    buf = pa.BufferReader(msg.data)
+                    batch = pa.ipc.read_record_batch(buf)
+                    row = {k: v[0] for k, v in batch.to_pydict().items()}
+                    if row.get("action") == "button":
                         global_web_inputs.append({"action": "button"})
-                    elif data[0] == "slider" and len(data) > 1:
-                        global_web_inputs.append({"action": "slider", "value": data[1]})
-                    elif data[0] == "sound_click" and len(data) > 1:
-                        global_web_inputs.append({"action": "sound_click", "value": data[1]})
+                    elif row.get("action") == "slider" and "value" in row:
+                        global_web_inputs.append({"action": "slider", "value": row["value"]})
+                    elif row.get("action") == "sound_click" and "value" in row:
+                        global_web_inputs.append({"action": "sound_click", "value": row["value"]})
                 except Exception as e:
-                    print("Error processing websocket message", e)
+                    print("Error processing binary websocket message", e)
     finally:
         ws_clients.discard(ws)
     return ws
@@ -62,6 +78,7 @@ async def index(request):
     return web.Response(text=rendered, content_type='text/html')
 
 async def broadcast_power_metrics():
+    import pyarrow as pa
     safe_metrics = {}
     for key, value in latest_power_metrics.items():
         if isinstance(value, float) and (value == float("inf") or value != value):
@@ -70,9 +87,12 @@ async def broadcast_power_metrics():
             safe_metrics[key] = value
     safe_metrics["available_sounds"] = latest_available_sounds
     safe_metrics["volume"] = latest_volume
+    # Wrap each value in a list to form a record batch with one row
+    batch = pa.RecordBatch.from_pydict({k: [v] for k, v in safe_metrics.items()})
+    serialized = pa.ipc.serialize_record_batch(batch).to_buffer().to_pybytes()
     for ws in ws_clients.copy():
         if not ws.closed:
-            await ws.send_json(safe_metrics)
+            await ws.send_bytes(serialized)
         else:
             ws_clients.discard(ws)
 

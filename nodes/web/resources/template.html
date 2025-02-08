@@ -71,6 +71,7 @@
         <md-list id="sounds"></md-list>
       </section>
     </main>
+    <script src="https://cdn.jsdelivr.net/npm/apache-arrow@11.0.0/dist/arrow.umd.min.js"></script>
     <script>
       var ws;
       function updateMetrics(metrics) {
@@ -80,18 +81,30 @@
         document.getElementById('soc').innerText = metrics.soc + " %";
         document.getElementById('runtime').innerText = metrics.runtime + " s";
       }
-      function updateStatus(connected) {
-        var statusIcon = document.getElementById('status-icon');
-        if (connected) {
-          statusIcon.innerText = "cloud";
-          statusIcon.style.color = "green";
-        } else {
-          statusIcon.innerText = "cloud_off";
-          statusIcon.style.color = "red";
-        }
+      function updateSoundList(sounds) {
+        var soundsList = document.getElementById('sounds');
+        soundsList.innerHTML = '';
+        sounds.forEach(function(sound) {
+          var displayName = sound.replace(/\.mp3$/i, '');
+          var item = document.createElement('md-list-item');
+          item.setAttribute('type', 'button');
+          var headline = document.createElement('div');
+          headline.setAttribute('slot', 'headline');
+          headline.innerText = displayName;
+          item.appendChild(headline);
+          item.style.cursor = 'pointer';
+          item.onclick = function() { sendSound(sound); };
+          soundsList.appendChild(item);
+        });
+      }
+      function updateUI(data) {
+        updateMetrics(data);
+        updateSoundList(data.available_sounds);
+        document.getElementById('volume').value = data.volume;
       }
       function connect() {
         ws = new WebSocket('ws://' + location.host + '/ws');
+        ws.binaryType = 'arraybuffer';
         ws.onopen = function() {
           updateStatus(true);
         };
@@ -103,48 +116,63 @@
           ws.close();
         };
         ws.onmessage = function(event) {
-          try {
-            var data = JSON.parse(event.data);
-            if (data.hasOwnProperty("available_sounds")) {
-              updateSoundList(data.available_sounds);
+          if (typeof event.data === "string") {
+            // Fallback: process as JSON
+            try {
+              var data = JSON.parse(event.data);
+              updateUI(data);
+            } catch(e) {
+              console.log("Failed to parse JSON metrics:", e);
             }
-            if (data.hasOwnProperty("voltage")) {
-              updateMetrics(data);
+          } else {
+            // Process binary Arrow formatted message
+            try {
+              var bytes = new Uint8Array(event.data);
+              arrow.RecordBatchFileReader.from(bytes).then(function(reader) {
+                let batches = [];
+                for (const batch of reader) {
+                  batches.push(batch);
+                }
+                if (batches.length > 0) {
+                  let obj = batches[0].toObjects()[0];
+                  updateUI(obj);
+                }
+              }).catch(function(e) {
+                console.log("Failed to parse Arrow message:", e);
+              });
+            } catch(e) {
+              console.log("Error processing binary message:", e);
             }
-          } catch(e) {
-            console.log("Failed to parse metrics:", e);
           }
         };
-        function updateSoundList(sounds) {
-          var soundsList = document.getElementById('sounds');
-          soundsList.innerHTML = '';
-          sounds.forEach(function(sound) {
-            var displayName = sound.replace(/\.mp3$/i, '');
-            var item = document.createElement('md-list-item');
-            item.setAttribute('type', 'button');
-            var headline = document.createElement('div');
-            headline.setAttribute('slot', 'headline');
-            headline.innerText = displayName;
-            item.appendChild(headline);
-            item.style.cursor = 'pointer';
-            item.onclick = function() { sendSound(sound); };
-            soundsList.appendChild(item);
-          });
-        }
         function sendSound(sound) {
           if (ws && ws.readyState === WebSocket.OPEN) {
+            // Fallback: send as text message
             ws.send('sound_click:' + sound);
           }
         }
       }
-      connect();
+      function updateStatus(connected) {
+        var statusIcon = document.getElementById('status-icon');
+        if (connected) {
+          statusIcon.innerText = "cloud";
+          statusIcon.style.color = "green";
+        } else {
+          statusIcon.innerText = "cloud_off";
+          statusIcon.style.color = "red";
+        }
+      }
       function sendButton() {
         if (ws && ws.readyState === WebSocket.OPEN) {
+          // Example of sending an Arrow formatted message for a button action
+          const fb = arrow.RecordBatchWriter.throughDOMStream();
+          // For simplicity, we'll send a JSON fallback here.
           ws.send('button');
         }
       }
       function sendSlider(value) {
         if (ws && ws.readyState === WebSocket.OPEN) {
+          // Example: send as text fallback
           ws.send('slider:' + value);
         }
       }
@@ -153,6 +181,7 @@
           ws.send('set_volume:' + value);
         }
       }
+      connect();
     </script>
   </body>
 </html>
