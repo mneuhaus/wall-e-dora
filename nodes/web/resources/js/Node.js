@@ -23,9 +23,20 @@ class Node {
   // Send output message to DORA stack
   send_output(output_id, data, metadata = {}) {
     const message = { output_id, data, metadata };
-    // In a real implementation, this would interface with DORA's communication mechanism.
-    console.log("JS Node sending output:", message);
-    this.outputQueue.push(message);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(message));
+    } else {
+      console.log("JS Node sending output:", message);
+      this.outputQueue.push(message);
+    }
+  }
+
+  setWebsocket(ws) {
+    this.ws = ws;
+    while (this.outputQueue.length > 0 && this.ws.readyState === WebSocket.OPEN) {
+      let msg = this.outputQueue.shift();
+      this.ws.send(JSON.stringify(msg));
+    }
   }
 
   // For testing: method to simulate receiving an event
