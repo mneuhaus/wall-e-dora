@@ -29,6 +29,7 @@ def flush_web_inputs(node):
             except ValueError:
                 print("Invalid slider value received:", web_event.get("value"))
         elif web_event.get("action") == "sound_click":
+            print("Play sound clicked: " + web_event.get("value"))
             node.send_output(output_id="play_requested_sound", data=pa.array([web_event.get("value")]), metadata={})
     global_web_inputs = []
 
