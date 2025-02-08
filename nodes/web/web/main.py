@@ -96,16 +96,16 @@ def start_background_webserver():
         app.router.add_static('/resources/', path=template_path, name='resources')
         js_path = os.path.join(os.path.dirname(__file__), "..", "js")
         if os.path.exists(js_path):
-            logging.info("DEBUG: Static JS files found at: %s", js_path)
+            print("DEBUG: Static JS files found at: " + str(js_path))
             app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
         else:
-            logging.info("DEBUG: Static JS files NOT found at: %s", js_path)
+            print("DEBUG: Static JS files NOT found at: " + str(js_path))
         static_path = os.path.join(os.path.dirname(__file__), "..", "static")
         if os.path.exists(static_path):
-            logging.info("DEBUG: Static files found at: %s", static_path)
+            print("DEBUG: Static files found at: " + str(static_path))
             app.router.add_static('/static', path=static_path, name='static')
         else:
-            logging.info("DEBUG: Static files NOT found at: %s", static_path)
+            print("DEBUG: Static files NOT found at: " + str(static_path))
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
@@ -117,7 +117,7 @@ def start_background_webserver():
         web_loop = loop
         asyncio.set_event_loop(loop)
         loop.run_until_complete(init_app())
-        logging.info("DEBUG: Web server started on port 8080")
+        print("DEBUG: Web server started on port 8080")
         loop.run_forever()
 
     thread = threading.Thread(target=run_loop, daemon=True)
