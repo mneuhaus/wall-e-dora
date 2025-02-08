@@ -29,12 +29,13 @@ The power package provides battery monitoring and power management for the Wall-
 
 ## DORA Node Information
 
-The power package includes a dora node that monitors battery status using an INA226 sensor. It publishes data outputs for:
-- Voltage (V)
-- Current (A)
-- Power (W)
-- State of Charge (SOC)
-- Estimated runtime in seconds
+The power package includes a dora node that monitors battery status using an INA226 sensor. It publishes the following outputs:
+- voltage: Battery voltage measurement in volts.
+- current: Battery current measurement in amperes.
+- power: Instantaneous power consumption in watts.
+- soc: Battery state of charge as a percentage.
+- runtime: Estimated available runtime in seconds until a critical battery level is reached.
+- shutdown: A signal output triggered when battery charge falls below the critical threshold (10%), indicating that a shutdown should be initiated.
 
 To run the node, use the provided script:
 ```bash
