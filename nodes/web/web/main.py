@@ -29,6 +29,12 @@ def flush_web_inputs(node):
                 node.send_output(output_id="slider_input", data=pa.array([slider_value]), metadata={})
             except ValueError:
                 print("Invalid slider value received:", web_event.get("value"))
+        elif web_event.get("action") == "set_volume":
+            try:
+                volume_value = float(web_event.get("value"))
+                node.send_output(output_id="set_volume", data=pa.array([volume_value]), metadata={})
+            except ValueError:
+                print("Invalid volume value received:", web_event.get("value"))
         elif web_event.get("action") == "sound_click":
             print("Play sound clicked: " + web_event.get("value"))
             node.send_output(output_id="play_requested_sound", data=pa.array([web_event.get("value")]), metadata={})
@@ -48,6 +54,8 @@ async def websocket_handler(request):
                         global_web_inputs.append({"action": "button"})
                     elif data[0] == "slider" and len(data) > 1:
                         global_web_inputs.append({"action": "slider", "value": data[1]})
+                    elif data[0] == "set_volume" and len(data) > 1:
+                        global_web_inputs.append({"action": "set_volume", "value": data[1]})
                     elif data[0] == "sound_click" and len(data) > 1:
                         global_web_inputs.append({"action": "sound_click", "value": data[1]})
                 except Exception as e:
