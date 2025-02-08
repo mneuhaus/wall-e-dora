@@ -94,10 +94,15 @@ def start_background_webserver():
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
         js_path = os.path.join(os.path.dirname(__file__), "..", "resources/js")
-        print(js_path)
         if os.path.exists(js_path):
             print("DEBUG: Static JS files found at: " + str(js_path))
             app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
+        else:
+            print("DEBUG: Static JS files NOT found at: " + str(js_path))
+        js_path = os.path.join(os.path.dirname(__file__), "..", "resources/node_modules")
+        if os.path.exists(js_path):
+            print("DEBUG: Static node_modules files found at: " + str(js_path))
+            app.router.add_static('/node_modules/', path=js_path, name='node_modules', show_index=True, append_version=True)
         else:
             print("DEBUG: Static JS files NOT found at: " + str(js_path))
         runner = web.AppRunner(app)

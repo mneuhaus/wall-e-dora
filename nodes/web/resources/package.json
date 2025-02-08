@@ -1,5 +1,6 @@
 {
 	"dependencies": {
-		"apache-arrow": "^19.0.0"
+		"apache-arrow": "^19.0.0",
+		"vite": "^6.1.0"
 	}
 }
