@@ -83,23 +83,7 @@
         document.getElementById('soc').innerText = metrics.soc + " %";
         document.getElementById('runtime').innerText = metrics.runtime + " s";
       }
-      function updateSoundList(sounds) {
-        var soundsList = document.getElementById('sounds');
-        soundsList.innerHTML = '';
-        if (!sounds || !Array.isArray(sounds)) return;
-        sounds.forEach(function(sound) {
-          var displayName = sound.replace(/\.mp3$/i, '');
-          var item = document.createElement('md-list-item');
-          item.setAttribute('type', 'button');
-          var headline = document.createElement('div');
-          headline.setAttribute('slot', 'headline');
-          headline.innerText = displayName;
-          item.appendChild(headline);
-          item.style.cursor = 'pointer';
-          item.onclick = function() { node.send_output('play_sound', [sound]); };
-          soundsList.appendChild(item);
-        });
-      }
+      
       function updateUI(data) {
         if (data.action) {
           data = data.value;
@@ -112,10 +96,9 @@
       }
 
       node.next((event) => {
-        // console.log(event.value);
-        if (event.id == 'available_sounds') {
-          updateSoundList(event.value);
-        }
+         if (event.id == 'metrics') {
+              updateMetrics(event.value);
+         }
       })
 
     </script>
