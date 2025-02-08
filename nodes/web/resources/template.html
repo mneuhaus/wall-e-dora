@@ -74,6 +74,7 @@
     <script src="https://cdn.jsdelivr.net/npm/apache-arrow@11.0.0/dist/arrow.umd.min.js"></script>
     <script type="module">
       import { Node } from './js/Node.js';
+      const arrow = window.arrow;
       const node = new Node();
       node.send_output = function(output_id, data, metadata = {}) {
           sendArrowMessage({ action: output_id, value: data });
