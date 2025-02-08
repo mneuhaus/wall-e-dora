@@ -73,7 +73,8 @@ def start_background_webserver():
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
         js_path = os.path.join(os.path.dirname(__file__), "js")
-        app.router.add_static('/js/', path=js_path, name='js')
+        if os.path.exists(js_path):
+            app.router.add_static('/js/', path=js_path, name='js')
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
@@ -117,7 +118,7 @@ def main():
             serialized = sink.getvalue().to_pybytes()
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
-        elif event["id"] == "tick":
+        elif "id" in event and event["id"] == "tick":
             flush_web_inputs(node)
 
 
