@@ -54,8 +54,6 @@ def main():
     play_startup_sound(sounds_dir)
     node = Node()
     print("Audio node started")
-    available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
-    node.send_output("available_sounds", pa.array(available), metadata={})
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "play_sound":
@@ -69,6 +67,10 @@ def main():
                 except Exception:
                     filename = event["value"]
                 play_sound(sounds_dir, filename)
+
+            if event["id"] == "scan_sounds":
+                available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
+                node.send_output("available_sounds", pa.array(available), metadata={})
 
 if __name__ == "__main__":
     main()

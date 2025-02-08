@@ -1,9 +1,4 @@
 nodes:
-  - id: listener_1
-    path: nodes/listener-1/listener_1/main.py
-    inputs:
-      speech-2: web/my_output_id
-
   # - id: gamepad
   #   path: nodes/gamepad/gamepad/main.py
   #   inputs:
@@ -42,6 +37,9 @@ nodes:
     path: nodes/audio/audio/main.py
     inputs:
       play_sound: web/play_requested_sound
+      scan_sounds: dora/timer/secs/3
+    outputs:
+      - available_sounds
 
   # - id: tracks
   #   path: nodes/tracks/tracks/main.py
