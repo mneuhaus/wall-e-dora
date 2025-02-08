@@ -84,6 +84,7 @@ async def broadcast_bytes(data_bytes):
 
 def start_background_webserver():
     async def init_app():
+        print('woop')
         app = web.Application()
         import os
         import jinja2
