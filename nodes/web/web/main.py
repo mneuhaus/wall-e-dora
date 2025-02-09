@@ -90,7 +90,7 @@ def start_background_webserver():
         try:
             with open(manifest_file, "r", encoding="utf-8") as f:
                 manifest = json.load(f)
-        except FileNotFoundError:
+        except Exception:
             manifest = {}
         app['jinja_env'].filters['asset_url'] = lambda asset: manifest.get(asset, asset)
         app.router.add_get('/', index)
