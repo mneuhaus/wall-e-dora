@@ -103,9 +103,12 @@ def start_background_webserver():
             append_version=True
         )
 
+        import ssl
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(certfile="nodes/web/cert.pem", keyfile="nodes/web/key.pem")
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8080)
+        site = web.TCPSite(runner, '0.0.0.0', 8443, ssl_context=ssl_context)
         await site.start()
 
     def run_loop():
@@ -114,7 +117,7 @@ def start_background_webserver():
         web_loop = loop
         asyncio.set_event_loop(loop)
         loop.run_until_complete(init_app())
-        print("DEBUG: Web server started on port 8080")
+        print("DEBUG: Web server started on port 8443")
         loop.run_forever()
 
     thread = threading.Thread(target=run_loop, daemon=True)
