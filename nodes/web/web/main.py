@@ -54,8 +54,15 @@ async def websocket_handler(request):
     return ws
 
 async def index(request):
+    import os, json
     template = request.app['jinja_env'].get_template('template.html')
-    rendered = template.render()
+    # Load grid state from file if it exists
+    grid_state = None
+    grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+    if os.path.exists(grid_state_path):
+        with open(grid_state_path, "r", encoding="utf-8") as f:
+            grid_state = json.load(f)
+    rendered = template.render(gridState=json.dumps(grid_state))
     return web.Response(text=rendered, content_type='text/html')
 
 async def broadcast_bytes(data_bytes):
@@ -109,6 +116,11 @@ def main():
             serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
+        elif "id" in event and event["id"] == "save_grid_state":
+            import os, json
+            grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+            with open(grid_state_path, "w", encoding="utf-8") as f:
+                json.dump(event["value"], f)
         elif "id" in event and event["id"] == "tick":
             flush_web_inputs(node)
 

@@ -74,15 +74,14 @@
     <script type="module">
       let theme = await ui("theme", "#ffd700");
       const grid = GridStack.init();
-      // Restore grid state from localStorage
-      const savedLayout = localStorage.getItem('grid-layout');
-      if (savedLayout) {
-          grid.load(JSON.parse(savedLayout));
+      // Restore grid state from server-provided variable
+      if (window.gridState) {
+          grid.load(window.gridState);
       }
-      // Save grid state on change event
+      // Save grid state on change event by sending it to the server
       grid.on('change', (event, items) => {
           const layout = grid.save(false);
-          localStorage.setItem('grid-layout', JSON.stringify(layout));
+          node.send_output('save_grid_state', layout);
       });
 
       import { Node } from './js/Node.js';
