@@ -34,7 +34,7 @@ grid.on('change', (event, items) => {
             w: parseInt(item.w),
         }
     })
-    node.send_output('save_grid_state', gridState);
+    node.sendOutput('save_grid_state', gridState);
 });
 
 /* The Node component is now integrated as a Vue child component 
@@ -51,13 +51,13 @@ function updateSoundList(sounds) {
         item.classList.add('row');
         item.classList.add('wave');
         item.innerText = displayName;
-        item.onclick = function() { node.send_output('play_sound', [sound]); };
+        item.onclick = function() { node.sendOutput('play_sound', [sound]); };
         soundsList.appendChild(item);
     });
 }
 
 function setVolume(volume) {
-    node.send_output('set_volume', [volume]);
+    node.sendOutput('set_volume', [volume]);
 }
 
 setInterval(() => {
