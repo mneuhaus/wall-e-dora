@@ -105,11 +105,11 @@
         <button onclick="sendButton()">Press me</button>
         <div style="margin-top: 16px;">
           <label for="slider">Adjust value:</label>
-          <md-slider id="slider" min="0" max="100" value="50" discrete onchange="sendSlider(this.value)"></md-slider>
+          <input type="range" id="slider" min="0" max="100" value="50" onchange="sendSlider(this.value)" class="slider">
         </div>
         <div style="margin-top: 16px;">
           <label for="volume">Volume:</label>
-          <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
+          <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);" class="slider">
         </div>
         <button onclick="window.node.send_output('stop', []);">Stop Sounds</button>
       </section>
