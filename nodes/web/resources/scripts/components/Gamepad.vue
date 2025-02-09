@@ -47,6 +47,11 @@ function closeModal() {
 }
 
 function updateDebugData() {
+  if (!window.isSecureContext) {
+    console.warn("Gamepad API requires a secure context. Please use HTTPS.");
+    debugData.value = {};
+    return;
+  }
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const currentPad = pads && pads[0] ? pads[0] : null;
   if (currentPad) {
