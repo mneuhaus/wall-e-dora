@@ -67,6 +67,9 @@ def main():
             if event["id"] == "scan_sounds":
                 available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
                 node.send_output("available_sounds", pa.array(available), metadata={})
+            elif event["id"] == "stop":
+                print("Stopping all sounds")
+                pygame.mixer.stop()
             elif event["id"] == "set_volume":
                 print('set_volume: ', event['value'])
                 try:

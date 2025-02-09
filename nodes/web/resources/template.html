@@ -130,6 +130,7 @@
           <label for="volume">Volume:</label>
           <md-slider id="volume" min="0" max="1" value="1" step="0.01" discrete onchange="window.node.send_output('set_volume', [this.value]);"></md-slider>
         </div>
+        <md-outlined-button onclick="window.node.send_output('stop', []);">Stop Sounds</md-outlined-button>
       </section>
       <section id="sound-list">
         <h2>Available Sounds</h2>
