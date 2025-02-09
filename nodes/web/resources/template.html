@@ -2,13 +2,7 @@
 <html>
   <head>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/beercss@3.8.0/dist/cdn/beer.min.css" rel="stylesheet">
-    <script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.8.0/dist/cdn/beer.min.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/material-dynamic-colors@1.1.2/dist/cdn/material-dynamic-colors.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/11.2.0/gridstack-all.min.js" integrity="sha512-jdxbbUO046wj/4kumkHaCmidQ/u96PzGqavC9TlYR3DLmuDi0L9VAURncHl1vdmHdPIvgcIBttp19ze0lvXGKw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <link href="https://cdn.jsdelivr.net/npm/gridstack@11.3.0/dist/gridstack.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset_url('build/main.css') }}">
+    <link rel="stylesheet" href="build/main.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>wall-e</title>
     <style>
@@ -16,164 +10,56 @@
     </style>
   </head>
   <body>
-    <header>
-      <nav>
-        <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
-        <div class="media-controls max center-align" style="display: flex; align-items: center;">
-            <button onclick="window.node.send_output('stop', []);" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">
-              <i class="fa-solid fa-stop"></i>
-            </button>
-        </div>
-        <div class="top-app-bar__actions">
-          <span id="connection-active" style="color: #00bfa5; font-size: 24px; display: none; margin-left: 16px;"><i class="fa-solid fa-link"></i></span>
-          <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;"><i class="fa-solid fa-link-slash"></i></span>
-        </div>
+    <div id="app">
+      <header>
+        <nav>
+          <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
+          <div class="media-controls max center-align" style="display: flex; align-items: center;">
+              <button onclick="window.node.send_output('stop', []);" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">
+                <i class="fa-solid fa-stop"></i>
+              </button>
+          </div>
+          <div class="top-app-bar__actions">
+            <span id="connection-active" style="color: #00bfa5; font-size: 24px; display: none; margin-left: 16px;"><i class="fa-solid fa-link"></i></span>
+            <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;"><i class="fa-solid fa-link-slash"></i></span>
+          </div>
 
-        <button class="transparent">
-          <span><i class="fa-solid fa-battery-half"></i><span id="soc" style="margin-left: 10px; display: inline-block;"></span></span>
-          <menu class="no-wrap">
-            <a id="voltage"></a>
-            <a id="current"></a>
-            <a id="power"></a>
-            <a id="runtime" style="font-size: 18px;"></a>
-          </menu>
-        </button>
+          <button class="transparent">
+            <span><i class="fa-solid fa-battery-half"></i><span id="soc" style="margin-left: 10px; display: inline-block;"></span></span>
+            <menu class="no-wrap">
+              <a id="voltage"></a>
+              <a id="current"></a>
+              <a id="power"></a>
+              <a id="runtime" style="font-size: 18px;"></a>
+            </menu>
+          </button>
 
-        <button>
-          <span><i class="fa-solid fa-volume-high"></i></span>
-          <i>arrow_drop_down</i>
-          <menu>
-            <article class="small-height round">
-              <label class="slider max vertical">
-                <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
-                <span></span>
-              </label>
-            </article>
-          </menu>
-        </button>
-      </nav>
-    </header>
+          <volume>
 
-    <main>
-      <div class="grid-stack">
-        <div class="grid-stack-item" id="sound-widget">
-          <div class="grid-stack-item-content">
-            <article id="sound-list" style="overflow: auto">
-              <strong>Available Sounds</strong>
-              <article id="sounds"></article>
-            </section>
+        </nav>
+      </header>
+
+      <main>
+        <div class="grid-stack">
+          <div class="grid-stack-item" id="sound-widget">
+            <div class="grid-stack-item-content">
+              <article id="sound-list" style="overflow: auto">
+                <strong>Available Sounds</strong>
+                <article id="sounds"></article>
+              </section>
+            </div>
+          </div>
+          <div class="grid-stack-item" gs-w="2" id="test">
+            <div class="grid-stack-item-content">Item 2 wider</div>
           </div>
         </div>
-        <div class="grid-stack-item" gs-w="2" id="test">
-          <div class="grid-stack-item-content">Item 2 wider</div>
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
 
-    <script type="module">
-      let theme = await ui("theme", "#ffd700");
+    <script type="text/javascript">
       let gridState = {{ gridState }};
-      if (typeof(gridState) != 'object') {
-        gridState = {};
-      }
-      const grid = GridStack.init({
-        alwaysShowResizeHandle: 'mobile' // true if we're on mobile devices
-      });
-      if (gridState) {
-        Object.keys(gridState).forEach((id) => {
-          if (document.getElementById(id)) {
-            grid.update(document.getElementById(id), gridState[id]);
-          }
-        })
-      }
-      grid.on('change', (event, items) => {
-        items.forEach((item) => {
-          gridState[item.el.id] = {
-            x: parseInt(item.x),
-            y: parseInt(item.y),
-            h: parseInt(item.h),
-            w: parseInt(item.w),
-          }
-        })
-        node.send_output('save_grid_state', gridState);
-      });
-
-      import { Node } from './js/Node.js';
-      const node = new Node();
-      window.node = node;
-
-      function updateSoundList(sounds) {
-        var soundsList = document.getElementById('sounds');
-        soundsList.innerHTML = '';
-        if (!sounds || !Array.isArray(sounds)) return;
-        sounds.forEach(function(sound) {
-          var displayName = sound.replace(/\.mp3$/i, '');
-          var item = document.createElement('a');
-          item.style.cursor = 'pointer';
-          item.classList.add('row');
-          item.classList.add('wave');
-          item.innerText = displayName;
-          item.onclick = function() { node.send_output('play_sound', [sound]); };
-          soundsList.appendChild(item);
-        });
-      }
-
-      function setVolume(volume) {
-        node.send_output('set_volume', [volume]);
-      }
-
-      setInterval(() => {
-        if (node.ws.readyState === WebSocket.OPEN) {
-          document.getElementById('connection-active').style.display = '';
-          document.getElementById('connection-inactive').style.display = 'none';
-        } else {
-          document.getElementById('connection-active').style.display = 'none';
-          document.getElementById('connection-inactive').style.display = '';
-        }
-      }, 100);
-
-      node.next((event) => {
-        console.log(event);
-        if (event.id === 'available_sounds') {
-          updateSoundList(event.value);
-        }
-
-        if (event.id === 'voltage') {
-          document.getElementById('voltage').innerText = "Voltage: " + parseFloat(event.value).toFixed(2) + " V";
-        }
-
-        if (event.id === 'current') {
-          document.getElementById('current').innerText = "Current: " + parseFloat(event.value).toFixed(2) + " A";
-        }
-
-        if (event.id === 'power') {
-          document.getElementById('power').innerText = "Power: " + parseFloat(event.value).toFixed(2) + " W";
-        }
-
-        if (event.id === 'soc') {
-          document.getElementById('soc').innerText = parseFloat(event.value).toFixed(0) + " %";
-        }
-
-        if (event.id === 'runtime') {
-          document.getElementById('runtime').innerText = "Runtime: " + event.value;
-        }
-
-        if (event.id === 'shutdown') {
-          console.log('Shutdown event received:', event.value);
-        }
-
-        if (event.id === 'volume') {
-          document.getElementById('volume').value = event.volume;
-        }
-      })
-
-      window.addEventListener('DOMContentLoaded', () => {
-          document.querySelectorAll('.slider input[type="range"]').forEach(input => {
-              input.dispatchEvent(new Event('change'));
-          });
-      });
-
     </script>
-    <script src="{{ asset_url('build/main.js') }}"></script>
+    <script src="build/runtime.js"></script>
+    <script src="build/main.js"></script>
   </body>
 </html>

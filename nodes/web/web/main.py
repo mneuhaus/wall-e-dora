@@ -63,9 +63,11 @@ async def index(request):
     # Load grid state from file if it exists
     grid_state = None
     grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+
     if os.path.exists(grid_state_path):
         with open(grid_state_path, "r", encoding="utf-8") as f:
             grid_state = json.load(f)
+
     rendered = template.render(gridState=json.dumps(grid_state))
     return web.Response(text=rendered, content_type='text/html')
 
@@ -76,32 +78,30 @@ async def broadcast_bytes(data_bytes):
         else:
             ws_clients.discard(ws)
 
+def asset_url(asset):
+    return manifest.get(asset, asset)
+
 def start_background_webserver():
     async def init_app():
-        app = web.Application()
         import os
         import jinja2
+        import json
+
+        app = web.Application()
         aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
         template_path = os.path.join(os.path.dirname(__file__), "..", "resources")
         app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
-        import json
-        manifest_file = os.path.join(template_path, "build", "manifest.json")
-        print(manifest_file)
-        try:
-            with open(manifest_file, "r", encoding="utf-8") as f:
-                manifest = json.load(f)
-        except Exception:
-            manifest = {}
-        app['jinja_env'].filters['asset_url'] = lambda asset: manifest.get(asset, asset)
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
-        # js_path = os.path.join(os.path.dirname(__file__), "..", "resources/js")
-        # if os.path.exists(js_path):
-        #     print("DEBUG: Static JS files found at: " + str(js_path))
-        #     app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
-        # else:
-        #     print("DEBUG: Static JS files NOT found at: " + str(js_path))
+
+        app.router.add_static('/build/',
+            path=os.path.join(os.path.dirname(__file__), "..", "resources/build"),
+            name='build',
+            show_index=True,
+            append_version=True
+        )
+
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)

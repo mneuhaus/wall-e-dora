@@ -34,7 +34,7 @@ Encore
     .enableBuildNotifications()
     .enableSourceMaps(!Encore.isProduction())
     // enables hashed filenames (e.g. app.abc123.css)
-    .enableVersioning(true)
+    .enableVersioning(false)
 
     .configureBabel((config) => {
         config.plugins.push('@babel/plugin-transform-class-properties');
@@ -47,6 +47,7 @@ Encore
     })
     // uncomment if you use TypeScript
     //.enableTypeScriptLoader()
+    .enableVueLoader()
 ;
 
 module.exports = Encore.getWebpackConfig();
