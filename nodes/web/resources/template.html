@@ -89,6 +89,12 @@
         }
       })
 
+      window.addEventListener('DOMContentLoaded', () => {
+          document.querySelectorAll('.slider input[type="range"]').forEach(input => {
+              input.dispatchEvent(new Event('change'));
+          });
+      });
+
     </script>
   </head>
   <body>
