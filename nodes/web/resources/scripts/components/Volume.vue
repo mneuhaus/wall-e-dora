@@ -13,11 +13,9 @@
   </button>
 </template>
 <script setup>
-import './Node';
-
-console.log(Node);
+import { sendOutput } from '../Node.js';
 
 function handleVolumeChange(event) {
-  sendOutput('set_volume', [event.target.value])
+  sendOutput('set_volume', [event.target.value]);
 }
 </script>

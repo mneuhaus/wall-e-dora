@@ -1,20 +1,19 @@
-<script setup>
-import { reactive, onMounted } from 'vue';
+import mitt from 'mitt';
 
-const state = reactive({
+const emitter = mitt();
+
+const state = {
   eventQueue: [],
   outputQueue: [],
   ws: null,
-});
-
-const emit = defineEmits(['message']);
+};
 
 function processEventQueue() {
   setInterval(() => {
     while (state.eventQueue.length > 0) {
       const event = state.eventQueue.shift();
-      // Use event.id as the emit name if available; otherwise fallback to 'message'
-      emit(event.id || 'message', event);
+      // Use event.id as the emitter event name if available; otherwise fallback to 'message'
+      emitter.emit(event.id || 'message', event);
     }
   }, 100);
 }
@@ -58,12 +57,8 @@ function connectWebSocket() {
   });
 }
 
-onMounted(() => {
-  console.log("JS Node initialized - Vue Component (Composition API)");
-  connectWebSocket();
-  processEventQueue();
-});
-defineExpose({
-  sendOutput
-});
-</script>
+console.log("JS Node initialized - Vanilla JS");
+connectWebSocket();
+processEventQueue();
+
+export { sendOutput, emitter };
