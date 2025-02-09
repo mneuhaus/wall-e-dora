@@ -1,6 +1,6 @@
 <template>
   <span :style="iconStyle">
-    <i class="fa-solid fa-gamepad"></i>
+    <i class="fa-solid fa-gamepad" style="width: 30px;"></i>
   </span>
 </template>
 

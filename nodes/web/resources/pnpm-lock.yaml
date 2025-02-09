@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@fortawesome/fontawesome-free':
+        specifier: ^6.7.2
+        version: 6.7.2
       '@symfony/webpack-encore':
         specifier: ^5.0.1
         version: 5.0.1(@babel/core@7.26.8)(@babel/preset-env@7.26.8(@babel/core@7.26.8))(@vue/compiler-sfc@3.5.13)(postcss@8.5.1)(vue-loader@17.4.2(@vue/compiler-sfc@3.5.13)(vue@3.5.13)(webpack@5.97.1))(vue@3.5.13)(webpack-cli@5.1.4)(webpack-notifier@1.15.0)(webpack@5.97.1)
@@ -20,6 +23,9 @@ importers:
       fontawesome:
         specifier: ^5.6.3
         version: 5.6.3
+      gamepad.js:
+        specifier: ^2.1.0
+        version: 2.1.0
       gridstack:
         specifier: ^11.3.0
         version: 11.3.0
@@ -537,6 +543,10 @@ packages:
   '@discoveryjs/json-ext@0.5.7':
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
+
+  '@fortawesome/fontawesome-free@6.7.2':
+    resolution: {integrity: sha512-JUOtgFW6k9u4Y+xeIaEiLr3+cjoUPiAuLXoyKOJSia6Duzb7pq+A76P9ZdPDoAoxHdHzq6gE9/jKBGXlZT8FbA==}
+    engines: {node: '>=6'}
 
   '@jest/schemas@29.6.3':
     resolution: {integrity: sha512-mo5j5X+jIZmJQveBKeS/clAueipV7KgiX1vMgCxam1RNYiqE1w62n0/tJJnHtjW8ZHcQco5gY85jA3mi0L+nSA==}
@@ -1221,6 +1231,9 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
+  gamepad.js@2.1.0:
+    resolution: {integrity: sha512-DmOuDwT4nYH7+whhtZOTdNTXq3AFL8n2YZCoa10AkKHBa8Dh28dUTQudH0fH8kJAbOZbcYkyiFWp6x7HroT5IA==}
+
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
@@ -1438,6 +1451,9 @@ packages:
 
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
+
+  option-resolver.js@1.1.0:
+    resolution: {integrity: sha512-gckuegIqAloPysPLK/mN3S88IcKfvPbSZntfpyqThbCKoPDmcC5kVM/2qpXglhrpab7GdWdd63XrttzTSMHUiw==}
 
   p-limit@2.3.0:
     resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
@@ -1880,6 +1896,9 @@ packages:
   tmp@0.2.3:
     resolution: {integrity: sha512-nZD7m9iCPC5g0pYmcaxogYKggSfLsdxl8of3Q/oIbqCqLLIO9IAF0GWjX1z9NZRHPiXv8Wex4yDCaZsgEw0Y8w==}
     engines: {node: '>=14.14'}
+
+  tom32i-event-emitter.js@2.0.5:
+    resolution: {integrity: sha512-7wYTrHfV3gWRZXZQniMLOO5hh01szsTVulTWwcNheESvRUrveQCKKEz2YMceYQZdfpmXMC8PGpzOpUcnfXSXiw==}
 
   undici-types@6.20.0:
     resolution: {integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==}
@@ -2657,6 +2676,8 @@ snapshots:
 
   '@discoveryjs/json-ext@0.5.7': {}
 
+  '@fortawesome/fontawesome-free@6.7.2': {}
+
   '@jest/schemas@29.6.3':
     dependencies:
       '@sinclair/typebox': 0.27.8
@@ -3333,6 +3354,11 @@ snapshots:
 
   function-bind@1.1.2: {}
 
+  gamepad.js@2.1.0:
+    dependencies:
+      option-resolver.js: 1.1.0
+      tom32i-event-emitter.js: 2.0.5
+
   gensync@1.0.0-beta.2: {}
 
   glob-to-regexp@0.4.1: {}
@@ -3515,6 +3541,8 @@ snapshots:
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
+
+  option-resolver.js@1.1.0: {}
 
   p-limit@2.3.0:
     dependencies:
@@ -3942,6 +3970,8 @@ snapshots:
       source-map-support: 0.5.21
 
   tmp@0.2.3: {}
+
+  tom32i-event-emitter.js@2.0.5: {}
 
   undici-types@6.20.0: {}
 

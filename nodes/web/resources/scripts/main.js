@@ -2,7 +2,7 @@ import "beercss";
 import "material-dynamic-colors";
 import 'gridstack/dist/gridstack.min.css';
 import { GridStack } from 'gridstack';
-import 'fontawesome';
+import '@fortawesome/fontawesome-free/css/all.css';
 import Node from "./Node.js";
 import { createApp } from 'vue';
 
