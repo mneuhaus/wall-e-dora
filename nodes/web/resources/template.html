@@ -10,17 +10,11 @@
     <title>wall-e</title>
     <style>
       body { margin:0; font-family: Roboto, sans-serif; }
-      .status-bar { display: flex; align-items: center; justify-content: space-between; background-color: #424242; color: white; padding: 10px 16px; }
-      .status-indicator { display: flex; align-items: center; }
-      .status-indicator span { margin-left: 8px; }
-      .metrics-table { margin: 16px 0; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { padding: 8px 12px; border-bottom: 1px solid #ddd; }
-      .controls { margin: 16px 0; }
-      .badge {margin-right: 10px;}
     </style>
 
     <script type="module">
+      let theme = await ui("theme", "#ffd700");
+
       import { Node } from './js/Node.js';
       const node = new Node();
       window.node = node;
@@ -60,15 +54,15 @@
         }
 
         if (event.id === 'voltage') {
-          document.getElementById('voltage').innerText = parseFloat(event.value).toFixed(2) + " V";
+          document.getElementById('voltage').innerText = "Voltage: " + parseFloat(event.value).toFixed(2) + " V";
         }
 
         if (event.id === 'current') {
-          document.getElementById('current').innerText = parseFloat(event.value).toFixed(2) + " A";
+          document.getElementById('current').innerText = "Current: " + parseFloat(event.value).toFixed(2) + " A";
         }
 
         if (event.id === 'power') {
-          document.getElementById('power').innerText = parseFloat(event.value).toFixed(2) + " W";
+          document.getElementById('power').innerText = "Power: " + parseFloat(event.value).toFixed(2) + " W";
         }
 
         if (event.id === 'soc') {
@@ -76,7 +70,7 @@
         }
 
         if (event.id === 'runtime') {
-          document.getElementById('runtime').innerText = event.value;
+          document.getElementById('runtime').innerText = "Runtime: " + event.value;
         }
 
         if (event.id === 'shutdown') {
@@ -97,26 +91,42 @@
     </script>
   </head>
   <body>
-    <header class="top-app-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background-color: #424242; color: white;">
-      <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
-      <div class="media-controls" style="display: flex; align-items: center;">
-          <label class="slider" style="margin: 0 16px;">
-            <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
-            <span></span>
-          </label>
-          <button onclick="window.node.send_output('stop', []);" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">
-            <i class="fa-solid fa-stop"></i>
-          </button>
-      </div>
-      <div class="top-app-bar__actions">
-        <span id="voltage" style="font-size: 18px; margin-right: 8px;"></span>
-        <span id="current" style="font-size: 18px; margin-right: 8px;"></span>
-        <span id="power" style="font-size: 18px; margin-right: 8px;"></span>
-        <span id="soc" style="font-size: 18px; margin-right: 8px;"></span>
-        <span id="runtime" style="font-size: 18px;"></span>
-        <span id="connection-active" style="color: #00bfa5; font-size: 24px; display: none; margin-left: 16px;"><i class="fa-solid fa-link"></i></span>
-        <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;"><i class="fa-solid fa-link-slash"></i></span>
-      </div>
+    <header>
+      <nav>
+        <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
+        <div class="media-controls max center-align" style="display: flex; align-items: center;">
+            <button onclick="window.node.send_output('stop', []);" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">
+              <i class="fa-solid fa-stop"></i>
+            </button>
+        </div>
+        <div class="top-app-bar__actions">
+          <span id="connection-active" style="color: #00bfa5; font-size: 24px; display: none; margin-left: 16px;"><i class="fa-solid fa-link"></i></span>
+          <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;"><i class="fa-solid fa-link-slash"></i></span>
+        </div>
+
+        <button class="transparent">
+          <span><i class="fa-solid fa-battery-half"></i><span id="soc" style="margin-left: 10px; display: inline-block;"></span></span>
+          <menu class="no-wrap">
+            <a id="voltage"></a>
+            <a id="current"></a>
+            <a id="power"></a>
+            <a id="runtime" style="font-size: 18px;"></a>
+          </menu>
+        </button>
+
+        <button>
+          <span><i class="fa-solid fa-volume-high"></i></span>
+          <i>arrow_drop_down</i>
+          <menu>
+            <article class="small-height round">
+              <label class="slider max vertical">
+                <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
+                <span></span>
+              </label>
+            </article>
+          </menu>
+        </button>
+      </nav>
     </header>
       
       <section id="sound-list">
