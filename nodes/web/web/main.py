@@ -84,6 +84,14 @@ def start_background_webserver():
         aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
         template_path = os.path.join(os.path.dirname(__file__), "..", "resources")
         app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
+        import json
+        manifest_file = os.path.join(template_path, "build", "manifest.json")
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as f:
+                manifest = json.load(f)
+        except FileNotFoundError:
+            manifest = {}
+        app['jinja_env'].filters['asset_url'] = lambda asset: manifest.get(asset, asset)
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
