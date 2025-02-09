@@ -88,18 +88,16 @@
     </script>
   </head>
   <body>
-    <header class="status-bar">
-      <div class="status-indicator">
-        <span>wall-e</span>
-      </div>
-      <div id="connection-status">
-        <span id="voltage" class="badge" style="font-size: 24px;"></span>
-        <span id="current" class="badge" style="font-size: 24px;"></span>
-        <span id="power" class="badge" style="font-size: 24px;"></span>
-        <span id="soc" class="badge" style="font-size: 24px;"></span>
-        <span id="runtime" class="badge" style="font-size: 24px;"></span>
-        <span id="connection-active" class="material-symbols-outlined" style="color: #00bfa5; font-size: 40px; display: none;">link</span>
-        <span id="connection-inactive" class="material-symbols-outlined" style="color: #e53935; font-size: 40px;">link_off</span>
+    <header class="top-app-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background-color: #424242; color: white;">
+      <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
+      <div class="top-app-bar__actions">
+        <span id="voltage" style="font-size: 18px; margin-right: 8px;"></span>
+        <span id="current" style="font-size: 18px; margin-right: 8px;"></span>
+        <span id="power" style="font-size: 18px; margin-right: 8px;"></span>
+        <span id="soc" style="font-size: 18px; margin-right: 8px;"></span>
+        <span id="runtime" style="font-size: 18px;"></span>
+        <span id="connection-active" style="color: #00bfa5; font-size: 24px; display: none; margin-left: 16px;">link</span>
+        <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;">link_off</span>
       </div>
     </header>
       <section class="controls">
