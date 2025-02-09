@@ -40,7 +40,10 @@
       function setVolume(volume) {
         node.send_output('set_volume', [volume]);
       }
-
+      function sendSlider(value) {
+        node.send_output('slider_input', [value]);
+      }
+    
       setInterval(() => {
         if (node.ws.readyState === WebSocket.OPEN) {
           document.getElementById('connection-active').style.display = '';
