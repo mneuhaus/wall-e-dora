@@ -35,7 +35,7 @@ class Node {
   }
 
   connectWebSocket() {
-    this.state.ws = new WebSocket('ws://' + location.host + '/ws');
+    this.state.ws = new WebSocket('wss://' + location.host + '/ws');
     this.state.ws.binaryType = 'arraybuffer';
     this.state.ws.onopen = () => {
       console.log("WebSocket connection opened");
