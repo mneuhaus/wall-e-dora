@@ -104,8 +104,20 @@ def start_background_webserver():
         )
 
         import ssl
+        import os
+        import subprocess
+        # Set the paths for the self-signed certificate and key
+        cert_file = os.path.join(os.path.dirname(__file__), "..", "cert.pem")
+        key_file = os.path.join(os.path.dirname(__file__), "..", "key.pem")
+        # Generate self-signed certs if they do not exist
+        if not (os.path.exists(cert_file) and os.path.exists(key_file)):
+            print("Generating self-signed certificates")
+            subprocess.run([
+                "openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
+                "-keyout", key_file, "-out", cert_file, "-days", "365", "-subj", "/CN=localhost"
+            ], check=True)
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(certfile="nodes/web/cert.pem", keyfile="nodes/web/key.pem")
+        ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8443, ssl_context=ssl_context)
