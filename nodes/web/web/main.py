@@ -86,6 +86,7 @@ def start_background_webserver():
         app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
         import json
         manifest_file = os.path.join(template_path, "build", "manifest.json")
+        print(manifest_file)
         try:
             with open(manifest_file, "r", encoding="utf-8") as f:
                 manifest = json.load(f)
@@ -95,12 +96,12 @@ def start_background_webserver():
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
-        js_path = os.path.join(os.path.dirname(__file__), "..", "resources/js")
-        if os.path.exists(js_path):
-            print("DEBUG: Static JS files found at: " + str(js_path))
-            app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
-        else:
-            print("DEBUG: Static JS files NOT found at: " + str(js_path))
+        # js_path = os.path.join(os.path.dirname(__file__), "..", "resources/js")
+        # if os.path.exists(js_path):
+        #     print("DEBUG: Static JS files found at: " + str(js_path))
+        #     app.router.add_static('/js/', path=js_path, name='js', show_index=True, append_version=True)
+        # else:
+        #     print("DEBUG: Static JS files NOT found at: " + str(js_path))
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8080)
