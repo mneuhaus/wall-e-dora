@@ -55,31 +55,30 @@
 
     <main>
       <div class="grid-stack">
-        <div class="grid-stack-item">
-          <div class="grid-stack-item-content">
-            <section id="sound-list">
-              <h2>Available Sounds</h2>
+        <div class="grid-stack-item" data-gs-id="3">
+          <div class="grid-stack-item-content" data-gs-id="3">
+            <article id="sound-list" style="overflow: auto">
+              <strong>Available Sounds</strong>
               <article id="sounds"></article>
             </section>
           </div>
         </div>
-        <div class="grid-stack-item" gs-w="2">
+        <div class="grid-stack-item" gs-w="2" id="test">
           <div class="grid-stack-item-content">Item 2 wider</div>
         </div>
       </div>
     </main>
 
-
-
     <script type="module">
-      window.gridState = {{ gridState | safe }};
       let theme = await ui("theme", "#ffd700");
-      const grid = GridStack.init();
-      // Restore grid state from server-provided variable
-      if (window.gridState) {
-          grid.load(window.gridState);
+      let gridState = {{ gridState | safe }};
+      const grid = GridStack.init({
+        alwaysShowResizeHandle: 'mobile' // true if we're on mobile devices
+      });
+      if (gridState) {
+          console.log(gridState);
+          // grid.load(gridState);
       }
-      // Save grid state on change event by sending it to the server
       grid.on('change', (event, items) => {
           const layout = grid.save(false);
           node.send_output('save_grid_state', layout);
