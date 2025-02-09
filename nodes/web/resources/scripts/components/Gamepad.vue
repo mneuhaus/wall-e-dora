@@ -47,19 +47,25 @@ function closeModal() {
 }
 
 function updateDebugData() {
-  if (!window.isSecureContext) {
-    console.warn("Gamepad API requires a secure context. Please use HTTPS.");
-    debugData.value = {};
-    return;
-  }
+  // if (!window.isSecureContext) {
+  //   console.warn("Gamepad API requires a secure context. Please use HTTPS.");
+  //   debugData.value = {};
+  //   return;
+  // }
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  const currentPad = pads && pads[0] ? pads[0] : null;
+  let currentPad = null;
+  for(let i = 0; pads.length > i; i++) {
+    if (pads[i]) {
+      currentPad = pads[i];
+    }
+  }
   if (currentPad) {
     const currentData = {
       id: currentPad.id,
       buttons: currentPad.buttons.map(button => ({ pressed: button.pressed, value: button.value })),
       axes: currentPad.axes
     };
+    console.log(currentPad.axes, currentPad.buttons.map(button => (button.pressed)));
     console.log("Gamepad Input:", currentData);
     debugData.value = currentData;
   } else {
