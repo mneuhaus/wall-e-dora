@@ -80,7 +80,7 @@ async def broadcast_bytes(data_bytes):
             ws_clients.discard(ws)
 
 def asset_url(asset):
-    return manifest.get(asset, asset)
+    return asset
 
 def start_background_webserver():
     async def init_app():
