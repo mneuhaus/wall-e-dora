@@ -5,10 +5,16 @@
     <menu>
       <article class="small-height round">
         <label class="slider max vertical">
-          <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
+          <input type="range" id="volume" min="0" max="1" value="1" step="0.01" @change="handleVolumeChange">
           <span></span>
         </label>
       </article>
     </menu>
   </button>
 </template>
+<script setup>
+const emit = defineEmits(['set_volume']);
+function handleVolumeChange(event) {
+  emit('set_volume', [event.target.value]);
+}
+</script>
