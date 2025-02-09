@@ -12,7 +12,9 @@ let app = createApp({});
 
 import Volume from './components/Volume';
 import Sounds from './components/Sounds';
+import Power from './components/Power.vue';
 app.component('Sounds', Sounds);
+app.component('Power', Power);
 
 app.mount('#app');
 
