@@ -21,7 +21,6 @@ def flush_web_inputs(node):
         return
     import os, json
     for web_event in global_web_inputs:
-        print(web_event)
         if web_event.get("output_id") == "save_grid_state":
             grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
             with open(grid_state_path, "w", encoding="utf-8") as f:

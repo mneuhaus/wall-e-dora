@@ -55,8 +55,8 @@
 
     <main>
       <div class="grid-stack">
-        <div class="grid-stack-item" data-gs-id="3">
-          <div class="grid-stack-item-content" data-gs-id="3">
+        <div class="grid-stack-item" id="sound-widget">
+          <div class="grid-stack-item-content">
             <article id="sound-list" style="overflow: auto">
               <strong>Available Sounds</strong>
               <article id="sounds"></article>
@@ -71,17 +71,30 @@
 
     <script type="module">
       let theme = await ui("theme", "#ffd700");
-      let gridState = {{ gridState | safe }};
+      let gridState = {{ gridState }};
+      if (typeof(gridState) != 'object') {
+        gridState = {};
+      }
       const grid = GridStack.init({
         alwaysShowResizeHandle: 'mobile' // true if we're on mobile devices
       });
       if (gridState) {
-          console.log(gridState);
-          // grid.load(gridState);
+        Object.keys(gridState).forEach((id) => {
+          if (document.getElementById(id)) {
+            grid.update(document.getElementById(id), gridState[id]);
+          }
+        })
       }
       grid.on('change', (event, items) => {
-          const layout = grid.save(false);
-          node.send_output('save_grid_state', layout);
+        items.forEach((item) => {
+          gridState[item.el.id] = {
+            x: parseInt(item.x),
+            y: parseInt(item.y),
+            h: parseInt(item.h),
+            w: parseInt(item.w),
+          }
+        })
+        node.send_output('save_grid_state', gridState);
       });
 
       import { Node } from './js/Node.js';
