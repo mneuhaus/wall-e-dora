@@ -3,16 +3,14 @@
     <i class="fa-solid fa-gamepad" style="width: 30px;"></i>
   </span>
   <div v-if="showModal" class="gamepad-debug-modal">
-    <div class="modal-content">
-      <h1>Gamepad Debug</h1>
-      <pre>{{ debugData }}</pre>
-      <button @click="closeModal">Close</button>
-    </div>
+    <GamepadDebug />
+    <button @click="closeModal" style="position: absolute; top: 10px; right: 10px; z-index: 1001;">Close</button>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import GamepadDebug from './GamepadDebug.vue';
 
 // Using the browser's gamepad API
 const connected = ref(false);
@@ -78,6 +76,7 @@ onUnmounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
+  z-index: 1000;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
