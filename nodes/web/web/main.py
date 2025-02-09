@@ -19,12 +19,17 @@ def flush_web_inputs(node):
     global global_web_inputs
     if not global_web_inputs:
         return
-    import json
+    import os, json
     for web_event in global_web_inputs:
         print(web_event)
-        node.send_output(
-            output_id=web_event["output_id"], data=pa.array(web_event["data"]), metadata=web_event["metadata"]
-        )
+        if web_event.get("output_id") == "save_grid_state":
+            grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+            with open(grid_state_path, "w", encoding="utf-8") as f:
+                json.dump(web_event["data"], f)
+        else:
+            node.send_output(
+                output_id=web_event["output_id"], data=pa.array(web_event["data"]), metadata=web_event["metadata"]
+            )
     global_web_inputs = []
 
 async def websocket_handler(request):
