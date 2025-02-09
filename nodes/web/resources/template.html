@@ -99,6 +99,15 @@
   <body>
     <header class="top-app-bar" style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px; background-color: #424242; color: white;">
       <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
+      <div class="media-controls" style="display: flex; align-items: center;">
+          <label class="slider" style="margin: 0 16px;">
+            <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
+            <span></span>
+          </label>
+          <button onclick="window.node.send_output('stop', []);" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">
+            <i class="fa-solid fa-stop"></i>
+          </button>
+      </div>
       <div class="top-app-bar__actions">
         <span id="voltage" style="font-size: 18px; margin-right: 8px;"></span>
         <span id="current" style="font-size: 18px; margin-right: 8px;"></span>
@@ -109,17 +118,7 @@
         <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;"><i class="fa-solid fa-link-slash"></i></span>
       </div>
     </header>
-      <section class="controls">
-        <button onclick="sendButton()">Press me</button>
-        <div style="margin-top: 16px;">
-          <label for="volume">Volume:</label>
-          <label class="slider">
-            <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
-            <span></span>
-          </label>
-        </div>
-        <button onclick="window.node.send_output('stop', []);">Stop Sounds</button>
-      </section>
+      
       <section id="sound-list">
         <h2>Available Sounds</h2>
         <ul id="sounds"></ul>
