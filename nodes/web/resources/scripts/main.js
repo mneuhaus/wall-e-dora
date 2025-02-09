@@ -3,7 +3,7 @@ import "material-dynamic-colors";
 import 'gridstack/dist/gridstack.min.css';
 import { GridStack } from 'gridstack';
 import 'fontawesome';
-import {Node} from "./Node.js";
+import Node from "./components/Node.vue";
 import Volume from './components/Volume';
 import { createApp } from 'vue';
 
@@ -37,7 +37,8 @@ grid.on('change', (event, items) => {
     node.send_output('save_grid_state', gridState);
 });
 
-const node = new Node();
+/* The Node component is now integrated as a Vue child component 
+   which will emit events via its "event" event */
 
 function updateSoundList(sounds) {
     var soundsList = document.getElementById('sounds');
