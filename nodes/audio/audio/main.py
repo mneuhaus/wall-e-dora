@@ -45,8 +45,29 @@ def play_sound(sounds_dir, filename):
     except pygame.error as e:
         print(f"Error playing sound {filename}: {e}")
 
+def load_volume():
+    vol_file = os.path.join(os.path.dirname(__file__), "volume.cfg")
+    try:
+        with open(vol_file, "r") as f:
+            vol = float(f.read().strip())
+            return vol
+    except Exception:
+        return 1.0
+
+def save_volume(vol):
+    vol_file = os.path.join(os.path.dirname(__file__), "volume.cfg")
+    try:
+        with open(vol_file, "w") as f:
+            f.write(str(vol))
+    except Exception as e:
+        print("Could not save volume:", e)
+
 def main():
     sounds_dir = setup_hardware()
+    vol = load_volume()
+    pygame.mixer.music.set_volume(vol)
+    for i in range(pygame.mixer.get_num_channels()):
+        pygame.mixer.Channel(i).set_volume(vol)
     play_startup_sound(sounds_dir)
     node = Node()
     print("Audio node started")
@@ -82,6 +103,7 @@ def main():
                     for i in range(pygame.mixer.get_num_channels()):
                         pygame.mixer.Channel(i).set_volume(vol)
                     node.send_output("volume", pa.array([vol]), metadata={})
+                    save_volume(vol)
                 except Exception as e:
                     print("Error setting volume:", e)
             elif event["id"] == "volume_tick":
