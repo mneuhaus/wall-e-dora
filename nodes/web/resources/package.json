@@ -1,0 +1,10 @@
+{
+	"dependencies": {
+		"@symfony/webpack-encore": "^5.0.1",
+		"core-js": "^3.40.0",
+		"svelte": "^5.19.9"
+	},
+	"devDependencies": {
+		"webpack-notifier": "^1.15.0"
+	}
+}
