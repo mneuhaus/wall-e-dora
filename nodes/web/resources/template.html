@@ -2,6 +2,8 @@
 <html>
   <head>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <script type="importmap">
       {
         "imports": {
@@ -16,46 +18,108 @@
       document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Power Metrics</title>
+    <title>wall-e</title>
     <style>
       body { margin:0; font-family: Roboto, sans-serif; }
-      .status-bar { display: flex; align-items: center; justify-content: space-between; background-color: #6200ee; color: white; padding: 10px 16px; }
+      .status-bar { display: flex; align-items: center; justify-content: space-between; background-color: #424242; color: white; padding: 10px 16px; }
       .status-indicator { display: flex; align-items: center; }
       .status-indicator span { margin-left: 8px; }
       .metrics-table { margin: 16px 0; }
       table { width: 100%; border-collapse: collapse; }
       th, td { padding: 8px 12px; border-bottom: 1px solid #ddd; }
       .controls { margin: 16px 0; }
+      .badge {margin-right: 10px;}
     </style>
+
+    <script type="module">
+      import { Node } from './js/Node.js';
+      const node = new Node();
+      window.node = node;
+
+      function updateSoundList(sounds) {
+        var soundsList = document.getElementById('sounds');
+        soundsList.innerHTML = '';
+        if (!sounds || !Array.isArray(sounds)) return;
+        sounds.forEach(function(sound) {
+          var displayName = sound.replace(/\.mp3$/i, '');
+          var item = document.createElement('md-list-item');
+          item.setAttribute('type', 'button');
+          var headline = document.createElement('div');
+          headline.setAttribute('slot', 'headline');
+          headline.innerText = displayName;
+          item.appendChild(headline);
+          item.style.cursor = 'pointer';
+          item.onclick = function() { node.send_output('play_sound', [sound]); };
+          soundsList.appendChild(item);
+        });
+      }
+
+      function setVolume(volume) {
+        node.send_output('set_volume', [volume]);
+      }
+
+      setInterval(() => {
+        if (node.ws.readyState === WebSocket.OPEN) {
+          document.getElementById('connection-active').style.display = '';
+          document.getElementById('connection-inactive').style.display = 'none';
+        } else {
+          document.getElementById('connection-active').style.display = 'none';
+          document.getElementById('connection-inactive').style.display = '';
+        }
+      }, 100);
+
+      node.next((event) => {
+        console.log(event);
+        if (event.id === 'available_sounds') {
+          updateSoundList(event.value);
+        }
+
+        if (event.id === 'voltage') {
+          document.getElementById('voltage').innerText = parseFloat(event.value).toFixed(2) + " V";
+        }
+
+        if (event.id === 'current') {
+          document.getElementById('current').innerText = parseFloat(event.value).toFixed(2) + " A";
+        }
+
+        if (event.id === 'power') {
+          document.getElementById('power').innerText = parseFloat(event.value).toFixed(2) + " W";
+        }
+
+        if (event.id === 'soc') {
+          document.getElementById('soc').innerText = parseFloat(event.value).toFixed(0) + " %";
+        }
+
+        if (event.id === 'runtime') {
+          document.getElementById('runtime').innerText = event.value;
+        }
+
+        if (event.id === 'shutdown') {
+          console.log('Shutdown event received:', event.value);
+        }
+
+        if (event.id === 'volume') {
+          document.getElementById('volume').value = event.volume;
+        }
+      })
+
+    </script>
   </head>
   <body>
     <header class="status-bar">
       <div class="status-indicator">
-        <md-icon style="color: white;">power</md-icon>
-        <span>Power Metrics</span>
+        <span>wall-e</span>
       </div>
       <div id="connection-status">
-        <md-icon id="status-icon" style="color: red;">cloud_off</md-icon>
+        <span id="voltage" class="badge" style="font-size: 24px;"></span>
+        <span id="current" class="badge" style="font-size: 24px;"></span>
+        <span id="power" class="badge" style="font-size: 24px;"></span>
+        <span id="soc" class="badge" style="font-size: 24px;"></span>
+        <span id="runtime" class="badge" style="font-size: 24px;"></span>
+        <span id="connection-active" class="material-symbols-outlined" style="color: #00bfa5; font-size: 40px; display: none;">link</span>
+        <span id="connection-inactive" class="material-symbols-outlined" style="color: #e53935; font-size: 40px;">link_off</span>
       </div>
     </header>
-    <main class="container" style="padding: 16px;">
-      <section class="metrics-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Voltage</td><td id="voltage">-- V</td></tr>
-            <tr><td>Current</td><td id="current">-- A</td></tr>
-            <tr><td>Power</td><td id="power">-- W</td></tr>
-            <tr><td>SoC</td><td id="soc">-- %</td></tr>
-            <tr><td>Runtime</td><td id="runtime">-- s</td></tr>
-          </tbody>
-        </table>
-      </section>
       <section class="controls">
         <md-outlined-button onclick="sendButton()">Press me</md-outlined-button>
         <div style="margin-top: 16px;">
@@ -64,7 +128,7 @@
         </div>
         <div style="margin-top: 16px;">
           <label for="volume">Volume:</label>
-          <md-slider id="volume" min="0" max="1" value="1" step="0.01" discrete onchange="sendVolume(this.value)"></md-slider>
+          <md-slider id="volume" min="0" max="1" value="1" step="0.01" discrete onchange="window.node.send_output('set_volume', [this.value]);"></md-slider>
         </div>
       </section>
       <section id="sound-list">
@@ -72,47 +136,5 @@
         <md-list id="sounds"></md-list>
       </section>
     </main>
-    <script type="module">
-      import { Node } from './js/Node.js';
-      const node = new Node();
-
-      function updateMetrics(metrics) {
-        document.getElementById('voltage').innerText = metrics.voltage + " V";
-        document.getElementById('current').innerText = metrics.current + " A";
-        document.getElementById('power').innerText = metrics.power + " W";
-        document.getElementById('soc').innerText = metrics.soc + " %";
-        document.getElementById('runtime').innerText = metrics.runtime + " s";
-      }
-      
-      function updateUI(data) {
-        if (data.action) {
-          data = data.value;
-        }
-        updateMetrics(data);
-        updateSoundList(data.available_sounds);
-        if (data.volume !== undefined) {
-          document.getElementById('volume').value = data.volume;
-        }
-      }
-
-      node.next((event) => {
-        if (event.id === 'available_sounds') {
-          updateSoundList(event.value);
-        } else if (event.id === 'voltage') {
-          document.getElementById('voltage').innerText = event.value + " V";
-        } else if (event.id === 'current') {
-          document.getElementById('current').innerText = event.value + " A";
-        } else if (event.id === 'power') {
-          document.getElementById('power').innerText = event.value + " W";
-        } else if (event.id === 'soc') {
-          document.getElementById('soc').innerText = event.value + " %";
-        } else if (event.id === 'runtime') {
-          document.getElementById('runtime').innerText = event.value + " s";
-        } else if (event.id === 'shutdown') {
-          console.log('Shutdown event received:', event.value);
-        }
-      })
-
-    </script>
   </body>
 </html>

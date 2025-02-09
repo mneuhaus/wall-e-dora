@@ -21,12 +21,10 @@ def play_startup_sound(sounds_dir):
         return
     try:
         sound = pygame.mixer.Sound(startup_sound)
-        sound.set_volume(1.0)
         channel = pygame.mixer.find_channel()
         if not channel:
             print("No available audio channels")
             return
-        channel.set_volume(1.0)
         channel.play(sound)
         print("Playing startup sound")
         time.sleep(2)
@@ -40,10 +38,8 @@ def play_sound(sounds_dir, filename):
         return
     try:
         sound = pygame.mixer.Sound(sound_file)
-        sound.set_volume(1.0)
         channel = pygame.mixer.find_channel()
         if channel:
-            channel.set_volume(1.0)
             channel.play(sound)
             print(f"Playing sound: {filename}")
     except pygame.error as e:
@@ -72,6 +68,7 @@ def main():
                 available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
                 node.send_output("available_sounds", pa.array(available), metadata={})
             elif event["id"] == "set_volume":
+                print('set_volume: ', event['value'])
                 try:
                     if hasattr(event["value"], "to_pylist"):
                         vol = float(event["value"].to_pylist()[0])
