@@ -72,6 +72,7 @@
 
 
     <script type="module">
+      window.gridState = {{ gridState | safe }};
       let theme = await ui("theme", "#ffd700");
       const grid = GridStack.init();
       // Restore grid state from server-provided variable
