@@ -37,6 +37,7 @@ def play_sound(sounds_dir, filename):
         print(f"Sound file not found: {sound_file}")
         return
     try:
+        pygame.mixer.stop()
         sound = pygame.mixer.Sound(sound_file)
         channel = pygame.mixer.find_channel()
         if channel:
