@@ -39,9 +39,11 @@ class Node {
     this.state.ws.binaryType = 'arraybuffer';
     this.state.ws.onopen = () => {
       console.log("WebSocket connection opened");
+      this.emitter.emit('connection', true);
     };
     this.state.ws.onclose = () => {
       console.log("WebSocket connection closed, retrying in 1s");
+      this.emitter.emit('connection', false);
       setTimeout(() => this.connectWebSocket(), 1000);
     };
     this.state.ws.onerror = (error) => {
