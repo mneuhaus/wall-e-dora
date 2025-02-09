@@ -18,7 +18,8 @@ function processEventQueue() {
   setInterval(() => {
     while (state.eventQueue.length > 0) {
       const event = state.eventQueue.shift();
-      emit('message', event);
+      // Use event.id as the emit name if available; otherwise fallback to 'message'
+      emit(event.id || 'message', event);
     }
   }, 100);
 }
