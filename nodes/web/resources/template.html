@@ -13,10 +13,11 @@
     <div id="app">
       <header>
         <nav>
-          <div class="top-app-bar__title" style="font-size: 24px;">wall-e</div>
+          <div class="top-app-bar__title max" style="font-size: 24px;">wall-e</div>
 
           <div class="top-app-bar__actions">
-            <connection-status></connection-status>
+            <span id="connection-active" style="color: #00bfa5; font-size: 24px; display: none; margin-left: 16px;"><i class="fa-solid fa-link"></i></span>
+            <span id="connection-inactive" style="color: #e53935; font-size: 24px; margin-left: 16px;"><i class="fa-solid fa-link-slash"></i></span>
           </div>
 
           <power></power>

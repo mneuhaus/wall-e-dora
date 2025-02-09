@@ -14,6 +14,7 @@ import Volume from './components/Volume';
 import Sounds from './components/Sounds';
 import Power from './components/Power.vue';
 import ConnectionStatus from './components/ConnectionStatus.vue';
+app.component('Volume', Volume);
 app.component('Sounds', Sounds);
 app.component('Power', Power);
 app.component('ConnectionStatus', ConnectionStatus);
