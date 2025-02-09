@@ -2,21 +2,7 @@
 <html>
   <head>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <script type="importmap">
-      {
-        "imports": {
-          "@material/web/": "https://esm.run/@material/web/",
-          "flatbuffers": "./node_modules/flatbuffers/flatbuffers.mjs"
-        }
-      }
-    </script>
-    <script type="module">
-      import '@material/web/all.js';
-      import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
-      document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
-    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/beercss@2.2.0/dist/beer.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>wall-e</title>
     <style>
@@ -42,13 +28,9 @@
         if (!sounds || !Array.isArray(sounds)) return;
         sounds.forEach(function(sound) {
           var displayName = sound.replace(/\.mp3$/i, '');
-          var item = document.createElement('md-list-item');
-          item.setAttribute('type', 'button');
-          var headline = document.createElement('div');
-          headline.setAttribute('slot', 'headline');
-          headline.innerText = displayName;
-          item.appendChild(headline);
+          var item = document.createElement('li');
           item.style.cursor = 'pointer';
+          item.innerText = displayName;
           item.onclick = function() { node.send_output('play_sound', [sound]); };
           soundsList.appendChild(item);
         });
@@ -121,20 +103,20 @@
       </div>
     </header>
       <section class="controls">
-        <md-outlined-button onclick="sendButton()">Press me</md-outlined-button>
+        <button onclick="sendButton()">Press me</button>
         <div style="margin-top: 16px;">
           <label for="slider">Adjust value:</label>
           <md-slider id="slider" min="0" max="100" value="50" discrete onchange="sendSlider(this.value)"></md-slider>
         </div>
         <div style="margin-top: 16px;">
           <label for="volume">Volume:</label>
-          <md-slider id="volume" min="0" max="1" value="1" step="0.01" discrete onchange="window.node.send_output('set_volume', [this.value]);"></md-slider>
+          <input type="range" id="volume" min="0" max="1" value="1" step="0.01" onchange="window.node.send_output('set_volume', [this.value]);">
         </div>
-        <md-outlined-button onclick="window.node.send_output('stop', []);">Stop Sounds</md-outlined-button>
+        <button onclick="window.node.send_output('stop', []);">Stop Sounds</button>
       </section>
       <section id="sound-list">
         <h2>Available Sounds</h2>
-        <md-list id="sounds"></md-list>
+        <ul id="sounds"></ul>
       </section>
     </main>
   </body>
