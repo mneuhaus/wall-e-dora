@@ -71,4 +71,6 @@ class Node {
   }
 }
 
-export default Node;
+let node = new Node();
+
+export default node;

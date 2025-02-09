@@ -129,7 +129,7 @@ def start_asset_compilation():
     threading.Thread(target=print_output, daemon=True).start()
 
 def main():
-    start_asset_compilation()
+    # start_asset_compilation()
     start_background_webserver()
     node = Node()
     
