@@ -121,11 +121,6 @@ def main():
             serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
-        elif "id" in event and event["id"] == "save_grid_state":
-            import os
-            grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
-            with open(grid_state_path, "w", encoding="utf-8") as f:
-                json.dump(event["value"], f)
         elif "id" in event and event["id"] == "tick":
             flush_web_inputs(node)
 
