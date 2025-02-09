@@ -1,8 +1,3 @@
-<template>
-  <!-- This component does not render any visible UI -->
-  <div style="display: none;"></div>
-</template>
-
 <script setup>
 import { reactive, onMounted } from 'vue';
 

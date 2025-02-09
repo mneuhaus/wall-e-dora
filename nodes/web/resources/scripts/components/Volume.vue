@@ -13,8 +13,11 @@
   </button>
 </template>
 <script setup>
-const emit = defineEmits(['set_volume']);
+import './Node';
+
+console.log(Node);
+
 function handleVolumeChange(event) {
-  emit('set_volume', [event.target.value]);
+  sendOutput('set_volume', [event.target.value])
 }
 </script>
