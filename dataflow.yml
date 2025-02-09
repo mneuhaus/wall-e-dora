@@ -33,6 +33,7 @@ nodes:
       - slider_input
       - play_sound
       - set_volume
+      - stop
 
   - id: audio
     path: nodes/audio/audio/main.py
@@ -41,6 +42,7 @@ nodes:
       scan_sounds: dora/timer/secs/3
       volume_tick: dora/timer/secs/1
       set_volume: web/set_volume
+      stop: web/stop
     outputs:
       - available_sounds
       - volume
