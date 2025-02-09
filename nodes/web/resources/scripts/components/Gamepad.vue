@@ -50,11 +50,13 @@ function updateDebugData() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const currentPad = pads && pads[0] ? pads[0] : null;
   if (currentPad) {
-    debugData.value = {
+    const currentData = {
       id: currentPad.id,
       buttons: currentPad.buttons.map(button => ({ pressed: button.pressed, value: button.value })),
       axes: currentPad.axes
     };
+    console.log("Gamepad Input:", currentData);
+    debugData.value = currentData;
   } else {
     debugData.value = {};
   }
