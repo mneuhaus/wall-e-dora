@@ -68,4 +68,7 @@ onMounted(() => {
   connectWebSocket();
   processEventQueue();
 });
+defineExpose({
+  sendOutput
+});
 </script>
