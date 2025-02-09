@@ -8,6 +8,7 @@ import aiohttp_debugtoolbar
 import json
 import logging
 import pyarrow as pa
+import subprocess
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -119,7 +120,16 @@ def start_background_webserver():
     thread = threading.Thread(target=run_loop, daemon=True)
     thread.start()
 
+def start_asset_compilation():
+    cmd = ['nodes/web/resources/node_modules/.bin/encore', 'dev', '--watch']
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    def print_output():
+        for line in iter(proc.stdout.readline, ""):
+            print("[ASSET COMPILER]", line, end="")
+    threading.Thread(target=print_output, daemon=True).start()
+
 def main():
+    start_asset_compilation()
     start_background_webserver()
     node = Node()
     
