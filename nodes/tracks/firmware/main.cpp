@@ -27,12 +27,14 @@ static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, ui
 static void process_command(const char* cmd, absolute_time_t *last_heartbeat, uint slice_left, uint chan_left, uint slice_right, uint chan_right) {
     if (strcmp(cmd, "heartbeat") == 0) {
         *last_heartbeat = get_absolute_time();
-    } else if (strncmp(cmd, "left ", 5) == 0) {
-        int speed = clamp_speed(atoi(cmd + 5));
-        pwm_set_chan_level(slice_left, chan_left, speed);
-    } else if (strncmp(cmd, "right ", 6) == 0) {
-        int speed = clamp_speed(atoi(cmd + 6));
-        pwm_set_chan_level(slice_right, chan_right, speed);
+    } else if (strncmp(cmd, "move ", 5) == 0) {
+        float linear = 0.0f, angular = 0.0f;
+        if (sscanf(cmd + 5, "%f %f", &linear, &angular) == 2) {
+            int left_speed = clamp_speed((int)((linear - angular) * 10));
+            int right_speed = clamp_speed((int)((linear + angular) * 10));
+            pwm_set_chan_level(slice_left, chan_left, left_speed);
+            pwm_set_chan_level(slice_right, chan_right, right_speed);
+        }
     }
 }
 
