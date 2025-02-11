@@ -9,9 +9,8 @@ import sys
 
 serial_buffer = queue.Queue()
 
-def background_serial_reader():
+def background_serial_reader(ser):
     try:
-        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0)
         while True:
             if ser.in_waiting:
                 line = ser.readline().decode('utf-8', errors='replace')
@@ -35,10 +34,10 @@ def move_tracks():
 
 bg_thread = None
 
-def start_background_thread():
+def start_background_thread(ser):
     global bg_thread
     if bg_thread is None or not bg_thread.is_alive():
-        bg_thread = threading.Thread(target=background_serial_reader, daemon=True)
+        bg_thread = threading.Thread(target=background_serial_reader, args=(ser,), daemon=True)
         bg_thread.start()
 
 def main():
@@ -48,7 +47,7 @@ def main():
         print("Error opening serial port for writing:", e)
         return
 
-    start_background_thread()
+    start_background_thread(ser)
 
     node = Node()
     joystick_x = None
