@@ -58,6 +58,8 @@ def main():
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 flush_serial_buffer()
+            elif event["id"] == "heartbeat":
+                ser.write(("heartbeat\n").encode("utf-8"))
             elif event["id"] == "LEFT_ANALOG_STICK_X":
                 joystick_x = event["value"][0].as_py()
             elif event["id"] == "LEFT_ANALOG_STICK_Y":
