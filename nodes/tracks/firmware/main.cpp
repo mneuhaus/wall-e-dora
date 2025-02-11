@@ -5,42 +5,51 @@
 #include "hardware/pwm.h"
 #include "pico/time.h"
 
+static int clamp_speed(int speed) {
+    if (speed < 0) return 0;
+    if (speed > 100) return 100;
+    return speed;
+}
+
+static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, uint *channel, int duty) {
+    gpio_init(vcc_pin);
+    gpio_set_dir(vcc_pin, GPIO_OUT);
+    gpio_init(dir_pin);
+    gpio_set_dir(dir_pin, GPIO_OUT);
+    gpio_set_function(pwm_pin, GPIO_FUNC_PWM);
+    *slice = pwm_gpio_to_slice_num(pwm_pin);
+    *channel = pwm_gpio_to_channel(pwm_pin);
+    pwm_set_wrap(*slice, 100);
+    pwm_set_chan_level(*slice, *channel, duty);
+    pwm_set_enabled(*slice, true);
+}
+
+static void process_command(const char* cmd, absolute_time_t *last_heartbeat, uint slice_left, uint chan_left, uint slice_right, uint chan_right) {
+    if (strcmp(cmd, "heartbeat") == 0) {
+        *last_heartbeat = get_absolute_time();
+    } else if (strncmp(cmd, "left ", 5) == 0) {
+        int speed = clamp_speed(atoi(cmd + 5));
+        pwm_set_chan_level(slice_left, chan_left, speed);
+    } else if (strncmp(cmd, "right ", 6) == 0) {
+        int speed = clamp_speed(atoi(cmd + 6));
+        pwm_set_chan_level(slice_right, chan_right, speed);
+    }
+}
+
 int main() {
     stdio_init_all();
 
-    // Initialize left track pins
-    gpio_init(2);           // Left VCC
-    gpio_set_dir(2, GPIO_OUT);
-    gpio_init(4);           // Left DIR
-    gpio_set_dir(4, GPIO_OUT);
-    gpio_set_function(3, GPIO_FUNC_PWM);  // Left PWM
+    uint slice_num_left, chan_left;
+    uint slice_num_right, chan_right;
 
-    // Initialize right track pins
-    gpio_init(6);           // Right VCC
-    gpio_set_dir(6, GPIO_OUT);
-    gpio_init(8);           // Right DIR
-    gpio_set_dir(8, GPIO_OUT);
-    gpio_set_function(7, GPIO_FUNC_PWM);  // Right PWM
+    init_track(2, 4, 3, &slice_num_left, &chan_left, 10);
+    init_track(6, 8, 7, &slice_num_right, &chan_right, 10);
 
-    // Set VCC and forward direction
+    // Set VCC and forward direction for both tracks
     gpio_put(2, 1);         // Enable left VCC
     gpio_put(4, 1);         // Set left direction forward
     gpio_put(6, 1);         // Enable right VCC
     gpio_put(8, 1);         // Set right direction forward
-
-    // Setup PWM for left track (GPIO3): 10% duty cycle
-    uint slice_num_left = pwm_gpio_to_slice_num(3);
-    uint chan_left = pwm_gpio_to_channel(3);
-    pwm_set_wrap(slice_num_left, 100);
-    pwm_set_chan_level(slice_num_left, chan_left, 10);
-    pwm_set_enabled(slice_num_left, true);
-
-    // Setup PWM for right track (GPIO7): 10% duty cycle
-    uint slice_num_right = pwm_gpio_to_slice_num(7);
-    uint chan_right = pwm_gpio_to_channel(7);
-    pwm_set_wrap(slice_num_right, 100);
-    pwm_set_chan_level(slice_num_right, chan_right, 10);
-    pwm_set_enabled(slice_num_right, true);
 
     // Heartbeat monitoring loop: if no "heartbeat" command received within 3s, stop all motors.
     absolute_time_t last_heartbeat = get_absolute_time();
@@ -52,19 +61,7 @@ int main() {
             char ch = (char)c;
             if (ch == '\n' || ch == '\r') {
                 buf[buf_index] = '\0';
-                if (strcmp(buf, "heartbeat") == 0) {
-                    last_heartbeat = get_absolute_time();
-                } else if (strncmp(buf, "left ", 5) == 0) {
-                    int speed = atoi(buf + 5);
-                    if (speed < 0) speed = 0;
-                    if (speed > 100) speed = 100;
-                    pwm_set_chan_level(slice_num_left, chan_left, speed);
-                } else if (strncmp(buf, "right ", 6) == 0) {
-                    int speed = atoi(buf + 6);
-                    if (speed < 0) speed = 0;
-                    if (speed > 100) speed = 100;
-                    pwm_set_chan_level(slice_num_right, chan_right, speed);
-                }
+                process_command(buf, &last_heartbeat, slice_num_left, chan_left, slice_num_right, chan_right);
                 buf_index = 0;
             } else {
                 if (buf_index < 63) {
