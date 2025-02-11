@@ -25,6 +25,7 @@ static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, ui
 }
 
 static void process_command(const char* cmd, absolute_time_t *last_heartbeat, uint slice_left, uint chan_left, uint slice_right, uint chan_right) {
+    printf("Received command: %s\n", cmd);
     if (strcmp(cmd, "heartbeat") == 0) {
         *last_heartbeat = get_absolute_time();
     } else if (strncmp(cmd, "move ", 5) == 0) {
