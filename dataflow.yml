@@ -34,6 +34,29 @@ nodes:
       - play_sound
       - set_volume
       - stop
+      - LEFT_ANALOG_STICK_X
+      - LEFT_ANALOG_STICK_Y
+      - RIGHT_ANALOG_STICK_X
+      - RIGHT_ANALOG_STICK_
+      - FACE_1
+      - FACE_2
+      - FACE_3
+      - FACE_4
+      - LEFT_SHOULDER
+      - RIGHT_SHOULDER
+      - LEFT_SHOULDER_BOTTOM
+      - RIGHT_SHOULDER_BOTTOM
+      - SELECT
+      - START
+      - LEFT_ANALOG_BUTTON
+      - RIGHT_ANALOG_BUTTON
+      - DPAD_UP
+      - DPAD_DOWN
+      - DPAD_LEFT
+      - DPAD_RIGHT
+      - HOME
+      - MISCBUTTON_1
+      - MISCBUTTON_2
 
   - id: audio
     path: nodes/audio/audio/main.py
