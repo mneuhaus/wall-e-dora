@@ -87,7 +87,8 @@ sidebar_position: 1
      import pyarrow as pa
 
      node = Node()
-
+     joystick_x = None
+     joystick_y = None
      event = node.next()
      if event["type"] == "INPUT":
          print(

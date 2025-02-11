@@ -56,10 +56,18 @@ def main():
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 flush_serial_buffer()
-            elif event["id"] == "command":
-                cmd = event.get("command", "")
-                if cmd:
-                    ser.write((cmd + "\n").encode("utf-8"))
+            elif event["id"] == "LEFT_ANALOG_STICK_X":
+                joystick_x = event.get("value", 0)
+            elif event["id"] == "LEFT_ANALOG_STICK_Y":
+                joystick_y = event.get("value", 0)
+            
+            if joystick_x is not None and joystick_y is not None:
+                # Convert joystick inputs to linear and angular velocities.
+                # Assuming the joystick values are normalized in [-1, 1]:
+                linear = -float(joystick_y) * 50.0
+                angular = float(joystick_x) * 50.0
+                cmd = f"move {linear} {angular}"
+                ser.write((cmd + "\n").encode("utf-8"))
 
 
 if __name__ == "__main__":
