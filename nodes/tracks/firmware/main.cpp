@@ -7,7 +7,7 @@
 
 static int clamp_speed(int speed) {
     if (speed < 0) return 0;
-    if (speed > 100) return 100;
+    if (speed > 1000) return 1000;
     return speed;
 }
 
@@ -19,7 +19,7 @@ static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, ui
     gpio_set_function(pwm_pin, GPIO_FUNC_PWM);
     *slice = pwm_gpio_to_slice_num(pwm_pin);
     *channel = pwm_gpio_to_channel(pwm_pin);
-    pwm_set_wrap(*slice, 100);
+    pwm_set_wrap(*slice, 1000);
     pwm_set_chan_level(*slice, *channel, duty);
     pwm_set_enabled(*slice, true);
 }
@@ -42,8 +42,8 @@ int main() {
     uint slice_num_left, chan_left;
     uint slice_num_right, chan_right;
 
-    init_track(2, 4, 3, &slice_num_left, &chan_left, 10);
-    init_track(6, 8, 7, &slice_num_right, &chan_right, 10);
+    init_track(2, 4, 3, &slice_num_left, &chan_left, 0);
+    init_track(6, 8, 7, &slice_num_right, &chan_right, 0);
 
     // Set VCC and forward direction for both tracks
     gpio_put(2, 1);         // Enable left VCC
@@ -70,16 +70,12 @@ int main() {
             }
         }
         if (absolute_time_diff_us(last_heartbeat, get_absolute_time()) > 3000000) {
-            break;
+            pwm_set_chan_level(slice_num_right, chan_right, 0);
+            pwm_set_chan_level(slice_num_left, chan_left, 0);
         }
         sleep_ms(100);
     }
 
-    // Stop the motors
-    pwm_set_enabled(slice_num_left, false);
-    pwm_set_enabled(slice_num_right, false);
-    gpio_put(2, 0);         // Disable left VCC
-    gpio_put(6, 0);         // Disable right VCC
-
-    return 0;
+    // pwm_set_chan_level(slice_num_right, chan_right, 1000);
+    // pwm_set_chan_level(slice_num_left, chan_left, 1000);
 }
