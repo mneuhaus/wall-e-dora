@@ -43,7 +43,7 @@ def start_background_thread():
 
 def main():
     try:
-        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_E6612483CB1A9621-if00', 115200, timeout=0)
+        ser = Serial('/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00', 115200, timeout=0)
     except Exception as e:
         print("Error opening serial port for writing:", e)
         return
@@ -51,23 +51,27 @@ def main():
     start_background_thread()
 
     node = Node()
-    
+    joystick_x = None
+    joystick_y = None
+
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
                 flush_serial_buffer()
             elif event["id"] == "LEFT_ANALOG_STICK_X":
-                joystick_x = event.get("value", 0)
+                joystick_x = event["value"][0].as_py()
             elif event["id"] == "LEFT_ANALOG_STICK_Y":
-                joystick_y = event.get("value", 0)
+                joystick_y = event["value"][0].as_py()
             
             if joystick_x is not None and joystick_y is not None:
                 # Convert joystick inputs to linear and angular velocities.
                 # Assuming the joystick values are normalized in [-1, 1]:
-                linear = -float(joystick_y) * 100.0
-                angular = float(joystick_x) * 100.0
+                print(joystick_y, joystick_x)
+                linear = -joystick_y * 100.0
+                angular = joystick_x * 100.0
                 cmd = f"move {linear} {angular}"
                 ser.write((cmd + "\n").encode("utf-8"))
+                print(cmd)
 
 
 if __name__ == "__main__":

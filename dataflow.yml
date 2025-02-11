@@ -34,8 +34,8 @@ nodes:
       - play_sound
       - set_volume
       - stop
-      - LEFT_ANALOG_STICK_X
-      - LEFT_ANALOG_STICK_Y
+      - GAMEPAD_LEFT_ANALOG_STICK_X
+      - GAMEPAD_LEFT_ANALOG_STICK_Y
       - RIGHT_ANALOG_STICK_X
       - RIGHT_ANALOG_STICK_
       - FACE_1
@@ -70,9 +70,9 @@ nodes:
       - available_sounds
       - volume
 
-  # - id: tracks
-  #   path: nodes/tracks/tracks/main.py
-  #   inputs:
-  #     tick: dora/timer/millis/100
-  #   outputs:
-  #     - my_output_id
+  - id: tracks
+    path: nodes/tracks/tracks/main.py
+    inputs:
+      # tick: dora/timer/millis/100
+      LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
+      LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
