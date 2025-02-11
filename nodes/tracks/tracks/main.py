@@ -14,7 +14,7 @@ def background_serial_reader(ser):
         while True:
             if ser.in_waiting:
                 line = ser.readline().decode('utf-8', errors='replace')
-                serial_buffer.put(line)
+                serial_buffer.put('RP2040: ' + line)
             time.sleep(0.1)
     except Exception as e:
         print(f"Error reading serial port in background thread: {e}")
