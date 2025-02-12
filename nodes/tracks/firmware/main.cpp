@@ -73,6 +73,7 @@ int main() {
 
     // Heartbeat monitoring loop: if no "heartbeat" command received within 3s, stop all motors.
     absolute_time_t last_heartbeat = get_absolute_time();
+    bool warned = false;
     char buf[64] = {0};
     int buf_index = 0;
     while (true) {
@@ -90,6 +91,10 @@ int main() {
             }
         }
         if (absolute_time_diff_us(last_heartbeat, get_absolute_time()) > 10000000) {
+            if (!warned) {
+                printf("heartbeat missing, stopping motors\n");
+                warned = true;
+            }
             pwm_set_chan_level(slice_num_right, chan_right, 0);
             pwm_set_chan_level(slice_num_left, chan_left, 0);
         }
