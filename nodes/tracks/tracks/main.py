@@ -8,14 +8,13 @@ import queue
 import sys
 
 serial_buffer = queue.Queue()
+bg_thread = None
 
 def background_serial_reader(ser):
     try:
-        while True:
-            if ser.in_waiting:
-                line = ser.readline().decode('utf-8', errors='replace')
-                serial_buffer.put('RP2040: ' + line)
-            time.sleep(0.1)
+        if ser.in_waiting:
+            line = ser.readline().decode('utf-8', errors='replace')
+            serial_buffer.put('RP2040: ' + line)
     except Exception as e:
         print(f"Error reading serial port in background thread: {e}")
 
@@ -23,16 +22,6 @@ def flush_serial_buffer():
     while not serial_buffer.empty():
         line = serial_buffer.get()
         print(line, end='')
-
-def move_tracks():
-    "Move left and right tracks at 10% speed for 5 seconds"
-    print("Setting left track to 10% speed")
-    print("Setting right track to 10% speed")
-    time.sleep(5)
-    print("Stopping left track")
-    print("Stopping right track")
-
-bg_thread = None
 
 def start_background_thread(ser):
     global bg_thread
@@ -57,7 +46,8 @@ def main():
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                flush_serial_buffer()
+                pass
+                # flush_serial_buffer()
             elif event["id"] == "heartbeat":
                 now = time.monotonic()
                 if now - last_command_time >= 0.1:
