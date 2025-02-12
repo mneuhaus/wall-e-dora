@@ -24,19 +24,33 @@ static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, ui
     pwm_set_enabled(*slice, true);
 }
 
-static void process_command(const char* cmd, absolute_time_t *last_heartbeat, uint slice_left, uint chan_left, uint slice_right, uint chan_right) {
+static void process_command(const char* cmd, absolute_time_t *last_heartbeat, uint slice_left, uint chan_left, uint slice_right, uint chan_right, uint left_dir_pin, uint right_dir_pin) {
     printf("cmd: %s\n", cmd);
     if (strcmp(cmd, "heartbeat") == 0) {
         *last_heartbeat = get_absolute_time();
     } else if (strncmp(cmd, "move ", 5) == 0) {
         float linear = 0.0f, angular = 0.0f;
         if (sscanf(cmd + 5, "%f %f", &linear, &angular) == 2) {
-            int left_speed = clamp_speed((int)((linear - angular) * 10));
-            int right_speed = clamp_speed((int)((linear + angular) * 10));
-            printf("left_speed: %i\n", left_speed);
-            printf("right_speed: %i\n", right_speed);
-            pwm_set_chan_level(slice_left, chan_left, left_speed);
-            pwm_set_chan_level(slice_right, chan_right, right_speed);
+            int left_val = (int)((linear - angular) * 10);
+            int right_val = (int)((linear + angular) * 10);
+            if (left_val < 0) {
+                gpio_put(left_dir_pin, 0);
+                left_val = clamp_speed(-left_val);
+            } else {
+                gpio_put(left_dir_pin, 1);
+                left_val = clamp_speed(left_val);
+            }
+            if (right_val < 0) {
+                gpio_put(right_dir_pin, 0);
+                right_val = clamp_speed(-right_val);
+            } else {
+                gpio_put(right_dir_pin, 1);
+                right_val = clamp_speed(right_val);
+            }
+            printf("left_speed: %i\n", left_val);
+            printf("right_speed: %i\n", right_val);
+            pwm_set_chan_level(slice_left, chan_left, left_val);
+            pwm_set_chan_level(slice_right, chan_right, right_val);
         }
     }
 }
@@ -67,7 +81,7 @@ int main() {
             char ch = (char)c;
             if (ch == '\n' || ch == '\r') {
                 buf[buf_index] = '\0';
-                process_command(buf, &last_heartbeat, slice_num_left, chan_left, slice_num_right, chan_right);
+                process_command(buf, &last_heartbeat, slice_num_left, chan_left, slice_num_right, chan_right, 4, 8);
                 buf_index = 0;
             } else {
                 if (buf_index < 63) {
