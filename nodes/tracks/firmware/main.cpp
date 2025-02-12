@@ -25,7 +25,7 @@ static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, ui
 }
 
 static void process_command(const char* cmd, absolute_time_t *last_heartbeat, uint slice_left, uint chan_left, uint slice_right, uint chan_right) {
-    printf("Received command: %s\n", cmd);
+    printf("%s\n", cmd);
     if (strcmp(cmd, "heartbeat") == 0) {
         *last_heartbeat = get_absolute_time();
     } else if (strncmp(cmd, "move ", 5) == 0) {
@@ -60,7 +60,6 @@ int main() {
     int buf_index = 0;
     while (true) {
         int c = getchar_timeout_us(0);
-        if (c != PICO_ERROR_TIMEOUT) {
             char ch = (char)c;
             if (ch == '\n' || ch == '\r') {
                 buf[buf_index] = '\0';
@@ -71,11 +70,10 @@ int main() {
                     buf[buf_index++] = ch;
                 }
             }
-        }
-        if (absolute_time_diff_us(last_heartbeat, get_absolute_time()) > 3000000) {
-            pwm_set_chan_level(slice_num_right, chan_right, 0);
-            pwm_set_chan_level(slice_num_left, chan_left, 0);
-        }
+        // if (absolute_time_diff_us(last_heartbeat, get_absolute_time()) > 3000000) {
+        //     pwm_set_chan_level(slice_num_right, chan_right, 0);
+        //     pwm_set_chan_level(slice_num_left, chan_left, 0);
+        // }
         sleep_ms(100);
     }
 
