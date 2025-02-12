@@ -93,7 +93,7 @@ int main() {
                 }
             }
         }
-        if (absolute_time_diff_us(last_heartbeat, get_absolute_time()) > 10000000) {
+        if (absolute_time_diff_us(last_heartbeat, get_absolute_time()) > 3000000) {
             if (!warned) {
                 printf("heartbeat missing, stopping motors\n");
                 warned = true;
