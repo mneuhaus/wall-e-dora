@@ -82,6 +82,9 @@ int main() {
             char ch = (char)c;
             if (ch == '\n' || ch == '\r') {
                 buf[buf_index] = '\0';
+                if (strcmp(buf, "heartbeat") == 0) {
+                    warned = false;
+                }
                 process_command(buf, &last_heartbeat, slice_num_left, chan_left, slice_num_right, chan_right, 4, 8);
                 buf_index = 0;
             } else {
