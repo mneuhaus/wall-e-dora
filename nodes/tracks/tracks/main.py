@@ -64,7 +64,7 @@ def main():
                     # Convert joystick inputs to linear and angular velocities.
                     # Assuming the joystick values are normalized in [-1, 1]:
                     print(joystick_y, joystick_x)
-                    linear = -joystick_y * 100.0
+                    linear = joystick_y * 100.0
                     angular = joystick_x * 100.0
                     cmd = f"move {linear} {angular}"
                     ser.write((cmd + "\n").encode("utf-8"))
