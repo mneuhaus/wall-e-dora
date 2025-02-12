@@ -41,35 +41,28 @@ def main():
     node = Node()
     joystick_x = None
     joystick_y = None
-    last_command_time = time.monotonic()
 
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                pass
+                print(ser.readline().decode('utf-8', errors='replace'))
                 # flush_serial_buffer()
             elif event["id"] == "heartbeat":
-                now = time.monotonic()
-                if now - last_command_time >= 0.1:
-                    ser.write(("heartbeat\n").encode("utf-8"))
-                    last_command_time = now
+                ser.write(("heartbeat\n").encode("utf-8"))
             elif event["id"] == "LEFT_ANALOG_STICK_X":
                 joystick_x = event["value"][0].as_py()
             elif event["id"] == "LEFT_ANALOG_STICK_Y":
                 joystick_y = event["value"][0].as_py()
             
             if joystick_x is not None and joystick_y is not None:
-                now = time.monotonic()
-                if now - last_command_time >= 0.1:
-                    # Convert joystick inputs to linear and angular velocities.
-                    # Assuming the joystick values are normalized in [-1, 1]:
-                    print(joystick_y, joystick_x)
-                    linear = joystick_y * 100.0
-                    angular = joystick_x * 100.0
-                    cmd = f"move {linear} {angular}"
-                    ser.write((cmd + "\n").encode("utf-8"))
-                    print(cmd)
-                    last_command_time = now
+                # Convert joystick inputs to linear and angular velocities.
+                # Assuming the joystick values are normalized in [-1, 1]:
+                print(joystick_y, joystick_x)
+                linear = int(joystick_y * 100.0)
+                angular = int(joystick_x * 100.0)
+                cmd = f"move {linear} {angular}"
+                ser.write((cmd + "\n").encode("utf-8"))
+                print(cmd)
 
 
 if __name__ == "__main__":

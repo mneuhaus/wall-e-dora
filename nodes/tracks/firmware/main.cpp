@@ -101,7 +101,6 @@ int main() {
             pwm_set_chan_level(slice_num_right, chan_right, 0);
             pwm_set_chan_level(slice_num_left, chan_left, 0);
         }
-        sleep_ms(10);
     }
 
     // pwm_set_chan_level(slice_num_right, chan_right, 1000);
