@@ -41,7 +41,8 @@ static void process_command(const char* cmd, absolute_time_t *last_heartbeat, ui
 
 int main() {
     stdio_init_all();
-
+    // The UART baud rate is set by the Pico SDK defaults (typically 115200)
+    // and configured via pico_enable_stdio_uart() in CMakeLists.txt.
     uint slice_num_left, chan_left;
     uint slice_num_right, chan_right;
 
