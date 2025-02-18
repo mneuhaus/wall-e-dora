@@ -27,8 +27,8 @@ def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
     :param baudrate: Baud rate (default: 1000000)
     """
     # Constants for SCS servo registers (assumed values)
-    SCSCL_ID = 3
-    SCSCL_LOCK = 47
+    SCSCL_ID = 5
+    SCSCL_LOCK = 48
 
     try:
         import serial
@@ -98,34 +98,29 @@ def main():
     if comm_result != COMM_SUCCESS or error != 0:
         print("Error setting goal speed (default)")
 
-    last_available_time = time.time()
-
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "SCAN":
                 print("Scan event triggered")
-                current_time = time.time()
-                if current_time - last_available_time >= 3:
-                    available_servos = {}
-                    for servo_id in range(1, 11):
-                        ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
-                        if comm_result == COMM_SUCCESS and error == 0:
-                            if servo_id == 1:
-                                new_id = settings["unique_id_counter"]
-                                # Close the port before issuing the ID change command.
-                                portHandler.closePort()
-                                change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
-                                # Reopen the port after changing the ID.
-                                if not portHandler.openPort():
-                                    print("Failed to reopen the port after id change")
-                                settings["unique_id_counter"] += 1
-                                save_settings(settings)
-                                print(f"Updated servo id 1 to {new_id}")
-                                servo_id = new_id
-                            available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
-                    print(f"Available servos found: {available_servos}")
-                    node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
-                    last_available_time = current_time
+                available_servos = {}
+                for servo_id in range(1, 256):
+                    ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
+                    if comm_result == COMM_SUCCESS and error == 0:
+                        if servo_id == 1:
+                            new_id = settings["unique_id_counter"]
+                            # Close the port before issuing the ID change command.
+                            portHandler.closePort()
+                            change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
+                            # Reopen the port after changing the ID.
+                            if not portHandler.openPort():
+                                print("Failed to reopen the port after id change")
+                            settings["unique_id_counter"] += 1
+                            save_settings(settings)
+                            print(f"Updated servo id 1 to {new_id}")
+                            servo_id = new_id
+                        available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
+                print(f"Available servos found: {available_servos}")
+                node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
 
             elif event["id"] == "set_servo":
                 cmd = event["value"].to_py()
