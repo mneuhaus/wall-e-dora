@@ -150,6 +150,28 @@ def main():
         if SCS_ID == old_id:
             SCS_ID = new_id
     
+    def status_update_loop():
+        import time
+        while True:
+            data, result, error = packetHandler.read2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_PRESENT_POSITION)
+            if result == COMM_SUCCESS and error == 0:
+                position = data
+            else:
+                position = 0
+            # For demonstration purposes, speed and torque are set to 0.
+            speed = 0
+            torque = 0
+            servo_status = {
+                "position": position,
+                "speed": speed,
+                "torque": torque
+            }
+            node.send_output(output_id="servo_status", data=pa.array([servo_status]), metadata={})
+            time.sleep(1)
+    
+    import threading
+    threading.Thread(target=status_update_loop, daemon=True).start()
+    
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "SCAN":
