@@ -49,7 +49,7 @@ def main():
                 if current_time - last_available_time >= 3:
                     available_servos = {}
                     for servo_id in range(1, 11):
-                        comm_result, error = packetHandler.ping(portHandler, servo_id)
+                        ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
                         if comm_result == COMM_SUCCESS and error == 0:
                             available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
                     node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
