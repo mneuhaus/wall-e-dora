@@ -39,6 +39,26 @@
         </div>
       </div>
 
+      <div class="card m-top">
+        <div class="row">
+          <div class="col s12 center-align">
+            <round-slider
+              v-model="currentPosition"
+              :min="minPos"
+              :max="maxPos"
+              radius="120"
+              line-cap="round"
+              path-color="#37474F"
+              range-color="#00bfa5"
+              :start-angle="0"
+              :end-angle="360"
+              :animation="false"
+              @update="handlePositionUpdate"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="row m-top">
         <button class="border" @click="wiggle">
           <i class="fa-solid fa-arrows-left-right"></i>
@@ -75,6 +95,7 @@
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import node from '../Node.js';
+import RoundSlider from 'vue-round-slider';
 
 const route = useRoute();
 const id = route.params.id;
@@ -88,11 +109,17 @@ function changeId() {
 }
 
 const newSpeed = ref(100);
+const currentPosition = ref(0);
+const minPos = computed(() => currentServo.value?.min_pos || 0);
+const maxPos = computed(() => currentServo.value?.max_pos || 1024);
 
 node.on('servo_status', (event) => {
   servos.value = event.value;
   if (currentServo.value?.speed) {
     newSpeed.value = currentServo.value.speed;
+  }
+  if (currentServo.value?.position) {
+    currentPosition.value = currentServo.value.position;
   }
 });
 
@@ -111,6 +138,10 @@ function wiggle() {
 
 function calibrate() {
   node.emit('calibrate', [parseInt(id)]);
+}
+
+function handlePositionUpdate(newValue) {
+  node.emit('set_servo', [parseInt(id), parseInt(newValue), parseInt(newSpeed.value)]);
 }
 </script>
 

@@ -2,6 +2,7 @@ import "beercss";
 import "material-dynamic-colors";
 import 'gridstack/dist/gridstack.min.css';
 import '@fortawesome/fontawesome-free/css/all.css';
+import RoundSlider from 'vue-round-slider';
 import Node from "./Node.js";
 import { createApp } from 'vue';
 import { createWebHashHistory, createRouter } from 'vue-router'
