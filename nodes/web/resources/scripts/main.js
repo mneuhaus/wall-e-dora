@@ -8,6 +8,7 @@ import { createWebHashHistory, createRouter } from 'vue-router'
 import App from './App.vue';
 import Dashboard from './views/Dashboard.vue';
 import Gamepad from './views/Gamepad.vue';
+import ServoDebug from './views/ServoDebug.vue';
 import '../styles/main.css';
 
 let theme = await ui("theme", "#ffd700");
