@@ -4,6 +4,7 @@ from scservo_sdk import *
 import time
 import json, os
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "servo_settings.json")
+
 def load_settings():
     try:
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
