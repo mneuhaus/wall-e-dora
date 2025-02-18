@@ -30,6 +30,7 @@ nodes:
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
       available_nodes: waveshare_servo/available_nodes
+      servo_status: waveshare_servo/servo_status
     outputs:
       - slider_input
       - play_sound
