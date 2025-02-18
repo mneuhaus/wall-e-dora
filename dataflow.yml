@@ -29,6 +29,7 @@ nodes:
       runtime: power/runtime
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
+      available_nodes: waveshare_servo/available_nodes
     outputs:
       - slider_input
       - play_sound
@@ -57,6 +58,7 @@ nodes:
       - HOME
       - MISCBUTTON_1
       - MISCBUTTON_2
+      - change_servo_id
 
   - id: audio
     path: nodes/audio/audio/main.py
@@ -81,8 +83,8 @@ nodes:
   - id: waveshare_servo
     path: nodes/waveshare_servo/waveshare_servo/main.py
     inputs:
-      SCAN: dora/timer/secs/3
-      # set_servo: web/set_servo
+      SCAN: dora/timer/millis/300
+      change_servo_id: web/change_servo_id
     outputs:
       - available_nodes
       # - servo_done
