@@ -150,9 +150,7 @@ def main():
     node = Node()
     
     for event in node:
-        if event["type"] == "INPUT" and "id" in event and event["id"] == "change_servo_id":
-            handle_change_servo_id_event(event)
-        elif event["type"] == "INPUT" and "id" in event and (event["id"] == "tick" or event["id"] == "runtime"):
+        if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick" or event["id"] == "runtime"):
             flush_web_inputs(node)
         elif event["type"] == "INPUT":
             event['value'] = event['value'].to_pylist()
