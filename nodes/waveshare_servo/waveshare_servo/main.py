@@ -40,11 +40,6 @@ def main():
     if comm_result != COMM_SUCCESS or error != 0:
         print("Error setting goal speed")
 
-    available_servos = {}
-    for servo_id in range(1, 11):
-        comm_result, error = packetHandler.ping(portHandler, servo_id)
-        if comm_result == COMM_SUCCESS and error == 0:
-            available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
     last_available_time = time.time()
 
     for event in node:
@@ -52,6 +47,11 @@ def main():
             if event["id"] == "TICK":
                 current_time = time.time()
                 if current_time - last_available_time >= 3:
+                    available_servos = {}
+                    for servo_id in range(1, 11):
+                        comm_result, error = packetHandler.ping(portHandler, servo_id)
+                        if comm_result == COMM_SUCCESS and error == 0:
+                            available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
                     node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
                     last_available_time = current_time
 
