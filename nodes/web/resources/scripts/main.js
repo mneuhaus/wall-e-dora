@@ -16,7 +16,8 @@ const router = createRouter({
     history: createWebHashHistory(),
     routes: [
         { path: '/', component: Dashboard },
-        { path: '/gamepad/:index', name: 'gamepad',  component: Gamepad }
+        { path: '/gamepad/:index', name: 'gamepad',  component: Gamepad },
+        { path: '/servo/:id', name: 'servo', component: ServoDebug }
     ],
 });
 app.use(router).mount('#app');

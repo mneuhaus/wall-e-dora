@@ -3,6 +3,7 @@ import Gamepad from './components/Gamepad.vue';
 import Power from './components/Power.vue';
 import Volume from './components/Volume.vue';
 import ConnectionStatus from './components/ConnectionStatus.vue';
+import ServoStatus from './components/ServoStatus.vue';
 </script>
 
 <template>
@@ -17,6 +18,7 @@ import ConnectionStatus from './components/ConnectionStatus.vue';
       <power></power>
       <volume></volume>
       <connection-status></connection-status>
+      <servo-status></servo-status>
     </nav>
   </header>
 
