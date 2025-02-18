@@ -22,18 +22,20 @@
           <div class="col s12">
             <h6>Current Status</h6>
             <table class="small border">
-              <tr>
-                <td>Position:</td>
-                <td>{{ currentServo?.position || 'N/A' }}</td>
-              </tr>
-              <tr>
-                <td>Speed:</td>
-                <td>{{ currentServo?.speed || 'N/A' }}</td>
-              </tr>
-              <tr>
-                <td>Torque:</td>
-                <td>{{ currentServo?.torque || 'N/A' }}</td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td>Position:</td>
+                  <td>{{ currentServo?.position || 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <td>Speed:</td>
+                  <td>{{ currentServo?.speed || 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <td>Torque:</td>
+                  <td>{{ currentServo?.torque || 'N/A' }}</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
@@ -75,14 +77,16 @@
           <div class="col s12">
             <h6>Calibration Range</h6>
             <table class="small border">
-              <tr>
-                <td>Min Position:</td>
-                <td>{{ currentServo?.min_pos || 'Not calibrated' }}</td>
-              </tr>
-              <tr>
-                <td>Max Position:</td>
-                <td>{{ currentServo?.max_pos || 'Not calibrated' }}</td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td>Min Position:</td>
+                  <td>{{ currentServo?.min_pos || 'Not calibrated' }}</td>
+                </tr>
+                <tr>
+                  <td>Max Position:</td>
+                  <td>{{ currentServo?.max_pos || 'Not calibrated' }}</td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>
