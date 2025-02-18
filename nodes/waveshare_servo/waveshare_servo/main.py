@@ -101,7 +101,10 @@ def main():
     def handle_scan_event():
         print("Scan event triggered")
         available_servos = []
-        for servo_id in range(1, 256):
+        # Only scan reasonable ID range and use shorter timeout
+        portHandler.setPacketTimeout(5)  # 5ms timeout instead of default
+        
+        for servo_id in range(1, 21):  # Most servos use IDs 1-20
             ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
             if comm_result == COMM_SUCCESS and error == 0:
                 if servo_id == 1:
@@ -115,23 +118,21 @@ def main():
                     print(f"Updated servo id 1 to {new_id}")
                     servo_id = new_id
 
-                # Read current servo status
-                pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
-                    portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
-                )
-                speed_data, speed_result, speed_error = packetHandler.read2ByteTxRx(
-                    portHandler, servo_id, 57  # Assuming 57 is present speed register
-                )
-                torque_data, torque_result, torque_error = packetHandler.read2ByteTxRx(
-                    portHandler, servo_id, 60  # Assuming 60 is present load (torque) register
-                )
-
-                available_servos.append({
-                    "id": servo_id,
-                    "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
-                    "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
-                    "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0
-                })
+                # Use sync read for better performance
+                sync_reader = GroupSyncRead(portHandler, packetHandler, ADDR_SCS_PRESENT_POSITION, 6)
+                sync_reader.addParam(servo_id)
+                
+                if sync_reader.txRxPacket() == COMM_SUCCESS:
+                    pos_data = sync_reader.getData(servo_id, ADDR_SCS_PRESENT_POSITION, 2)
+                    speed_data = sync_reader.getData(servo_id, ADDR_SCS_PRESENT_POSITION + 2, 2)
+                    torque_data = sync_reader.getData(servo_id, ADDR_SCS_PRESENT_POSITION + 4, 2)
+                    
+                    available_servos.append({
+                        "id": servo_id,
+                        "position": pos_data,
+                        "speed": speed_data,
+                        "torque": torque_data
+                    })
         
         print(f"Available servos found: {[s['id'] for s in available_servos]}")
         node.send_output(output_id="servo_status", data=pa.array(available_servos), metadata={})
