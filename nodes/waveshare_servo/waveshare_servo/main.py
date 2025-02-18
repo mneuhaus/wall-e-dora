@@ -44,7 +44,7 @@ def main():
 
     for event in node:
         if event["type"] == "INPUT":
-            if event["id"] == "TICK":
+            if event["id"] == "SCAN":
                 current_time = time.time()
                 if current_time - last_available_time >= 3:
                     available_servos = {}

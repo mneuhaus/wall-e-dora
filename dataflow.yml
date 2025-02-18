@@ -78,6 +78,17 @@ nodes:
       LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
       LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
 
+  - id: waveshare_servo
+    path: nodes/waveshare_servo/waveshare_servo/main.py
+    inputs:
+      SCAN: dora/timer/secs/3
+      set_servo: web/set_servo
+      my_input_id: web/my_input_id
+    outputs:
+      - available_nodes
+      - servo_done
+      - my_output_id
+
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture
   #   path: opencv-video-capture
