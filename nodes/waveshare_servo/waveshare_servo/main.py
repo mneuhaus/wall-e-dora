@@ -144,8 +144,6 @@ def main():
                 handle_scan_event()
             elif event["id"] == "set_servo":
                 handle_set_servo_event(event)
-            elif event["id"] == "my_input_id":
-                handle_my_input_event()
 
 if __name__ == "__main__":
     main()
