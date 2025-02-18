@@ -16,6 +16,30 @@ def save_settings(settings):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(settings, f)
 
+def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
+    """
+    Change the ID of an SCS servo connected to a Waveshare Bus Servo Adapter.
+    
+    :param serial_port: Serial port name (e.g., '/dev/ttyUSB0')
+    :param old_id: Current ID of the servo
+    :param new_id: New ID to assign to the servo
+    :param baudrate: Baud rate (default: 1000000)
+    """
+    try:
+        import serial
+        ser = serial.Serial(serial_port, baudrate, timeout=1)
+        time.sleep(0.1)
+        # SCS Servo ID Change Command: HEADER, old id, LEN=4, CMD=3, PARAM=new id, CHECKSUM
+        command = [0xFF, 0xFF, old_id, 4, 3, new_id, 0]
+        checksum = (~sum(command[2:]) & 0xFF)
+        command.append(checksum)
+        ser.write(bytearray(command))
+        time.sleep(0.1)
+        print(f"Sent command to change ID {old_id} → {new_id}")
+        ser.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
 def main():
     node = Node()
     # SCServo configuration
