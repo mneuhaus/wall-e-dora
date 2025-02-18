@@ -3,8 +3,8 @@
     <label for="servoDropdown">Servos:</label>
     <select id="servoDropdown" @change="handleSelect">
       <option value="" disabled selected>Select Servo</option>
-      <option v-for="servo in servos" :key="servo" :value="servo">
-        {{ servo }}
+      <option v-for="servo in servos" :key="servo.id" :value="servo.id">
+        Servo {{ servo.id }} (Pos: {{ servo.position }})
       </option>
     </select>
   </div>
@@ -18,8 +18,7 @@ import { useRouter } from 'vue-router';
 const servos = ref([]);
 const router = useRouter();
 
-node.on('available_nodes', (event) => {
-  // assuming event.value is an array of available servo IDs
+node.on('servo_status', (event) => {
   servos.value = event.value;
 });
 

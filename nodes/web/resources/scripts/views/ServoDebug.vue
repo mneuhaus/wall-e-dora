@@ -14,20 +14,23 @@
     </div>
     <div style="margin-top: 1rem;">
       <p>Current Servo Status:</p>
-      <p>Position: {{ servoStatus.position }}</p>
-      <p>Speed: {{ servoStatus.speed }}</p>
-      <p>Torque: {{ servoStatus.torque }}</p>
+      <p>Position: {{ currentServo?.position || 'N/A' }}</p>
+      <p>Speed: {{ currentServo?.speed || 'N/A' }}</p>
+      <p>Torque: {{ currentServo?.torque || 'N/A' }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import node from '../Node.js';
+
 const route = useRoute();
 const id = route.params.id;
 const newId = ref('');
+const servos = ref([]);
+
 function changeId() {
   if (newId.value !== '') {
     node.emit('change_servo_id', [parseInt(id), parseInt(newId.value)]);
@@ -35,15 +38,20 @@ function changeId() {
 }
 
 const newSpeed = ref(100);
-const servoStatus = ref({});
+
 node.on('servo_status', (event) => {
-  servoStatus.value = event.value;
-  if (event.value.speed) {
-    newSpeed.value = event.value.speed;
+  servos.value = event.value;
+  if (currentServo.value?.speed) {
+    newSpeed.value = currentServo.value.speed;
   }
 });
+
+const currentServo = computed(() => 
+  servos.value.find(servo => servo.id === parseInt(id))
+);
+
 function updateSpeed() {
-  const currentPosition = servoStatus.value.position || 0;
+  const currentPosition = currentServo.value?.position || 0;
   node.emit('set_servo', [parseInt(id), parseInt(currentPosition), parseInt(newSpeed.value)]);
 }
 </script>
