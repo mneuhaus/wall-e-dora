@@ -59,6 +59,7 @@ nodes:
       - MISCBUTTON_1
       - MISCBUTTON_2
       - change_servo_id
+      - wiggle
 
   - id: audio
     path: nodes/audio/audio/main.py
@@ -85,6 +86,7 @@ nodes:
     inputs:
       SCAN: dora/timer/millis/300
       change_servo_id: web/change_servo_id
+      wiggle: web/wiggle
     outputs:
       - servo_status
 
