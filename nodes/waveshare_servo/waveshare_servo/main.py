@@ -68,6 +68,12 @@ def main():
                             if servo_id == 1:
                                 if "1" not in settings["id_mapping"]:
                                     new_id = settings["unique_id_counter"]
+                                    # Close the port before issuing the ID change command.
+                                    portHandler.closePort()
+                                    change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
+                                    # Reopen the port after changing the ID.
+                                    if not portHandler.openPort():
+                                        print("Failed to reopen the port after id change")
                                     settings["id_mapping"]["1"] = new_id
                                     settings["unique_id_counter"] += 1
                                     save_settings(settings)
