@@ -77,3 +77,18 @@ nodes:
       heartbeat: dora/timer/secs/1
       LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
       LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
+
+  # - id: opencv-video-capture
+  #   build: pip install opencv-video-capture
+  #   path: opencv-video-capture
+  #   inputs:
+  #     tick: dora/timer/millis/50
+  #   outputs:
+  #     - image
+
+  # - id: dora-rerun
+  #   path: /home/mneuhaus/dora/node-hub/dora-rerun
+  #   build: pip install /home/mneuhaus/dora/node-hub/dora-rerun
+  #   inputs:
+  #     image: opencv-video-capture/image
+

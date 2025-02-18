@@ -38,6 +38,7 @@ async def websocket_handler(request):
     ws_clients.add(ws)
     try:
         async for msg in ws:
+            print(msg)
             if msg.type == web.WSMsgType.TEXT:
                 try:
                     import json
