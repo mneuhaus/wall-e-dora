@@ -87,6 +87,7 @@ nodes:
       SCAN: dora/timer/millis/300
       change_servo_id: web/change_servo_id
       wiggle: web/wiggle
+      calibrate: web/calibrate
     outputs:
       - servo_status
 
