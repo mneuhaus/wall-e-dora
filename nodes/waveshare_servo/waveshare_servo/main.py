@@ -118,21 +118,23 @@ def main():
                     print(f"Updated servo id 1 to {new_id}")
                     servo_id = new_id
 
-                # Use sync read for better performance
-                sync_reader = GroupSyncRead(portHandler, packetHandler, ADDR_SCS_PRESENT_POSITION, 6)
-                sync_reader.addParam(servo_id)
-                
-                if sync_reader.txRxPacket() == COMM_SUCCESS:
-                    pos_data = sync_reader.getData(servo_id, ADDR_SCS_PRESENT_POSITION, 2)
-                    speed_data = sync_reader.getData(servo_id, ADDR_SCS_PRESENT_POSITION + 2, 2)
-                    torque_data = sync_reader.getData(servo_id, ADDR_SCS_PRESENT_POSITION + 4, 2)
-                    
-                    available_servos.append({
-                        "id": servo_id,
-                        "position": pos_data,
-                        "speed": speed_data,
-                        "torque": torque_data
-                    })
+                # Read current servo status
+                pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+                    portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+                )
+                speed_data, speed_result, speed_error = packetHandler.read2ByteTxRx(
+                    portHandler, servo_id, 57  # Present speed register
+                )
+                torque_data, torque_result, torque_error = packetHandler.read2ByteTxRx(
+                    portHandler, servo_id, 60  # Present load (torque) register
+                )
+
+                available_servos.append({
+                    "id": servo_id,
+                    "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
+                    "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
+                    "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0
+                })
         
         print(f"Available servos found: {[s['id'] for s in available_servos]}")
         node.send_output(output_id="servo_status", data=pa.array(available_servos), metadata={})
