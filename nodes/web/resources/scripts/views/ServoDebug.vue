@@ -1,32 +1,73 @@
 <template>
   <div class="servo-debug">
-    <h2>Servo Debug - {{ id }}</h2>
-    <p>This is where you can inspect and test servo behavior.</p>
-    <div style="margin-top: 1rem;">
-      <label for="newServoId">New Servo ID:</label>
-      <input id="newServoId" type="number" v-model="newId" style="width: 60px; margin-left: 0.5rem;" />
-      <button @click="changeId" style="margin-left: 0.5rem;">Change Servo ID</button>
-    </div>
-    <div style="margin-top: 1rem;">
-      <label for="newSpeed">Servo Speed:</label>
-      <input id="newSpeed" type="range" min="100" max="2000" step="1" v-model="newSpeed" @change="updateSpeed" style="width: 300px; margin-left: 0.5rem;" />
-      <span>{{ newSpeed }}</span>
-    </div>
-    <div style="margin-top: 1rem;">
-      <p>Current Servo Status:</p>
-      <p>Position: {{ currentServo?.position || 'N/A' }}</p>
-      <p>Speed: {{ currentServo?.speed || 'N/A' }}</p>
-      <p>Torque: {{ currentServo?.torque || 'N/A' }}</p>
-    </div>
-    <div style="margin-top: 1rem;">
-      <button @click="wiggle">Wiggle Servo</button>
-      <button @click="calibrate" style="margin-left: 0.5rem;">Calibrate Servo</button>
-    </div>
-    <div style="margin-top: 1rem;" v-if="currentServo?.min_pos !== undefined">
-      <p>Calibration Range:</p>
-      <p>Min Position: {{ currentServo?.min_pos || 'Not calibrated' }}</p>
-      <p>Max Position: {{ currentServo?.max_pos || 'Not calibrated' }}</p>
-    </div>
+    <article class="responsive">
+      <h5>Servo Debug - {{ id }}</h5>
+      <p class="small">This is where you can inspect and test servo behavior.</p>
+
+      <div class="field label border round">
+        <input type="number" v-model="newId">
+        <label>New Servo ID</label>
+        <button class="small" @click="changeId">Change ID</button>
+      </div>
+
+      <div class="field label border round m-top">
+        <label class="slider">
+          <input type="range" min="100" max="2000" step="1" v-model="newSpeed" @change="updateSpeed">
+          <span>Speed: {{ newSpeed }}</span>
+        </label>
+      </div>
+
+      <div class="card m-top">
+        <div class="row">
+          <div class="col s12">
+            <h6>Current Status</h6>
+            <table class="small border">
+              <tr>
+                <td>Position:</td>
+                <td>{{ currentServo?.position || 'N/A' }}</td>
+              </tr>
+              <tr>
+                <td>Speed:</td>
+                <td>{{ currentServo?.speed || 'N/A' }}</td>
+              </tr>
+              <tr>
+                <td>Torque:</td>
+                <td>{{ currentServo?.torque || 'N/A' }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="row m-top">
+        <button class="border" @click="wiggle">
+          <i class="fa-solid fa-arrows-left-right"></i>
+          Wiggle
+        </button>
+        <button class="border" @click="calibrate">
+          <i class="fa-solid fa-ruler"></i>
+          Calibrate
+        </button>
+      </div>
+
+      <div class="card m-top" v-if="currentServo?.min_pos !== undefined">
+        <div class="row">
+          <div class="col s12">
+            <h6>Calibration Range</h6>
+            <table class="small border">
+              <tr>
+                <td>Min Position:</td>
+                <td>{{ currentServo?.min_pos || 'Not calibrated' }}</td>
+              </tr>
+              <tr>
+                <td>Max Position:</td>
+                <td>{{ currentServo?.max_pos || 'Not calibrated' }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </article>
   </div>
 </template>
 
