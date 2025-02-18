@@ -82,12 +82,10 @@ nodes:
     path: nodes/waveshare_servo/waveshare_servo/main.py
     inputs:
       SCAN: dora/timer/secs/3
-      set_servo: web/set_servo
-      my_input_id: web/my_input_id
+      # set_servo: web/set_servo
     outputs:
       - available_nodes
-      - servo_done
-      - my_output_id
+      # - servo_done
 
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture
