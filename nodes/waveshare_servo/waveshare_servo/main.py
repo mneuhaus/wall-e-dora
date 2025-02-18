@@ -3,7 +3,6 @@ import pyarrow as pa
 from scservo_sdk import *
 import time
 
-
 def main():
     node = Node()
     # SCServo configuration
@@ -38,13 +37,14 @@ def main():
         print("Error setting goal acceleration")
     comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, SCS_MOVING_SPEED)
     if comm_result != COMM_SUCCESS or error != 0:
-        print("Error setting goal speed")
+        print("Error setting goal speed (default)")
 
     last_available_time = time.time()
 
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "SCAN":
+                print("Scan event triggered")
                 current_time = time.time()
                 if current_time - last_available_time >= 3:
                     available_servos = {}
@@ -52,6 +52,7 @@ def main():
                         ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
                         if comm_result == COMM_SUCCESS and error == 0:
                             available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
+                    print(f"Available servos found: {available_servos}")
                     node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
                     last_available_time = current_time
 
@@ -64,29 +65,14 @@ def main():
                 _, target_position, target_speed = cmd
                 comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, int(target_speed))
                 if comm_result != COMM_SUCCESS or error != 0:
-                    print("Error setting goal speed:", packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error))
+                    print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
                 comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_POSITION, int(target_position))
                 if comm_result != COMM_SUCCESS or error != 0:
-                    print("Error setting goal position:", packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error))
-                    continue
-
-                while True:
-                    present_pos_speed, comm_result, error = packetHandler.read4ByteTxRx(portHandler, SCS_ID, ADDR_SCS_PRESENT_POSITION)
-                    if comm_result != COMM_SUCCESS or error != 0:
-                        print("Error reading servo position")
-                        break
-                    present_position = SCS_LOWORD(present_pos_speed)
-                    present_speed = SCS_HIWORD(present_pos_speed)
-                    print("[ID:%03d] GoalPos:%03d PresPos:%03d PresSpd:%03d" %
-                          (SCS_ID, int(target_position), present_position, SCS_TOHOST(present_speed, 15)))
-                    if abs(int(target_position) - present_position) <= SCS_MOVING_STATUS_THRESHOLD:
-                        break
-                    time.sleep(0.1)
-                node.send_output(output_id="servo_done", data=pa.array([present_position]), metadata={})
+                    print(f"Error setting goal position: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
+                node.send_output(output_id="servo_done", data=pa.array([int(target_position)]), metadata={})
 
             elif event["id"] == "my_input_id":
                 node.send_output(output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={})
-
 
 if __name__ == "__main__":
     main()
