@@ -18,6 +18,9 @@
       <p>Speed: {{ currentServo?.speed || 'N/A' }}</p>
       <p>Torque: {{ currentServo?.torque || 'N/A' }}</p>
     </div>
+    <div style="margin-top: 1rem;">
+      <button @click="wiggle">Wiggle Servo</button>
+    </div>
   </div>
 </template>
 
@@ -53,6 +56,10 @@ const currentServo = computed(() =>
 function updateSpeed() {
   const currentPosition = currentServo.value?.position || 0;
   node.emit('set_servo', [parseInt(id), parseInt(currentPosition), parseInt(newSpeed.value)]);
+}
+
+function wiggle() {
+  node.emit('wiggle', [parseInt(id)]);
 }
 </script>
 

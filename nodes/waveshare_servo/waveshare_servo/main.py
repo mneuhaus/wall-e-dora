@@ -166,6 +166,34 @@ def main():
         if SCS_ID == old_id:
             SCS_ID = new_id
     
+    def handle_wiggle_event(event):
+        servo_id = event["value"].to_pylist()[0]
+        # Read current position
+        pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+            portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+        )
+        if pos_result != COMM_SUCCESS or pos_error != 0:
+            print("Failed to read current position")
+            return
+            
+        center_pos = pos_data
+        wiggle_amount = 50  # ~5 degrees
+        speed = 400
+        
+        # Set speed
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, speed)
+        
+        # Wiggle 3 times
+        for _ in range(3):
+            # Move right
+            packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, center_pos + wiggle_amount)
+            time.sleep(0.3)
+            # Move left
+            packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, center_pos - wiggle_amount)
+            time.sleep(0.3)
+        
+        # Return to center
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, center_pos)
     
     for event in node:
         if event["type"] == "INPUT":
@@ -175,6 +203,8 @@ def main():
                 handle_set_servo_event(event)
             elif event["id"] == "change_servo_id":
                 handle_change_servo_id_event(event)
+            elif event["id"] == "wiggle":
+                handle_wiggle_event(event)
 
 if __name__ == "__main__":
     main()
