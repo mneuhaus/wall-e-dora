@@ -60,6 +60,7 @@ nodes:
       - MISCBUTTON_2
       - change_servo_id
       - wiggle
+      - calibrate
 
   - id: audio
     path: nodes/audio/audio/main.py
