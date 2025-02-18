@@ -19,24 +19,44 @@ def save_settings(settings):
 
 def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
     """
-    Change the ID of an SCS servo connected to a Waveshare Bus Servo Adapter.
+    Change the ID of an SCS servo by unlocking EPROM, changing the ID, and locking EPROM.
     
     :param serial_port: Serial port name (e.g., '/dev/ttyUSB0')
-    :param old_id: Current ID of the servo
+    :param old_id: Current ID of the servo (factory default is 1)
     :param new_id: New ID to assign to the servo
     :param baudrate: Baud rate (default: 1000000)
     """
+    # Constants for SCS servo registers (assumed values)
+    SCSCL_ID = 3
+    SCSCL_LOCK = 47
+
     try:
         import serial
         ser = serial.Serial(serial_port, baudrate, timeout=1)
         time.sleep(0.1)
-        # SCS Servo ID Change Command: HEADER, old id, LEN=4, CMD=3, PARAM=new id, CHECKSUM
-        command = [0xFF, 0xFF, old_id, 4, 3, new_id, 0]
-        checksum = (~sum(command[2:]) & 0xFF)
-        command.append(checksum)
-        ser.write(bytearray(command))
+        
+        # Unlock EPROM (set LOCK register to 0)
+        unlock_cmd = [0xFF, 0xFF, old_id, 4, 3, SCSCL_LOCK, 0]
+        unlock_checksum = (~sum(unlock_cmd[2:]) & 0xFF)
+        unlock_cmd.append(unlock_checksum)
+        ser.write(bytearray(unlock_cmd))
         time.sleep(0.1)
-        print(f"Sent command to change ID {old_id} → {new_id}")
+        
+        # Change servo ID (write new_id to SCSCL_ID register)
+        change_cmd = [0xFF, 0xFF, old_id, 4, 3, SCSCL_ID, new_id]
+        change_checksum = (~sum(change_cmd[2:]) & 0xFF)
+        change_cmd.append(change_checksum)
+        ser.write(bytearray(change_cmd))
+        time.sleep(0.1)
+        
+        # Lock EPROM (set LOCK register to 1 on new ID)
+        lock_cmd = [0xFF, 0xFF, new_id, 4, 3, SCSCL_LOCK, 1]
+        lock_checksum = (~sum(lock_cmd[2:]) & 0xFF)
+        lock_cmd.append(lock_checksum)
+        ser.write(bytearray(lock_cmd))
+        time.sleep(0.1)
+        
+        print(f"Changed servo ID from {old_id} to {new_id}")
         ser.close()
     except Exception as e:
         print(f"Error: {e}")
