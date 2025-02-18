@@ -100,25 +100,41 @@ def main():
     
     def handle_scan_event():
         print("Scan event triggered")
-        available_servos = {}
+        available_servos = []
         for servo_id in range(1, 256):
             ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
             if comm_result == COMM_SUCCESS and error == 0:
                 if servo_id == 1:
                     new_id = settings["unique_id_counter"]
-                    # Close the port before issuing the ID change command.
                     portHandler.closePort()
                     change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
-                    # Reopen the port after changing the ID.
                     if not portHandler.openPort():
                         print("Failed to reopen the port after id change")
                     settings["unique_id_counter"] += 1
                     save_settings(settings)
                     print(f"Updated servo id 1 to {new_id}")
                     servo_id = new_id
-                available_servos[f"{servo_id}"] = f"{servo_id}"
-        print(f"Available servos found: {available_servos}")
-        node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
+
+                # Read current servo status
+                pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+                    portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+                )
+                speed_data, speed_result, speed_error = packetHandler.read2ByteTxRx(
+                    portHandler, servo_id, 57  # Assuming 57 is present speed register
+                )
+                torque_data, torque_result, torque_error = packetHandler.read2ByteTxRx(
+                    portHandler, servo_id, 60  # Assuming 60 is present load (torque) register
+                )
+
+                available_servos.append({
+                    "id": servo_id,
+                    "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
+                    "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
+                    "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0
+                })
+        
+        print(f"Available servos found: {[s['id'] for s in available_servos]}")
+        node.send_output(output_id="servo_status", data=pa.array(available_servos), metadata={})
     
     def handle_set_servo_event(event):
         cmd = event["value"].to_py()
@@ -150,27 +166,6 @@ def main():
         if SCS_ID == old_id:
             SCS_ID = new_id
     
-    def status_update_loop():
-        import time
-        while True:
-            data, result, error = packetHandler.read2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_PRESENT_POSITION)
-            if result == COMM_SUCCESS and error == 0:
-                position = data
-            else:
-                position = 0
-            # For demonstration purposes, speed and torque are set to 0.
-            speed = 0
-            torque = 0
-            servo_status = {
-                "position": position,
-                "speed": speed,
-                "torque": torque
-            }
-            node.send_output(output_id="servo_status", data=pa.array([servo_status]), metadata={})
-            time.sleep(1)
-    
-    import threading
-    threading.Thread(target=status_update_loop, daemon=True).start()
     
     for event in node:
         if event["type"] == "INPUT":
