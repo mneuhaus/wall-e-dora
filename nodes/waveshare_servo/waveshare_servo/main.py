@@ -138,6 +138,21 @@ def main():
     def handle_my_input_event():
         node.send_output(output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={})
     
+    def handle_change_servo_id_event(event):
+        data = event["value"].to_py()
+        if (not isinstance(data, list)) or (len(data) != 2):
+            print("Invalid change_servo_id command received")
+            return
+        old_id, new_id = data
+        portHandler.closePort()
+        change_servo_id(DEVICENAME, old_id, new_id, BAUDRATE)
+        if not portHandler.openPort():
+            print("Failed to reopen the port after ID change")
+        print(f"Changed servo ID from {old_id} to {new_id}")
+        nonlocal SCS_ID
+        if SCS_ID == old_id:
+            SCS_ID = new_id
+    
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "SCAN":
