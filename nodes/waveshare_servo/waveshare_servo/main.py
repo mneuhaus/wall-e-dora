@@ -136,7 +136,7 @@ def main():
         node.send_output(output_id="servo_done", data=pa.array([int(target_position)]), metadata={})
     
     def handle_change_servo_id_event(event):
-        data = event["value"].to_py()
+        data = event["value"].to_pylist()
         if (not isinstance(data, list)) or (len(data) != 2):
             print("Invalid change_servo_id command received")
             return
