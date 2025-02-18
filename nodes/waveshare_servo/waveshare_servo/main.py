@@ -47,7 +47,7 @@ def main():
     DEVICENAME = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'
     BAUDRATE = 1000000
     settings = load_settings()
-    SCS_ID = settings["id_mapping"].get("1", 1)
+    SCS_ID = 1
     ADDR_SCS_GOAL_ACC = 41
     ADDR_SCS_GOAL_SPEED = 46
     ADDR_SCS_GOAL_POSITION = 42
@@ -91,19 +91,17 @@ def main():
                         ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
                         if comm_result == COMM_SUCCESS and error == 0:
                             if servo_id == 1:
-                                if "1" not in settings["id_mapping"]:
-                                    new_id = settings["unique_id_counter"]
-                                    # Close the port before issuing the ID change command.
-                                    portHandler.closePort()
-                                    change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
-                                    # Reopen the port after changing the ID.
-                                    if not portHandler.openPort():
-                                        print("Failed to reopen the port after id change")
-                                    settings["id_mapping"]["1"] = new_id
-                                    settings["unique_id_counter"] += 1
-                                    save_settings(settings)
-                                    print(f"Updated servo id 1 to {new_id}")
-                                    servo_id = new_id
+                                new_id = settings["unique_id_counter"]
+                                # Close the port before issuing the ID change command.
+                                portHandler.closePort()
+                                change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
+                                # Reopen the port after changing the ID.
+                                if not portHandler.openPort():
+                                    print("Failed to reopen the port after id change")
+                                settings["unique_id_counter"] += 1
+                                save_settings(settings)
+                                print(f"Updated servo id 1 to {new_id}")
+                                servo_id = new_id
                             available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
                     print(f"Available servos found: {available_servos}")
                     node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
