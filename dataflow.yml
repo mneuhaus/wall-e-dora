@@ -87,6 +87,7 @@ nodes:
       change_servo_id: web/change_servo_id
     outputs:
       - available_nodes
+      - servo_status
       # - servo_done
 
   # - id: opencv-video-capture
