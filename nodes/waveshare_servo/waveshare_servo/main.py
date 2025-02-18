@@ -1,45 +1,86 @@
 from dora import Node
 import pyarrow as pa
-import serial
+from scservo_sdk import *
 import time
 
 
 def main():
     node = Node()
-    # Initialize serial connection to the servo driver board
-    ser = serial.Serial("/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00", 115200, timeout=1)
-    # Available servo nodes definition (example)
+    # SCServo configuration
+    DEVICENAME = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'
+    BAUDRATE = 1000000
+    SCS_ID = 1
+    ADDR_SCS_GOAL_ACC = 41
+    ADDR_SCS_GOAL_SPEED = 46
+    ADDR_SCS_GOAL_POSITION = 42
+    ADDR_SCS_PRESENT_POSITION = 56
+    SCS_MINIMUM_POSITION_VALUE = 100
+    SCS_MAXIMUM_POSITION_VALUE = 4000
+    SCS_MOVING_STATUS_THRESHOLD = 20
+    SCS_MOVING_SPEED = 0
+    SCS_MOVING_ACC = 0
+    protocol_end = 1
+
+    # Initialize PortHandler and PacketHandler
+    portHandler = PortHandler(DEVICENAME)
+    packetHandler = PacketHandler(protocol_end)
+
+    if not portHandler.openPort():
+        print("Failed to open the port")
+        return
+    if not portHandler.setBaudRate(BAUDRATE):
+        print("Failed to change the baudrate")
+        return
+
+    # Write SCServo acceleration and speed defaults
+    comm_result, error = packetHandler.write1ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_ACC, SCS_MOVING_ACC)
+    if comm_result != COMM_SUCCESS or error != 0:
+        print("Error setting goal acceleration")
+    comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, SCS_MOVING_SPEED)
+    if comm_result != COMM_SUCCESS or error != 0:
+        print("Error setting goal speed")
+
     available_servos = {"servo1": "Servo A", "servo2": "Servo B", "servo3": "Servo C"}
     last_available_time = time.time()
 
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "TICK":
-                print(f"""Node received:
-                id: {event["id"]},
-                value: {event["value"]},
-                metadata: {event["metadata"]}""")
-                # Check if 3 seconds have passed to output available nodes.
                 current_time = time.time()
                 if current_time - last_available_time >= 3:
                     node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
                     last_available_time = current_time
 
             elif event["id"] == "set_servo":
-                # Set servo command handler. Expects event["value"] to be a list [servo_id, position, speed]
                 cmd = event["value"].to_py()
                 if len(cmd) != 3:
                     print("Invalid set_servo command received")
                     continue
-                servo_id, position, speed = cmd[0], cmd[1], cmd[2]
-                # Using the command format expected by the driver board
-                command_str = f"SET_SERVO,{servo_id},{position},{speed}\n"
-                ser.write(command_str.encode())
-                ser.flush()
-                print(f"Sent command to servo {servo_id}: position {position} at speed {speed}")
+                # Unpack command—ignoring the provided servo_id and using the configured SCS_ID
+                _, target_position, target_speed = cmd
+                comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, int(target_speed))
+                if comm_result != COMM_SUCCESS or error != 0:
+                    print("Error setting goal speed:", packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error))
+                comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_POSITION, int(target_position))
+                if comm_result != COMM_SUCCESS or error != 0:
+                    print("Error setting goal position:", packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error))
+                    continue
+
+                while True:
+                    present_pos_speed, comm_result, error = packetHandler.read4ByteTxRx(portHandler, SCS_ID, ADDR_SCS_PRESENT_POSITION)
+                    if comm_result != COMM_SUCCESS or error != 0:
+                        print("Error reading servo position")
+                        break
+                    present_position = SCS_LOWORD(present_pos_speed)
+                    present_speed = SCS_HIWORD(present_pos_speed)
+                    print("[ID:%03d] GoalPos:%03d PresPos:%03d PresSpd:%03d" %
+                          (SCS_ID, int(target_position), present_position, SCS_TOHOST(present_speed, 15)))
+                    if abs(int(target_position) - present_position) <= SCS_MOVING_STATUS_THRESHOLD:
+                        break
+                    time.sleep(0.1)
+                node.send_output(output_id="servo_done", data=pa.array([present_position]), metadata={})
 
             elif event["id"] == "my_input_id":
-                # Warning: Make sure to add my_output_id and my_input_id within the dataflow.
                 node.send_output(output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={})
 
 
