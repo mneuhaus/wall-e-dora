@@ -26,11 +26,16 @@ def main():
                     last_available_time = current_time
 
             elif event["id"] == "set_servo":
-                # Set servo command handler. Expects event["value"] to be [servo_id, position, speed]
+                # Set servo command handler. Expects event["value"] to be a list [servo_id, position, speed]
                 cmd = event["value"].to_py()
+                if len(cmd) != 3:
+                    print("Invalid set_servo command received")
+                    continue
                 servo_id, position, speed = cmd[0], cmd[1], cmd[2]
-                command_str = f"{servo_id},{position},{speed}\n"
+                # Using the command format expected by the driver board
+                command_str = f"SET_SERVO,{servo_id},{position},{speed}\n"
                 ser.write(command_str.encode())
+                ser.flush()
                 print(f"Sent command to servo {servo_id}: position {position} at speed {speed}")
 
             elif event["id"] == "my_input_id":
