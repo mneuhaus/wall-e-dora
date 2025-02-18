@@ -29,7 +29,6 @@ nodes:
       runtime: power/runtime
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
-      available_nodes: waveshare_servo/available_nodes
       servo_status: waveshare_servo/servo_status
     outputs:
       - slider_input
@@ -88,7 +87,6 @@ nodes:
       change_servo_id: web/change_servo_id
     outputs:
       - servo_status
-      # - servo_done
 
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture
