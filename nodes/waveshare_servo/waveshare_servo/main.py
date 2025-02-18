@@ -99,7 +99,6 @@ def main():
         print("Error setting goal speed (default)")
     
     def handle_scan_event():
-        print("Scan event triggered")
         available_servos = []
         # Only scan reasonable ID range and use shorter timeout
         portHandler.setPacketTimeout(5)  # 5ms timeout instead of default
