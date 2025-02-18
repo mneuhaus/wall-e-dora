@@ -20,6 +20,12 @@
     </div>
     <div style="margin-top: 1rem;">
       <button @click="wiggle">Wiggle Servo</button>
+      <button @click="calibrate" style="margin-left: 0.5rem;">Calibrate Servo</button>
+    </div>
+    <div style="margin-top: 1rem;" v-if="currentServo?.min_pos !== undefined">
+      <p>Calibration Range:</p>
+      <p>Min Position: {{ currentServo?.min_pos || 'Not calibrated' }}</p>
+      <p>Max Position: {{ currentServo?.max_pos || 'Not calibrated' }}</p>
     </div>
   </div>
 </template>
@@ -60,6 +66,10 @@ function updateSpeed() {
 
 function wiggle() {
   node.emit('wiggle', [parseInt(id)]);
+}
+
+function calibrate() {
+  node.emit('calibrate', [parseInt(id)]);
 }
 </script>
 

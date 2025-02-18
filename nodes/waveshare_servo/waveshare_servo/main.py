@@ -10,7 +10,11 @@ def load_settings():
         with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
             settings = json.load(f)
     except FileNotFoundError:
-        settings = {"unique_id_counter": 10, "id_mapping": {}}
+        settings = {
+            "unique_id_counter": 10,
+            "id_mapping": {},
+            "servo_limits": {}  # Store min/max positions for each servo
+        }
     return settings
 
 def save_settings(settings):
@@ -128,12 +132,19 @@ def main():
                     portHandler, servo_id, 60  # Present load (torque) register
                 )
 
-                available_servos.append({
+                servo_data = {
                     "id": servo_id,
                     "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
                     "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
                     "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0
-                })
+                }
+                
+                # Add calibration data if available
+                if str(servo_id) in settings.get("servo_limits", {}):
+                    servo_data["min_pos"] = settings["servo_limits"][str(servo_id)]["min"]
+                    servo_data["max_pos"] = settings["servo_limits"][str(servo_id)]["max"]
+                
+                available_servos.append(servo_data)
         
         print(f"Available servos found: {[s['id'] for s in available_servos]}")
         node.send_output(output_id="servo_status", data=pa.array(available_servos), metadata={})
@@ -168,6 +179,66 @@ def main():
         if SCS_ID == old_id:
             SCS_ID = new_id
     
+    def handle_calibrate_event(event):
+        servo_id = event["value"].to_pylist()[0]
+        print(f"Starting calibration for servo {servo_id}")
+        
+        # Start from current position
+        pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+            portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+        )
+        if pos_result != COMM_SUCCESS or pos_error != 0:
+            print("Failed to read current position")
+            return
+        
+        # Set slow speed for calibration
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, 100)
+        
+        # Find minimum position
+        min_pos = pos_data
+        while True:
+            test_pos = min_pos - 50
+            packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, test_pos)
+            time.sleep(0.5)  # Wait for movement
+            
+            actual_pos, pos_result, pos_error = packetHandler.read2ByteTxRx(
+                portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+            )
+            if abs(actual_pos - min_pos) < 10:  # If barely moved, we found the limit
+                break
+            min_pos = actual_pos
+        
+        # Find maximum position
+        max_pos = pos_data
+        while True:
+            test_pos = max_pos + 50
+            packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, test_pos)
+            time.sleep(0.5)  # Wait for movement
+            
+            actual_pos, pos_result, pos_error = packetHandler.read2ByteTxRx(
+                portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+            )
+            if abs(actual_pos - max_pos) < 10:  # If barely moved, we found the limit
+                break
+            max_pos = actual_pos
+        
+        # Save calibration to settings
+        settings.setdefault("servo_limits", {})
+        settings["servo_limits"][str(servo_id)] = {
+            "min": min_pos,
+            "max": max_pos
+        }
+        save_settings(settings)
+        
+        # Return to center position
+        center_pos = min_pos + (max_pos - min_pos) // 2
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, center_pos)
+        
+        print(f"Calibration complete for servo {servo_id}. Range: {min_pos}-{max_pos}")
+        
+        # Trigger a scan to update the UI with new calibration data
+        handle_scan_event()
+
     def handle_wiggle_event(event):
         servo_id = event["value"].to_pylist()[0]
         # Read current position
@@ -207,6 +278,8 @@ def main():
                 handle_change_servo_id_event(event)
             elif event["id"] == "wiggle":
                 handle_wiggle_event(event)
+            elif event["id"] == "calibrate":
+                handle_calibrate_event(event)
 
 if __name__ == "__main__":
     main()
