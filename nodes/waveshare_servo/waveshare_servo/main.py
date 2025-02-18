@@ -97,48 +97,55 @@ def main():
     comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, SCS_MOVING_SPEED)
     if comm_result != COMM_SUCCESS or error != 0:
         print("Error setting goal speed (default)")
-
+    
+    def handle_scan_event():
+        print("Scan event triggered")
+        available_servos = {}
+        for servo_id in range(1, 256):
+            ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
+            if comm_result == COMM_SUCCESS and error == 0:
+                if servo_id == 1:
+                    new_id = settings["unique_id_counter"]
+                    # Close the port before issuing the ID change command.
+                    portHandler.closePort()
+                    change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
+                    # Reopen the port after changing the ID.
+                    if not portHandler.openPort():
+                        print("Failed to reopen the port after id change")
+                    settings["unique_id_counter"] += 1
+                    save_settings(settings)
+                    print(f"Updated servo id 1 to {new_id}")
+                    servo_id = new_id
+                available_servos[f"{servo_id}"] = f"{servo_id}"
+        print(f"Available servos found: {available_servos}")
+        node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
+    
+    def handle_set_servo_event(event):
+        cmd = event["value"].to_py()
+        if len(cmd) != 3:
+            print("Invalid set_servo command received")
+            return
+        # Unpack command—ignoring the provided servo_id and using the configured SCS_ID
+        _, target_position, target_speed = cmd
+        comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, int(target_speed))
+        if comm_result != COMM_SUCCESS or error != 0:
+            print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
+        comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_POSITION, int(target_position))
+        if comm_result != COMM_SUCCESS or error != 0:
+            print(f"Error setting goal position: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
+        node.send_output(output_id="servo_done", data=pa.array([int(target_position)]), metadata={})
+    
+    def handle_my_input_event():
+        node.send_output(output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={})
+    
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "SCAN":
-                print("Scan event triggered")
-                available_servos = {}
-                for servo_id in range(1, 256):
-                    ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
-                    if comm_result == COMM_SUCCESS and error == 0:
-                        if servo_id == 1:
-                            new_id = settings["unique_id_counter"]
-                            # Close the port before issuing the ID change command.
-                            portHandler.closePort()
-                            change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
-                            # Reopen the port after changing the ID.
-                            if not portHandler.openPort():
-                                print("Failed to reopen the port after id change")
-                            settings["unique_id_counter"] += 1
-                            save_settings(settings)
-                            print(f"Updated servo id 1 to {new_id}")
-                            servo_id = new_id
-                        available_servos[f"{servo_id}"] = f"{servo_id}"
-                print(f"Available servos found: {available_servos}")
-                node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
-
+                handle_scan_event()
             elif event["id"] == "set_servo":
-                cmd = event["value"].to_py()
-                if len(cmd) != 3:
-                    print("Invalid set_servo command received")
-                    continue
-                # Unpack command—ignoring the provided servo_id and using the configured SCS_ID
-                _, target_position, target_speed = cmd
-                comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, int(target_speed))
-                if comm_result != COMM_SUCCESS or error != 0:
-                    print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
-                comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_POSITION, int(target_position))
-                if comm_result != COMM_SUCCESS or error != 0:
-                    print(f"Error setting goal position: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
-                node.send_output(output_id="servo_done", data=pa.array([int(target_position)]), metadata={})
-
+                handle_set_servo_event(event)
             elif event["id"] == "my_input_id":
-                node.send_output(output_id="my_output_id", data=pa.array([1, 2, 3]), metadata={})
+                handle_my_input_event()
 
 if __name__ == "__main__":
     main()
