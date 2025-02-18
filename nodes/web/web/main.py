@@ -150,13 +150,15 @@ def main():
     node = Node()
     
     for event in node:
-        if event["type"] == "INPUT" and not ("id" in event and (event["id"] == "tick" or event["id"] == "runtime")):
+        if event["type"] == "INPUT" and "id" in event and event["id"] == "change_servo_id":
+            handle_change_servo_id_event(event)
+        elif event["type"] == "INPUT" and "id" in event and (event["id"] == "tick" or event["id"] == "runtime"):
+            flush_web_inputs(node)
+        elif event["type"] == "INPUT":
             event['value'] = event['value'].to_pylist()
             serialized = json.dumps(event, default=str).encode('utf-8')
             if web_loop is not None:
                 asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
-        elif "id" in event and event["id"] == "tick":
-            flush_web_inputs(node)
 
 
 if __name__ == "__main__":
