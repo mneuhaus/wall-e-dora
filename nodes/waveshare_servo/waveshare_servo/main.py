@@ -118,7 +118,7 @@ def main():
                             save_settings(settings)
                             print(f"Updated servo id 1 to {new_id}")
                             servo_id = new_id
-                        available_servos[f"servo{servo_id}"] = f"Servo {servo_id}"
+                        available_servos[f"{servo_id}"] = f"{servo_id}"
                 print(f"Available servos found: {available_servos}")
                 node.send_output(output_id="available_nodes", data=pa.array(list(available_servos.keys())), metadata={})
 
