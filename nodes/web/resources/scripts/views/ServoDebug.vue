@@ -54,6 +54,7 @@
               :start-angle="300"
               :end-angle="600"
               :animation="false"
+              v-bind:change="handlePositionUpdate"
             />
           </div>
         </div>
@@ -158,10 +159,12 @@ watch(currentPosition, (newValue) => {
   node.emit('set_servo', [parseInt(id), parseInt(newValue), parseInt(newSpeed.value)]);
 });
 
-watch(newSpeed, (newValue) => {
-  if (!currentServo.value) return;
-  node.emit('set_servo', [parseInt(id), parseInt(currentPosition.value), parseInt(newValue)]);
-});
+function handlePositionUpdate(newValue) {
+  if (typeof newValue === 'object' && newValue.value !== undefined) {
+    newValue = newValue.value;
+  }
+  node.emit('set_servo', [parseInt(id), parseInt(newValue), parseInt(newSpeed.value)]);
+}
 </script>
 
 <style scoped>
