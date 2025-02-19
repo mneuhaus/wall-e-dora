@@ -55,6 +55,7 @@
               :end-angle="600"
               :animation="false"
               @update="handlePositionUpdate"
+              @change="handlePositionUpdate"
             />
           </div>
         </div>
