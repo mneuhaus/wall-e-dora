@@ -150,7 +150,7 @@ def main():
         node.send_output(output_id="servo_status", data=pa.array(available_servos), metadata={})
     
     def handle_set_servo_event(event):
-        cmd = event["value"].to_py()
+        cmd = event["value"].to_pylist()
         if len(cmd) != 3:
             print("Invalid set_servo command received")
             return
