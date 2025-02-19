@@ -61,6 +61,7 @@ nodes:
       - change_servo_id
       - wiggle
       - calibrate
+      - set_servo
 
   - id: audio
     path: nodes/audio/audio/main.py
@@ -89,6 +90,7 @@ nodes:
       change_servo_id: web/change_servo_id
       wiggle: web/wiggle
       calibrate: web/calibrate
+      set_servo: web/set_servo
     outputs:
       - servo_status
 

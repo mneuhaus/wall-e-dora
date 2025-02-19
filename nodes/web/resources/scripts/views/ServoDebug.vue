@@ -145,6 +145,9 @@ function calibrate() {
 }
 
 function handlePositionUpdate(newValue) {
+  if (typeof newValue === 'object' && newValue.value !== undefined) {
+    newValue = newValue.value; // Handle vue-round-slider event object
+  }
   node.emit('set_servo', [parseInt(id), parseInt(newValue), parseInt(newSpeed.value)]);
 }
 </script>
