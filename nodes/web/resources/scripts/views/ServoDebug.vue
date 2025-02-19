@@ -1,17 +1,23 @@
 <template>
   <div class="servo-debug">
     <article class="responsive">
-      <!-- Header Section -->
-      <header>
-        <h5>Servo Debug - {{ id }}</h5>
-        <p class="small">This is where you can inspect and test servo behavior.</p>
+      <!-- Header Section with Breadcrumb -->
+      <header class="m-bottom-2">
+        <nav aria-label="breadcrumb">
+          <RouterLink to="/" class="small">Home</RouterLink>
+          <span class="small">/</span>
+          <span class="small" aria-current="page">Servo {{ id }}</span>
+        </nav>
+        <h5 class="m-top-1">Servo Control Panel</h5>
+        <p class="small text-gray">Configure and monitor servo behavior</p>
       </header>
 
-      <div class="grid">
+      <div class="grid gap-2">
         <!-- Left Column: Position Control -->
-        <div class="s4">
-          <section class="card">
-            <div class="center-align">
+        <div class="s12 m6 l4">
+          <section class="card p-2">
+            <h6 class="m-bottom-2">Position Control</h6>
+            <div class="center-align" role="group" aria-label="Position control">
               <round-slider
                 v-model="currentPosition"
                 :min="minPos"
@@ -23,66 +29,92 @@
                 :start-angle="300"
                 :end-angle="600"
                 :animation="false"
-                v-bind:change="handlePositionUpdate"
+                aria-label="Servo position control"
               />
-            </div>
-            <div class="m-top">
-              <label class="slider">
-                <input type="range" min="100" max="2000" step="1" v-model="newSpeed">
-                <span>Speed: {{ newSpeed }}</span>
-              </label>
+              <div class="field label border round m-top-2">
+                <label class="slider">
+                  <input 
+                    type="range" 
+                    min="100" 
+                    max="2000" 
+                    step="1" 
+                    v-model="newSpeed"
+                    aria-label="Servo speed control"
+                  >
+                  <span class="small">Speed: {{ newSpeed }}</span>
+                </label>
+              </div>
             </div>
           </section>
         </div>
 
         <!-- Middle Column: Status and Calibration -->
-        <div class="s4">
-          <section class="card">
-            <h6>Current Status</h6>
-            <table class="small border">
-              <tbody>
-                <tr v-for="(value, key) in servoStatus" :key="key">
-                  <td>{{ key }}:</td>
-                  <td>{{ value }}</td>
-                </tr>
-              </tbody>
-            </table>
+        <div class="s12 m6 l4">
+          <section class="card p-2 m-bottom-2">
+            <h6 class="m-bottom-2">Current Status</h6>
+            <div class="status-grid">
+              <div v-for="(value, key) in servoStatus" :key="key" class="status-item p-1">
+                <span class="label text-gray">{{ key }}</span>
+                <span class="value">{{ value }}</span>
+              </div>
+            </div>
           </section>
 
-          <section class="card m-top" v-if="currentServo?.min_pos !== undefined">
-            <h6>Calibration Range</h6>
-            <table class="small border">
-              <tbody>
-                <tr>
-                  <td>Min Position:</td>
-                  <td>{{ currentServo?.min_pos || 'Not calibrated' }}</td>
-                </tr>
-                <tr>
-                  <td>Max Position:</td>
-                  <td>{{ currentServo?.max_pos || 'Not calibrated' }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <section class="card p-2" v-if="currentServo?.min_pos !== undefined">
+            <h6 class="m-bottom-2">Calibration Range</h6>
+            <div class="status-grid">
+              <div class="status-item p-1">
+                <span class="label text-gray">Min Position</span>
+                <span class="value">{{ currentServo?.min_pos || 'Not calibrated' }}</span>
+              </div>
+              <div class="status-item p-1">
+                <span class="label text-gray">Max Position</span>
+                <span class="value">{{ currentServo?.max_pos || 'Not calibrated' }}</span>
+              </div>
+            </div>
           </section>
         </div>
 
         <!-- Right Column: Controls -->
-        <div class="s4">
-          <section class="card">
-            <div class="field label border round">
-              <input type="number" v-model="newId">
+        <div class="s12 m12 l4">
+          <section class="card p-2">
+            <h6 class="m-bottom-2">Servo Configuration</h6>
+            
+            <div class="field label border round m-bottom-2">
+              <input 
+                type="number" 
+                v-model="newId"
+                aria-label="New servo ID"
+                min="1"
+                max="253"
+              >
               <label>New Servo ID</label>
-              <button class="small" @click="changeId">Change ID</button>
+              <button 
+                class="small"
+                @click="changeId"
+                :disabled="!newId"
+                aria-label="Change servo ID"
+              >
+                Change ID
+              </button>
             </div>
 
-            <div class="m-top center">
-              <button class="border m-right-2" @click="wiggle">
-                <i class="fa-solid fa-arrows-left-right"></i>
-                Wiggle
+            <div class="actions">
+              <button 
+                class="border m-right-2 p-2"
+                @click="wiggle"
+                aria-label="Test servo movement"
+              >
+                <i class="fa-solid fa-arrows-left-right m-right-1"></i>
+                Test Movement
               </button>
-              <button class="border" @click="calibrate">
-                <i class="fa-solid fa-ruler"></i>
-                Calibrate
+              <button 
+                class="border p-2"
+                @click="calibrate"
+                aria-label="Calibrate servo range"
+              >
+                <i class="fa-solid fa-ruler m-right-1"></i>
+                Calibrate Range
               </button>
             </div>
           </section>
@@ -165,5 +197,54 @@ function handlePositionUpdate(newValue) {
 <style scoped>
 .servo-debug {
   padding: 1rem;
+}
+
+.status-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.status-item:last-child {
+  border-bottom: none;
+}
+
+.label {
+  font-size: 0.875rem;
+}
+
+.value {
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actions button {
+  flex: 1;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .actions {
+    flex-direction: column;
+  }
+  
+  .actions button {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
 }
 </style>
