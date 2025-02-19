@@ -129,7 +129,6 @@ const servoStatus = computed(() => ({
 // Event handlers
 node.on('servo_status', (event) => {
   servos.value = event.value;
-  console.log(event.value);
   if (currentServo.value?.speed) {
     newSpeed.value = currentServo.value.speed;
   }
@@ -154,9 +153,10 @@ function calibrate() {
   node.emit('calibrate', [parseInt(id)]);
 }
 
-// Watch for position and speed changes
-watch(currentPosition, (newValue) => {
-  node.emit('set_servo', [parseInt(id), parseInt(newValue), parseInt(newSpeed.value)]);
+watch(newSpeed, (newValue) => {
+  console.log(newValue);
+  if (!currentServo.value) return;
+  node.emit('set_speed', [parseInt(id), parseInt(newValue)]);
 });
 
 function handlePositionUpdate(newValue) {
