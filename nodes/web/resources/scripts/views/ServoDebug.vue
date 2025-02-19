@@ -54,7 +54,6 @@
               :start-angle="300"
               :end-angle="600"
               :animation="false"
-              v-bind:change="handlePositionUpdate"
             />
           </div>
         </div>
