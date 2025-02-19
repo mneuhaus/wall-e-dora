@@ -154,15 +154,21 @@ def main():
         if len(cmd) != 3:
             print("Invalid set_servo command received")
             return
-        # Unpack command—ignoring the provided servo_id and using the configured SCS_ID
-        _, target_position, target_speed = cmd
-        comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_SPEED, int(target_speed))
+        # Unpack command using the provided servo_id
+        servo_id, target_position, target_speed = cmd
+        print(f"Setting servo {servo_id} to position {target_position} at speed {target_speed}")
+        
+        comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, int(target_speed))
         if comm_result != COMM_SUCCESS or error != 0:
             print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
-        comm_result, error = packetHandler.write2ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_POSITION, int(target_position))
+            return
+            
+        comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, int(target_position))
         if comm_result != COMM_SUCCESS or error != 0:
             print(f"Error setting goal position: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
-        node.send_output(output_id="servo_done", data=pa.array([int(target_position)]), metadata={})
+            return
+            
+        print(f"Successfully set servo {servo_id} position and speed")
     
     def handle_change_servo_id_event(event):
         data = event["value"].to_pylist()
