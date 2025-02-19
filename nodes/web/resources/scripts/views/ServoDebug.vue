@@ -17,7 +17,7 @@
       <!-- Speed Control Section -->
       <section class="field label border round m-top">
         <label class="slider">
-          <input type="range" min="100" max="2000" step="1" v-model="newSpeed" v-bind:change="updateSpeed">
+          <input type="range" min="100" max="2000" step="1" v-model="newSpeed" @change="updateSpeed">
           <span>Speed: {{ newSpeed }}</span>
         </label>
       </section>
@@ -146,8 +146,8 @@ function changeId() {
 }
 
 function updateSpeed() {
-  const currentPosition = currentServo.value?.position || 0;
-  node.emit('set_servo', [parseInt(id), parseInt(currentPosition), parseInt(newSpeed.value)]);
+  if (!currentServo.value) return;
+  node.emit('set_servo', [parseInt(id), parseInt(currentPosition.value), parseInt(newSpeed.value)]);
 }
 
 function wiggle() {
