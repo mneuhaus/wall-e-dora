@@ -7,25 +7,37 @@
         <p class="small">This is where you can inspect and test servo behavior.</p>
       </header>
 
-      <!-- ID Configuration Section -->
-      <section class="field label border round">
-        <input type="number" v-model="newId">
-        <label>New Servo ID</label>
-        <button class="small" @click="changeId">Change ID</button>
-      </section>
+      <div class="grid">
+        <!-- Left Column: Position Control -->
+        <div class="s4">
+          <section class="card">
+            <div class="center-align">
+              <round-slider
+                v-model="currentPosition"
+                :min="minPos"
+                :max="maxPos"
+                radius="120"
+                line-cap="round"
+                path-color="#37474F"
+                range-color="#00bfa5"
+                :start-angle="300"
+                :end-angle="600"
+                :animation="false"
+                v-bind:change="handlePositionUpdate"
+              />
+            </div>
+            <div class="m-top">
+              <label class="slider">
+                <input type="range" min="100" max="2000" step="1" v-model="newSpeed">
+                <span>Speed: {{ newSpeed }}</span>
+              </label>
+            </div>
+          </section>
+        </div>
 
-      <!-- Speed Control Section -->
-      <section class="field label border round m-top">
-        <label class="slider">
-          <input type="range" min="100" max="2000" step="1" v-model="newSpeed">
-          <span>Speed: {{ newSpeed }}</span>
-        </label>
-      </section>
-
-      <!-- Status Display Section -->
-      <section class="card m-top">
-        <div class="row">
-          <div class="col s12">
+        <!-- Middle Column: Status and Calibration -->
+        <div class="s4">
+          <section class="card">
             <h6>Current Status</h6>
             <table class="small border">
               <tbody>
@@ -35,47 +47,9 @@
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <!-- Position Control Section -->
-      <section class="card m-top">
-        <div class="row">
-          <div class="col s12 center-align">
-            <round-slider
-              v-model="currentPosition"
-              :min="minPos"
-              :max="maxPos"
-              radius="120"
-              line-cap="round"
-              path-color="#37474F"
-              range-color="#00bfa5"
-              :start-angle="300"
-              :end-angle="600"
-              :animation="false"
-              v-bind:change="handlePositionUpdate"
-            />
-          </div>
-        </div>
-      </section>
-
-      <!-- Action Buttons Section -->
-      <section class="row m-top">
-        <button class="border" @click="wiggle">
-          <i class="fa-solid fa-arrows-left-right"></i>
-          Wiggle
-        </button>
-        <button class="border" @click="calibrate">
-          <i class="fa-solid fa-ruler"></i>
-          Calibrate
-        </button>
-      </section>
-
-      <!-- Calibration Info Section -->
-      <section class="card m-top" v-if="currentServo?.min_pos !== undefined">
-        <div class="row">
-          <div class="col s12">
+          <section class="card m-top" v-if="currentServo?.min_pos !== undefined">
             <h6>Calibration Range</h6>
             <table class="small border">
               <tbody>
@@ -89,9 +63,31 @@
                 </tr>
               </tbody>
             </table>
-          </div>
+          </section>
         </div>
-      </section>
+
+        <!-- Right Column: Controls -->
+        <div class="s4">
+          <section class="card">
+            <div class="field label border round">
+              <input type="number" v-model="newId">
+              <label>New Servo ID</label>
+              <button class="small" @click="changeId">Change ID</button>
+            </div>
+
+            <div class="m-top center">
+              <button class="border m-right-2" @click="wiggle">
+                <i class="fa-solid fa-arrows-left-right"></i>
+                Wiggle
+              </button>
+              <button class="border" @click="calibrate">
+                <i class="fa-solid fa-ruler"></i>
+                Calibrate
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
     </article>
   </div>
 </template>
