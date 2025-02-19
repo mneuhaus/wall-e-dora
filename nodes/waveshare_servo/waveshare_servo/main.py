@@ -13,7 +13,8 @@ def load_settings():
         settings = {
             "unique_id_counter": 10,
             "id_mapping": {},
-            "servo_limits": {}  # Store min/max positions for each servo
+            "servo_limits": {},  # Store min/max positions for each servo
+            "servo_aliases": {}  # Store aliases for servos
         }
     return settings
 
@@ -136,7 +137,8 @@ def main():
                     "id": servo_id,
                     "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
                     "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
-                    "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0
+                    "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0,
+                    "alias": settings.get("servo_aliases", {}).get(str(servo_id), "")
                 }
                 
                 # Add calibration data if available
@@ -310,6 +312,15 @@ def main():
                 handle_calibrate_event(event)
             elif event["id"] == "set_speed":
                 handle_set_speed_event(event)
+            elif event["id"] == "set_alias":
+                data = event["value"].to_pylist()
+                if len(data) == 2:
+                    servo_id, alias = data
+                    settings.setdefault("servo_aliases", {})
+                    settings["servo_aliases"][str(servo_id)] = alias
+                    save_settings(settings)
+                    print(f"Set alias for servo {servo_id} to {alias}")
+                    handle_scan_event()  # Update UI with new alias
 
 if __name__ == "__main__":
     main()

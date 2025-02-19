@@ -93,6 +93,7 @@ nodes:
       calibrate: web/calibrate
       set_servo: web/set_servo
       set_speed: web/set_speed
+      set_alias: web/set_alias
     outputs:
       - servo_status
 

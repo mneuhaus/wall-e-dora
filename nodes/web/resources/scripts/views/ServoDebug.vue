@@ -100,6 +100,24 @@
               </button>
             </div>
 
+            <div class="field label round m-bottom-2" style="display: flex;">
+              <input 
+                class="border"
+                type="text" 
+                v-model="aliasInput"
+                aria-label="Servo alias"
+                placeholder="Enter alias"
+              >
+              <label>Servo Alias</label>
+              <button 
+                @click="setAlias"
+                :disabled="!aliasInput"
+                aria-label="Set alias"
+              >
+                Set Alias
+              </button>
+            </div>
+
             <div class="actions m-top-2">
               <button 
                 class="border m-right-2 p-2"
@@ -140,6 +158,7 @@ const servos = ref([]);
 const newId = ref('');
 const newSpeed = ref(100);
 const currentPosition = ref(0);
+const aliasInput = ref('');
 
 // Computed properties
 const currentServo = computed(() => 
@@ -152,7 +171,8 @@ const maxPos = computed(() => currentServo.value?.max_pos || 1024);
 const servoStatus = computed(() => ({
   Position: currentServo.value?.position || 'N/A',
   Speed: currentServo.value?.speed || 'N/A',
-  Torque: currentServo.value?.torque || 'N/A'
+  Torque: currentServo.value?.torque || 'N/A',
+  Alias: currentServo.value?.alias || 'None'
 }));
 
 // Event handlers
@@ -180,6 +200,13 @@ function wiggle() {
 
 function calibrate() {
   node.emit('calibrate', [parseInt(id)]);
+}
+
+function setAlias() {
+  if (aliasInput.value.trim()) {
+    node.emit('set_alias', [parseInt(id), aliasInput.value.trim()]);
+    aliasInput.value = ''; // Clear input after sending
+  }
 }
 
 watch(newSpeed, (newValue) => {
