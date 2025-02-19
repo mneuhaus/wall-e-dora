@@ -17,7 +17,7 @@
       <!-- Speed Control Section -->
       <section class="field label border round m-top">
         <label class="slider">
-          <input type="range" min="100" max="2000" step="1" v-model="newSpeed" @change="updateSpeed">
+          <input type="range" min="100" max="2000" step="1" v-model="newSpeed" v-bind:change="updateSpeed">
           <span>Speed: {{ newSpeed }}</span>
         </label>
       </section>
@@ -54,8 +54,7 @@
               :start-angle="300"
               :end-angle="600"
               :animation="false"
-              @update="handlePositionUpdate"
-              @change="handlePositionUpdate"
+              v-bind:change="handlePositionUpdate"
             />
           </div>
         </div>
@@ -130,6 +129,7 @@ const servoStatus = computed(() => ({
 // Event handlers
 node.on('servo_status', (event) => {
   servos.value = event.value;
+  console.log(event.value);
   if (currentServo.value?.speed) {
     newSpeed.value = currentServo.value.speed;
   }
