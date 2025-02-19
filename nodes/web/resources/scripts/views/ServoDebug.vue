@@ -97,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import node from '../Node.js';
 import RoundSlider from 'vue-three-round-slider';
@@ -158,12 +158,10 @@ function calibrate() {
   node.emit('calibrate', [parseInt(id)]);
 }
 
-function handlePositionUpdate(newValue) {
-  if (typeof newValue === 'object' && newValue.value !== undefined) {
-    newValue = newValue.value;
-  }
+// Watch for position changes
+watch(currentPosition, (newValue) => {
   node.emit('set_servo', [parseInt(id), parseInt(newValue), parseInt(newSpeed.value)]);
-}
+});
 </script>
 
 <style scoped>
