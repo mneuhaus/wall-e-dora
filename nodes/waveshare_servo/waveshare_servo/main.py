@@ -254,12 +254,18 @@ def main():
         servo_id, target_speed = cmd
         print(f"Setting servo {servo_id} speed to {target_speed}")
         
-        comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, int(target_speed))
+        # Ensure speed is within valid range (100-2000)
+        target_speed = max(100, min(2000, int(target_speed)))
+        
+        comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, target_speed)
         if comm_result != COMM_SUCCESS or error != 0:
             print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
             return
             
-        print(f"Successfully set servo {servo_id} speed")
+        print(f"Successfully set servo {servo_id} speed to {target_speed}")
+        
+        # Trigger a scan to update the UI with new speed
+        handle_scan_event()
 
     def handle_wiggle_event(event):
         servo_id = event["value"].to_pylist()[0]
