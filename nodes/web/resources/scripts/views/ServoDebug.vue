@@ -52,8 +52,8 @@
               line-cap="round"
               path-color="#37474F"
               range-color="#00bfa5"
-              :start-angle="120"
-              :end-angle="420"
+              :start-angle="300"
+              :end-angle="600"
               :animation="false"
               @update="handlePositionUpdate"
             />
