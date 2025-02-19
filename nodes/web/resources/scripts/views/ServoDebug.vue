@@ -99,7 +99,7 @@
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import node from '../Node.js';
-import RoundSlider from 'vue-round-slider';
+import RoundSlider from 'vue-three-round-slider';
 
 const route = useRoute();
 const id = route.params.id;
