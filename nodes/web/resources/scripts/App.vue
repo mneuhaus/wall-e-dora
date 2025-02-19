@@ -15,10 +15,10 @@ import ServoStatus from './components/ServoStatus.vue';
       <a class=max>&nbsp;</a>
       <!-- <RouterLink to="/">Go to Home</RouterLink> -->
       <gamepad></gamepad>
+      <servo-status></servo-status>
       <power></power>
       <volume></volume>
       <connection-status></connection-status>
-      <servo-status></servo-status>
     </nav>
   </header>
 

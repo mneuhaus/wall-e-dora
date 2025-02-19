@@ -2,8 +2,6 @@ import "beercss";
 import "material-dynamic-colors";
 import 'gridstack/dist/gridstack.min.css';
 import '@fortawesome/fontawesome-free/css/all.css';
-import RoundSlider from 'vue-round-slider';
-import 'vue-round-slider/dist/vue-round-slider.css';
 import Node from "./Node.js";
 import { createApp } from 'vue';
 import { createWebHashHistory, createRouter } from 'vue-router'
@@ -15,7 +13,6 @@ import '../styles/main.css';
 
 let theme = await ui("theme", "#ffd700");
 let app = createApp(App);
-app.component('round-slider', RoundSlider);
 const router = createRouter({
     history: createWebHashHistory(),
     routes: [

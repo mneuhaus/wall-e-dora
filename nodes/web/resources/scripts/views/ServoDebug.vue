@@ -30,6 +30,7 @@
                 :end-angle="600"
                 :animation="false"
                 aria-label="Servo position control"
+                v-bind:change="handlePositionUpdate"
               />
               <div class="field label border round m-top-2">
                 <label class="slider">
@@ -80,8 +81,9 @@
           <section class="card p-2">
             <h6 class="m-bottom-2">Servo Configuration</h6>
             
-            <div class="field label border round m-bottom-2">
+            <div class="field label round m-bottom-2" style="display: flex;">
               <input 
+                class="border"
                 type="number" 
                 v-model="newId"
                 aria-label="New servo ID"
@@ -90,7 +92,6 @@
               >
               <label>New Servo ID</label>
               <button 
-                class="small"
                 @click="changeId"
                 :disabled="!newId"
                 aria-label="Change servo ID"
@@ -99,7 +100,7 @@
               </button>
             </div>
 
-            <div class="actions">
+            <div class="actions m-top-2">
               <button 
                 class="border m-right-2 p-2"
                 @click="wiggle"

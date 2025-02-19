@@ -44,9 +44,15 @@ importers:
       vue-loader:
         specifier: ^17.0.0
         version: 17.4.2(@vue/compiler-sfc@3.5.13)(vue@3.5.13)(webpack@5.97.1)
+      vue-round-slider:
+        specifier: ^1.0.1
+        version: 1.0.1
       vue-router:
         specifier: ^4.5.0
         version: 4.5.0(vue@3.5.13)
+      vue-three-round-slider:
+        specifier: ^1.2.7
+        version: 1.2.7
     devDependencies:
       webpack-notifier:
         specifier: ^1.15.0
@@ -1336,6 +1342,9 @@ packages:
     resolution: {integrity: sha512-eIz2msL/EzL9UFTFFx7jBTkeZfku0yUAyZZZmJ93H2TYEiroIx2PQjEXcwYtYl8zXCxb+PAmA2hLIt/6ZEkPHw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
 
+  jquery@3.7.1:
+    resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -1777,6 +1786,9 @@ packages:
     engines: {node: '>= 0.4'}
     hasBin: true
 
+  round-slider@1.6.1:
+    resolution: {integrity: sha512-yRVcksg/wUP6TUWoNrnGRkbvfWuir73+ZgVhYBQaMHXwq2Z2c2MyVZav6p0voIqMZNPbELuYF0UFkg+5d5dNgg==}
+
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 
@@ -1956,10 +1968,16 @@ packages:
       vue:
         optional: true
 
+  vue-round-slider@1.0.1:
+    resolution: {integrity: sha512-ll82R1gmdsqfq++eSVufaoNzdyvnLOg8W9H341k1NVKwjAoGhc5wZN1gR5HTRLrDEya0lyOrM/L3dbtSBrDvsQ==}
+
   vue-router@4.5.0:
     resolution: {integrity: sha512-HDuk+PuH5monfNuY+ct49mNmkCRK4xJAV9Ts4z9UFc4rzdDnxQLyCMGGc8pKhZhHTVzfanpNwB/lwqevcBwI4w==}
     peerDependencies:
       vue: ^3.2.0
+
+  vue-three-round-slider@1.2.7:
+    resolution: {integrity: sha512-sYXvvYieuQ6859PZPcm0dq4YgXKZM/P83NmQMt1DbxrU/3gq7lkqvzzTecKdCfjNAkiKZfSSf53RLRjZal+HkQ==}
 
   vue@3.5.13:
     resolution: {integrity: sha512-wmeiSMxkZCSc+PM2w2VRsOYAZC8GdipNFRTsLSfodVqI9mbejKeXEGr8SckuLnrQPGe3oJN5c3K0vpoU9q/wCQ==}
@@ -3458,6 +3476,8 @@ snapshots:
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
+  jquery@3.7.1: {}
+
   js-tokens@4.0.0: {}
 
   jsesc@3.0.2: {}
@@ -3857,6 +3877,10 @@ snapshots:
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
 
+  round-slider@1.6.1:
+    dependencies:
+      jquery: 3.7.1
+
   safe-buffer@5.2.1: {}
 
   schema-utils@3.3.0:
@@ -4025,10 +4049,18 @@ snapshots:
       '@vue/compiler-sfc': 3.5.13
       vue: 3.5.13
 
+  vue-round-slider@1.0.1:
+    dependencies:
+      round-slider: 1.6.1
+
   vue-router@4.5.0(vue@3.5.13):
     dependencies:
       '@vue/devtools-api': 6.6.4
       vue: 3.5.13
+
+  vue-three-round-slider@1.2.7:
+    dependencies:
+      round-slider: 1.6.1
 
   vue@3.5.13:
     dependencies:
