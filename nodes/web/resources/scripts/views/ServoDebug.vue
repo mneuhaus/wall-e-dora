@@ -154,7 +154,6 @@ function calibrate() {
 }
 
 watch(newSpeed, (newValue) => {
-  console.log(newValue);
   if (!currentServo.value) return;
   node.emit('set_speed', [parseInt(id), parseInt(newValue)]);
 });
