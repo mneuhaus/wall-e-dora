@@ -66,6 +66,24 @@ def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
     except Exception as e:
         print(f"Error: {e}")
 
+def scan_baud_rates(portHandler, packetHandler, servo_id):
+    """Try to communicate with servo using different baud rates"""
+    baud_rates = [115200, 1000000, 57600, 9600]  # Common baud rates
+    
+    for rate in baud_rates:
+        print(f"\nTrying baud rate: {rate}")
+        if portHandler.setBaudRate(rate):
+            print(f"Set baud rate to {rate}")
+            ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
+            if comm_result == COMM_SUCCESS and error == 0:
+                print(f"Success! Servo responded at {rate} baud")
+                return rate
+        else:
+            print(f"Failed to set baud rate {rate}")
+    
+    print("\nFailed to communicate at any baud rate")
+    return None
+
 def main():
     node = Node()
     # SCServo configuration
@@ -89,20 +107,44 @@ def main():
     packetHandler = PacketHandler(protocol_end)
 
     if not portHandler.openPort():
-        print("Failed to open the port")
-        return
-    if not portHandler.setBaudRate(BAUDRATE):
-        print("Failed to change the baudrate")
+        print(f"Failed to open the port {DEVICENAME}")
+        print("Please check:")
+        print("1. Is the USB device connected?")
+        print("2. Do you have permission to access the port?")
+        print("3. Is the device path correct?")
         return
         
-    print(f"Port opened successfully at {BAUDRATE} baud")
+    if not portHandler.setBaudRate(BAUDRATE):
+        print(f"Failed to change the baudrate to {BAUDRATE}")
+        print("This could indicate:")
+        print("1. Port is already in use")
+        print("2. Hardware communication issues")
+        return
+        
+    print(f"Port opened successfully at {BAUDRATE} baud on {DEVICENAME}")
     
     # Test communication with ping
+    print(f"\nAttempting to ping servo ID {SCS_ID}...")
     ping_result, comm_result, error = packetHandler.ping(portHandler, SCS_ID)
     if comm_result != COMM_SUCCESS or error != 0:
         print(f"Failed to ping servo ID {SCS_ID}")
         print(f"Communication Result: {packetHandler.getTxRxResult(comm_result)}")
         print(f"Error: {packetHandler.getRxPacketError(error)}")
+        print("\nPossible issues:")
+        print("1. Wrong servo ID (default is 1)")
+        print("2. Incorrect baud rate (try 115200)")
+        print("3. Loose/faulty connections")
+        print("4. Power issues - check servo power supply")
+        print(f"5. Wrong protocol (currently using protocol_end={protocol_end})")
+        
+        print("\nTrying to auto-detect baud rate...")
+        working_baud = scan_baud_rates(portHandler, packetHandler, SCS_ID)
+        if working_baud:
+            print(f"\nFound working baud rate: {working_baud}")
+            print(f"Consider updating BAUDRATE to {working_baud}")
+            BAUDRATE = working_baud
+        else:
+            print("\nCould not establish communication at any common baud rate")
     else:
         print(f"Successfully pinged servo ID {SCS_ID}")
 
