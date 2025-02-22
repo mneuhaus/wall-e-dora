@@ -70,7 +70,7 @@ def main():
     node = Node()
     # SCServo configuration
     DEVICENAME = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'
-    BAUDRATE = 1000000
+    BAUDRATE = 115200  # SC15 default baud rate
     settings = load_settings()
     SCS_ID = 1
     ADDR_SCS_GOAL_ACC = 41
@@ -94,6 +94,17 @@ def main():
     if not portHandler.setBaudRate(BAUDRATE):
         print("Failed to change the baudrate")
         return
+        
+    print(f"Port opened successfully at {BAUDRATE} baud")
+    
+    # Test communication with ping
+    ping_result, comm_result, error = packetHandler.ping(portHandler, SCS_ID)
+    if comm_result != COMM_SUCCESS or error != 0:
+        print(f"Failed to ping servo ID {SCS_ID}")
+        print(f"Communication Result: {packetHandler.getTxRxResult(comm_result)}")
+        print(f"Error: {packetHandler.getRxPacketError(error)}")
+    else:
+        print(f"Successfully pinged servo ID {SCS_ID}")
 
     # Write SCServo acceleration and speed defaults
     comm_result, error = packetHandler.write1ByteTxRx(portHandler, SCS_ID, ADDR_SCS_GOAL_ACC, SCS_MOVING_ACC)
