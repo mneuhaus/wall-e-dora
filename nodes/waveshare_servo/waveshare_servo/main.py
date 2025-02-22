@@ -70,7 +70,7 @@ def main():
     node = Node()
     # SCServo configuration
     DEVICENAME = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'
-    BAUDRATE = 115200  # SC15 default baud rate
+    BAUDRATE = 1000000
     settings = load_settings()
     SCS_ID = 1
     ADDR_SCS_GOAL_ACC = 41
