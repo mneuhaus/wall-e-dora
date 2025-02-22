@@ -214,28 +214,46 @@ def main():
         
         # Find minimum position
         min_pos = pos_data
+        ABSOLUTE_MIN = 0  # Servo's absolute minimum
         while True:
-            test_pos = min_pos - 50
+            test_pos = max(ABSOLUTE_MIN, min_pos - 50)
+            if test_pos == ABSOLUTE_MIN:
+                min_pos = ABSOLUTE_MIN
+                break
+                
             packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, test_pos)
             time.sleep(0.5)  # Wait for movement
             
             actual_pos, pos_result, pos_error = packetHandler.read2ByteTxRx(
                 portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
             )
+            if pos_result != COMM_SUCCESS or pos_error != 0:
+                print("Error reading position during calibration")
+                break
+                
             if abs(actual_pos - min_pos) < 10:  # If barely moved, we found the limit
                 break
             min_pos = actual_pos
         
         # Find maximum position
         max_pos = pos_data
+        ABSOLUTE_MAX = 4095  # Servo's absolute maximum
         while True:
-            test_pos = max_pos + 50
+            test_pos = min(ABSOLUTE_MAX, max_pos + 50)
+            if test_pos == ABSOLUTE_MAX:
+                max_pos = ABSOLUTE_MAX
+                break
+                
             packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, test_pos)
             time.sleep(0.5)  # Wait for movement
             
             actual_pos, pos_result, pos_error = packetHandler.read2ByteTxRx(
                 portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
             )
+            if pos_result != COMM_SUCCESS or pos_error != 0:
+                print("Error reading position during calibration")
+                break
+                
             if abs(actual_pos - max_pos) < 10:  # If barely moved, we found the limit
                 break
             max_pos = actual_pos
