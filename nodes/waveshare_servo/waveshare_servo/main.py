@@ -66,23 +66,6 @@ def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
     except Exception as e:
         print(f"Error: {e}")
 
-def scan_baud_rates(portHandler, packetHandler, servo_id):
-    """Try to communicate with servo using different baud rates"""
-    baud_rates = [115200, 1000000, 57600, 9600]  # Common baud rates
-    
-    for rate in baud_rates:
-        print(f"\nTrying baud rate: {rate}")
-        if portHandler.setBaudRate(rate):
-            print(f"Set baud rate to {rate}")
-            ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
-            if comm_result == COMM_SUCCESS and error == 0:
-                print(f"Success! Servo responded at {rate} baud")
-                return rate
-        else:
-            print(f"Failed to set baud rate {rate}")
-    
-    print("\nFailed to communicate at any baud rate")
-    return None
 
 def main():
     node = Node()
