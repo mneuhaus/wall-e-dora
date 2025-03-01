@@ -30,6 +30,7 @@ nodes:
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
       servo_status: waveshare_servo/servo_status
+      # camera_feed: opencv-video-capture/image
     outputs:
       - slider_input
       - play_sound
@@ -63,6 +64,7 @@ nodes:
       - calibrate
       - set_servo
       - set_speed
+      - set_alias
 
   - id: audio
     path: nodes/audio/audio/main.py
@@ -101,7 +103,7 @@ nodes:
   #   build: pip install opencv-video-capture
   #   path: opencv-video-capture
   #   inputs:
-  #     tick: dora/timer/millis/50
+  #     tick: dora/timer/secs/3
   #   outputs:
   #     - image
 

@@ -5,3 +5,90 @@ button {
 nav {
 	gap: 0.5rem;
 }
+
+/* GridStack styles */
+.grid-stack {
+    background: transparent;
+    width: 100%;
+    margin: 0 auto;
+    max-width: 1200px;
+}
+
+.grid-stack-item {
+    border-radius: 8px;
+    background-color: var(--surface);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.grid-stack-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.grid-stack-item.ui-draggable-dragging {
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    z-index: 100;
+}
+
+.grid-stack-item-content {
+    padding: 16px;
+    border-radius: 8px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Servo widget dialog */
+.servo-selector-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.dialog-content {
+    background-color: var(--surface);
+    color: var(--text);
+    padding: 20px;
+    border-radius: 8px;
+    min-width: 300px;
+    max-width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+}
+
+.servo-list {
+    margin: 16px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.servo-option {
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.servo-option:hover {
+    background-color: var(--primary-90);
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+/* Separator widget */
+.separator {
+    width: 100%;
+    height: 2px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin: 4px 0;
+}

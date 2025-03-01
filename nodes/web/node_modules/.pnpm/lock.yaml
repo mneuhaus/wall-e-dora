@@ -1,0 +1,41 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      jquery:
+        specifier: ^3.7.1
+        version: 3.7.1
+      round-slider:
+        specifier: ^1.6.1
+        version: 1.6.1
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
+
+packages:
+
+  jquery@3.7.1:
+    resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
+
+  round-slider@1.6.1:
+    resolution: {integrity: sha512-yRVcksg/wUP6TUWoNrnGRkbvfWuir73+ZgVhYBQaMHXwq2Z2c2MyVZav6p0voIqMZNPbELuYF0UFkg+5d5dNgg==}
+
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+
+snapshots:
+
+  jquery@3.7.1: {}
+
+  round-slider@1.6.1:
+    dependencies:
+      jquery: 3.7.1
+
+  uuid@11.1.0: {}
