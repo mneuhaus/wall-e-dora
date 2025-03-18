@@ -10,5 +10,8 @@ wheels/
 .venv
 .aider*
 
+# Node.js dependencies
+node_modules/
+
 # Dora
 out
