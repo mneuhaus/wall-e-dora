@@ -1,1 +1,1 @@
-{"test": {"x": 0, "y": 0, "h": 2, "w": 3}, "sounds": {"x": 0, "y": 0, "h": 3, "w": 5}, "sound-widget": {"x": 8, "y": 0, "h": 7, "w": 4}, "": {"x": 2, "y": 1, "h": 7, "w": 6}}
+{"widget-c7a1fbd8-c098-46b3-a2e0-533c50bf33cc": {"w": 3, "h": 9, "x": 9, "y": 0, "i": "widget-c7a1fbd8-c098-46b3-a2e0-533c50bf33cc", "minW": 2, "minH": 2, "moved": false, "static": false, "type": "sounds-widget"}}

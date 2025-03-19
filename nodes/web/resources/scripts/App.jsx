@@ -1,0 +1,54 @@
+import React, { useRef } from 'react';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { AppProvider } from './contexts/AppContext';
+import { GridProvider } from './contexts/GridContext';
+
+// Import components
+import ConnectionStatus from './components/ConnectionStatus';
+import GridLock from './components/GridLock';
+import AddWidget from './components/AddWidget';
+import Power from './components/Power';
+import Volume from './components/Volume';
+import ServoStatus from './components/ServoStatus';
+import Gamepad from './components/Gamepad';
+
+// Import views
+import Dashboard from './views/Dashboard';
+import GamepadView from './views/Gamepad';
+import ServoDebug from './views/ServoDebug';
+
+const App = () => {
+  const dashboardRef = useRef(null);
+  
+  return (
+    <AppProvider>
+      <GridProvider>
+        <Router>
+          <header>
+            <nav>
+              <Link className="top-app-bar__title" style={{ fontSize: '24px', alignItems: 'left' }} to="/">wall-e</Link>
+              <div className="max">&nbsp;</div>
+              <Gamepad />
+              <ServoStatus />
+              <Power />
+              <Volume />
+              <AddWidget />
+              <GridLock />
+              <ConnectionStatus />
+            </nav>
+          </header>
+          
+          <main>
+            <Routes>
+              <Route path="/" element={<Dashboard ref={dashboardRef} />} />
+              <Route path="/gamepad/:index" element={<GamepadView />} />
+              <Route path="/servo/:id" element={<ServoDebug />} />
+            </Routes>
+          </main>
+        </Router>
+      </GridProvider>
+    </AppProvider>
+  );
+};
+
+export default App;

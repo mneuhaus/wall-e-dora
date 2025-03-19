@@ -1,68 +1,38 @@
 import "beercss";
 import "material-dynamic-colors";
-import 'gridstack/dist/gridstack.min.css';
 import '@fortawesome/fontawesome-free/css/all.css';
-import 'round-slider/dist/roundslider.min.css';
-import jQuery from 'jquery';
-window.$ = window.jQuery = jQuery;
-import Node from "./Node.js";
-import { createApp } from 'vue';
-import { createWebHashHistory, createRouter } from 'vue-router'
-import App from './App.vue';
-import Dashboard from './views/Dashboard.vue';
-import Gamepad from './views/Gamepad.vue';
-import ServoDebug from './views/ServoDebug.vue';
-import ServoControl from './components/ServoControl.vue';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import '../styles/main.css';
 
-// Create a central store for widget and service data
-const appState = {
-  availableServos: [],
-  gridStack: null,
-  gridState: {},
-  widgetsState: {},
-  registerGridStack(grid) {
-    this.gridStack = grid;
-  },
-  getGridStack() {
-    return this.gridStack;
-  },
-  setServos(servos) {
-    this.availableServos = servos;
-  },
-  getServos() {
-    return this.availableServos;
-  },
-  updateWidgetsState(state) {
-    this.widgetsState = state;
-  },
-  getWidgetsState() {
-    return this.widgetsState;
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './App.jsx';
+
+// Make initial grid state available globally via a custom event
+// This allows our context to access it before establishing WebSocket connection
+document.addEventListener('DOMContentLoaded', () => {
+  // gridState is injected by the server in template.html
+  if (typeof window.gridState !== 'undefined') {
+    // Dispatch a custom event with the grid state
+    const event = new CustomEvent('grid_state_initialized', { 
+      detail: window.gridState 
+    });
+    document.dispatchEvent(event);
   }
-};
-
-// Make state available to window for debugging only
-window.appState = appState;
-
-let theme = await ui("theme", "#ffd700");
-let app = createApp(App);
-
-// Register custom components globally
-app.component('servo-control', ServoControl);
-
-// Provide app state to all components
-app.provide('appState', appState);
-app.provide('node', Node);
-
-// Store for available servos (legacy support - will be deprecated)
-window.availableServos = [];
-
-const router = createRouter({
-    history: createWebHashHistory(),
-    routes: [
-        { path: '/', component: Dashboard },
-        { path: '/gamepad/:index', name: 'gamepad',  component: Gamepad },
-        { path: '/servo/:id', name: 'servo', component: ServoDebug }
-    ],
 });
-app.use(router).mount('#app');
+
+// Initialize UI theme with BeerCSS
+(async () => {
+  try {
+    let theme = await ui("theme", "#ffd700");
+    console.log("Theme initialized:", theme);
+  } catch (e) {
+    console.warn("Could not initialize BeerCSS theme:", e);
+  }
+  
+  // Mount React app
+  const container = document.getElementById('root');
+  const root = createRoot(container);
+  root.render(<App />);
+})();

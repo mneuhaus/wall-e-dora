@@ -45,9 +45,13 @@ Encore
         config.useBuiltIns = 'usage';
         config.corejs = 3;
     })
-    // uncomment if you use TypeScript
-    //.enableTypeScriptLoader()
-    .enableVueLoader()
+    
+    // Enable React - this automatically adds the @babel/preset-react
+    .enableReactPreset()
 ;
 
-module.exports = Encore.getWebpackConfig();
+// Configure resolve extensions to support JSX
+const config = Encore.getWebpackConfig();
+config.resolve.extensions.push('.jsx');
+
+module.exports = config;

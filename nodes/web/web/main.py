@@ -26,6 +26,54 @@ def flush_web_inputs(node):
             grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
             with open(grid_state_path, "w", encoding="utf-8") as f:
                 json.dump(web_event["data"], f)
+            
+            # Broadcast the updated grid state to all connected clients
+            for ws in ws_clients.copy():
+                if not ws.closed:
+                    try:
+                        response = {
+                            "id": "grid_state",
+                            "value": web_event["data"],
+                            "type": "EVENT"
+                        }
+                        asyncio.run_coroutine_threadsafe(
+                            ws.send_str(json.dumps(response)), 
+                            web_loop
+                        )
+                    except Exception as e:
+                        print(f"Error broadcasting grid state: {e}")
+                else:
+                    ws_clients.discard(ws)
+        
+        elif web_event.get("output_id") == "get_grid_state":
+            # Load and send grid state to the requesting client
+            grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+            grid_state = {}
+            
+            if os.path.exists(grid_state_path):
+                try:
+                    with open(grid_state_path, "r", encoding="utf-8") as f:
+                        grid_state = json.load(f)
+                except Exception as e:
+                    print(f"Error loading grid state: {e}")
+            
+            # Send to the client that requested it
+            for ws in ws_clients.copy():
+                if not ws.closed:
+                    try:
+                        response = {
+                            "id": "grid_state",
+                            "value": grid_state,
+                            "type": "EVENT"
+                        }
+                        asyncio.run_coroutine_threadsafe(
+                            ws.send_str(json.dumps(response)), 
+                            web_loop
+                        )
+                    except Exception as e:
+                        print(f"Error sending grid state: {e}")
+                else:
+                    ws_clients.discard(ws)
         else:
             node.send_output(
                 output_id=web_event["output_id"], data=pa.array(web_event["data"]), metadata=web_event["metadata"]
@@ -63,13 +111,17 @@ async def index(request):
     import os, json
     template = request.app['jinja_env'].get_template('template.html')
     # Load grid state from file if it exists
-    grid_state = None
+    grid_state = {}
     grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
 
     if os.path.exists(grid_state_path):
-        with open(grid_state_path, "r", encoding="utf-8") as f:
-            grid_state = json.load(f)
+        try:
+            with open(grid_state_path, "r", encoding="utf-8") as f:
+                grid_state = json.load(f)
+        except Exception as e:
+            print(f"Error loading grid state for template: {e}")
 
+    # We set this as a JSON string in the template to initialize the frontend immediately
     rendered = template.render(gridState=json.dumps(grid_state))
     return web.Response(text=rendered, content_type='text/html')
 

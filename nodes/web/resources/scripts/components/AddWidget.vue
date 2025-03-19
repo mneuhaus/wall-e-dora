@@ -1,6 +1,6 @@
 <template>
   <div class="add-widget">
-    <a @click="showWidgetMenu" class="add-button">
+    <a @click="showWidgetMenu" class="add-button" :class="{ 'disabled': !isEditable }">
       <i class="fas fa-plus"></i>
     </a>
     
@@ -15,6 +15,14 @@
           <i class="fas fa-grip-lines m-right-1"></i>
           Separator
         </div>
+        <div class="menu-item" @click="addTestWidget">
+          <i class="fas fa-cube m-right-1"></i>
+          Test Widget
+        </div>
+        <div class="menu-item" @click="addSoundsWidget">
+          <i class="fas fa-volume-up m-right-1"></i>
+          Sounds Widget
+        </div>
         <!-- Add more widget types here -->
       </div>
     </div>
@@ -23,55 +31,24 @@
 
 <script setup>
 import { ref, inject, onMounted, onUnmounted } from 'vue';
-import { v4 as uuidv4 } from 'uuid';
 import node from "../Node.js";
 
 const menuVisible = ref(false);
-const gridStackInstance = inject('gridStackInstance');
-const servoDialog = ref(null);
+
+// Get addWidget function from Dashboard
+const addWidget = inject('addWidget', null);
+
+// Get isEditable state from Dashboard
+const isEditable = inject('isGridEditable', false);
+
+// Get widgetsState from Dashboard
+const widgetsState = inject('widgetsState', ref({}));
 
 // Get appState if available (new approach)
 const appState = inject('appState', null);
 
-// Function to save widget configuration to backend
-function saveWidgetToState(widgetId, config) {
-  // Get widget position and size from grid
-  const grid = appState ? appState.getGridStack() : window.gridStackInstance;
-  const el = document.getElementById(widgetId);
-  
-  if (grid && el) {
-    const gridNode = grid.engine.nodes.find(n => n.el.id === widgetId);
-    
-    if (gridNode) {
-      // Create a full widget configuration 
-      const widgetConfig = {
-        ...config,
-        x: gridNode.x,
-        y: gridNode.y,
-        w: gridNode.w,
-        h: gridNode.h
-      };
-      
-      // Get current widgets state
-      let widgetsState = appState ? appState.getWidgetsState() : (window.widgetsState || {});
-      
-      // Add/update this widget
-      widgetsState[widgetId] = widgetConfig;
-      
-      // Save to state manager
-      if (appState) {
-        appState.updateWidgetsState(widgetsState);
-      } else {
-        // Legacy support
-        window.widgetsState = widgetsState;
-      }
-      
-      // Send to backend for saving
-      console.log("Saving widget state:", widgetId, widgetConfig);
-      node.emit('save_widgets_state', widgetsState);
-    }
-  }
-}
+// Reference for servo selection dialog
+const servoDialog = ref(null);
 
 // Helper function to get available servos
 function getAvailableServos() {
@@ -101,11 +78,16 @@ onUnmounted(() => {
 });
 
 function showWidgetMenu() {
+  // Only show menu if grid is in edit mode
+  if (!isEditable.value) {
+    return;
+  }
   menuVisible.value = !menuVisible.value;
 }
 
 function addServoWidget() {
   console.log("Adding servo widget");
+  
   // Get available servos
   const servos = getAvailableServos();
   console.log("Available servos:", servos);
@@ -154,50 +136,18 @@ function addServoWidget() {
       const servoId = option.getAttribute('data-id');
       console.log("Selected servo ID:", servoId);
       
-      // Create widget using direct GridStack API
-      const grid = window.gridStackInstance;
-      if (!grid) {
-        console.error("GridStack instance not found");
-        return;
+      // Add widget using the Dashboard's addWidget function
+      if (addWidget) {
+        const widgetId = addWidget('servo-control', {
+          servoId,
+          w: 3,
+          h: 4
+        });
+        
+        console.log("Servo widget created with ID:", widgetId);
+      } else {
+        console.error("addWidget function not available");
       }
-      
-      console.log("Grid instance found, adding widget");
-      
-      // Make sure grid is unlocked
-      if (grid.opts.staticGrid) {
-        console.log("Grid is locked, unlocking temporarily");
-        grid.setStatic(false);
-      }
-      
-      // Create widget directly with GridStack API
-      const widgetId = `servo-widget-${uuidv4()}`;
-      
-      // Create content that will be properly interpreted by the browser
-      const content = `
-        <div class="grid-stack-item-content widget-mount-point" data-id="${widgetId}" data-type="servo-control" data-servo-id="${servoId}">
-          <servo-control servo-id="${servoId}"></servo-control>
-        </div>
-      `;
-      
-      // Create the widget with proper HTML content
-      const widget = grid.addWidget({
-        id: widgetId,
-        w: 3,
-        h: 4,
-        content
-      });
-      
-      console.log("Servo widget created with HTML content");
-      
-      // Save widget data to state
-      saveWidgetToState(widgetId, {
-        type: 'servo-control',
-        servoId: servoId,
-        w: 3,
-        h: 4
-      });
-      
-      console.log("Widget added:", widget);
       
       // Hide dialog
       servoDialog.value.style.display = 'none';
@@ -218,46 +168,59 @@ function addServoWidget() {
 function addSeparator() {
   console.log("Adding separator widget");
   
-  // Get grid instance directly from window
-  const grid = window.gridStackInstance;
-  if (!grid) {
-    console.error("GridStack instance not found");
-    return;
+  // Add widget using the Dashboard's addWidget function
+  if (addWidget) {
+    const widgetId = addWidget('separator', {
+      w: 12,
+      h: 1,
+      minH: 1,
+      maxH: 1
+    });
+    
+    console.log("Separator widget added with ID:", widgetId);
+  } else {
+    console.error("addWidget function not available");
   }
   
-  console.log("Grid instance found, adding separator");
+  menuVisible.value = false;
+}
+
+function addTestWidget() {
+  console.log("Adding test widget");
   
-  // Make sure grid is unlocked
-  if (grid.opts.staticGrid) {
-    console.log("Grid is locked, unlocking temporarily");
-    grid.setStatic(false);
+  // Add widget using the Dashboard's addWidget function
+  if (addWidget) {
+    const widgetId = addWidget('test-widget', {
+      w: 4,
+      h: 3,
+      minW: 2,
+      minH: 2
+    });
+    
+    console.log("Test widget added with ID:", widgetId);
+  } else {
+    console.error("addWidget function not available");
   }
   
-  // Create widget directly with GridStack API
-  const widgetId = `separator-${uuidv4()}`;
+  menuVisible.value = false;
+}
+
+function addSoundsWidget() {
+  console.log("Adding sounds widget");
   
-  // Create content with proper wrapper
-  const content = `
-    <div class="grid-stack-item-content widget-mount-point" data-id="${widgetId}" data-type="separator">
-      <div class="separator"></div>
-    </div>
-  `;
-  
-  const widget = grid.addWidget({
-    id: widgetId,
-    w: 12,
-    h: 1,
-    content
-  });
-  
-  console.log("Separator widget added:", widget);
-  
-  // Save widget data to state
-  saveWidgetToState(widgetId, {
-    type: 'separator',
-    w: 12,
-    h: 1
-  });
+  // Add widget using the Dashboard's addWidget function
+  if (addWidget) {
+    const widgetId = addWidget('sounds-widget', {
+      w: 4,
+      h: 6,
+      minW: 3,
+      minH: 4
+    });
+    
+    console.log("Sounds widget added with ID:", widgetId);
+  } else {
+    console.error("addWidget function not available");
+  }
   
   menuVisible.value = false;
 }
@@ -272,12 +235,18 @@ function addSeparator() {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
   color: white;
 }
 
-.add-button:hover {
+.add-button:hover:not(.disabled) {
   background-color: rgba(255, 255, 255, 0.1);
+  color: var(--primary, #ffb300);
+}
+
+.add-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .widget-menu {

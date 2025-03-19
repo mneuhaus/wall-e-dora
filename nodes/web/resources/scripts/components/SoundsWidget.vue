@@ -17,14 +17,20 @@
 </template>
 
 <script setup>
-import {ref} from 'vue';
+import {ref, onMounted} from 'vue';
 import node from '../Node.js';
 
 const sounds = ref([]);
 
+// Request sounds list on mount
+onMounted(() => {
+  node.emit('get_sounds', []);
+});
+
+// Listen for sounds list
 node.on('available_sounds', (event) => {
   sounds.value = event.value;
-})
+});
 
 function play_sound(sound) {
   node.emit('play_sound', [sound]);

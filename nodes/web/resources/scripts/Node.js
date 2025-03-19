@@ -40,6 +40,12 @@ class Node {
     this.state.ws.onopen = () => {
       console.log("WebSocket connection opened");
       this.emitter.emit('connection', true);
+      
+      // Send any queued messages
+      while (this.state.outputQueue.length > 0) {
+        const message = this.state.outputQueue.shift();
+        this.state.ws.send(JSON.stringify(message));
+      }
     };
     this.state.ws.onclose = () => {
       console.log("WebSocket connection closed, retrying in 1s");
@@ -66,6 +72,7 @@ class Node {
 
   on(eventName, callback) {
     this.emitter.on(eventName, callback);
+    return () => this.emitter.off(eventName, callback); // Return unsubscribe function for React useEffect
   }
 
   emit(output_id, data, metadata = {}) {

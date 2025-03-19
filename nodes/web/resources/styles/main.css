@@ -1,94 +1,527 @@
+/* General styles */
 button {
-	padding: 0 0.75rem;
+  padding: 0 0.75rem;
 }
 
 nav {
-	gap: 0.5rem;
+  gap: 0.5rem;
 }
 
-/* GridStack styles */
-.grid-stack {
-    background: transparent;
-    width: 100%;
-    margin: 0 auto;
-    max-width: 1200px;
+/* Dashboard styles */
+.dashboard {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-.grid-stack-item {
-    border-radius: 8px;
-    background-color: var(--surface);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: box-shadow 0.3s ease;
+.grid-container {
+  width: 100%;
+  height: 100%;
+  padding: 10px;
 }
 
-.grid-stack-item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+/* React Grid Layout styles */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
 }
 
-.grid-stack-item.ui-draggable-dragging {
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-    z-index: 100;
+.react-grid-item {
+  background-color: var(--surface);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 200ms ease, opacity 500ms ease, border-color 0.2s ease;
 }
 
-.grid-stack-item-content {
-    padding: 16px;
-    border-radius: 8px;
-    height: 100%;
-    overflow: hidden;
+.react-grid-item:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 215, 0, 0.4);
 }
 
-/* Servo widget dialog */
-.servo-selector-dialog {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+.react-grid-item.react-draggable-dragging {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  transition: none;
+  border-color: var(--primary);
+  border-width: 2px;
+  cursor: grabbing;
+  transform: scale(1.02) !important;
 }
 
-.dialog-content {
-    background-color: var(--surface);
-    color: var(--text);
-    padding: 20px;
-    border-radius: 8px;
-    min-width: 300px;
-    max-width: 90%;
-    max-height: 80%;
-    overflow-y: auto;
+.react-grid-item.react-grid-placeholder {
+  background: rgba(255, 215, 0, 0.2);
+  border: 2px dashed var(--primary);
+  border-radius: 8px;
+  opacity: 0.8;
+  z-index: 2;
+  transition-duration: 100ms;
+  box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.1);
 }
 
-.servo-list {
-    margin: 16px 0;
-    max-height: 300px;
-    overflow-y: auto;
+.react-resizable-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="6" height="6"><path d="M6 6H0V4.2h4.2V0H6v6z" fill="rgba(255, 215, 0, 0.8)"/></svg>');
+  background-position: bottom right;
+  padding: 0 4px 4px 0;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  cursor: se-resize;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
 }
 
-.servo-option {
-    padding: 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.react-grid-item:hover .react-resizable-handle {
+  opacity: 1;
 }
 
-.servo-option:hover {
-    background-color: var(--primary-90);
+/* Widget container styles */
+.widget-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.dialog-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 16px;
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background-color: rgba(255, 215, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.widget-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.widget-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.widget-remove-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 6px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.widget-remove-btn:hover {
+  background-color: rgba(255, 0, 0, 0.25);
+  transform: scale(1.05);
+  color: white;
+}
+
+.widget-content {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.widget-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #ffcc00;
+  text-align: center;
+  padding: 20px;
+}
+
+.widget-error i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.widget-error p {
+  margin: 5px 0;
+  font-weight: 500;
+}
+
+.widget-error small {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* Separator widget */
 .separator {
-    width: 100%;
-    height: 2px;
-    background-color: rgba(0, 0, 0, 0.1);
-    margin: 4px 0;
+  width: 100%;
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 8px 0;
+}
+
+/* Modal dialog styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background-color: var(--surface);
+  color: var(--text);
+  border-radius: 12px;
+  min-width: 350px;
+  max-width: 90%;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.modal-header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 215, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h5 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--primary);
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Widget options list */
+.widget-category {
+  margin-bottom: 20px;
+}
+
+.category-title {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+}
+
+.widget-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.widget-list-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.widget-list-item:last-child {
+  border-bottom: none;
+}
+
+.widget-list-item:hover {
+  background-color: rgba(255, 215, 0, 0.15);
+}
+
+.widget-list-item i {
+  margin-right: 12px;
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+/* Sounds widget styles */
+.sounds-widget {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.small-spacing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sound-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  background-color: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 6px;
+}
+
+.sound-name {
+  margin-left: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.sound-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.sound-item:active {
+  transform: translateY(0);
+  background-color: rgba(255, 215, 0, 0.2);
+}
+
+.sound-item i {
+  color: var(--primary);
+  font-size: 1.1rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 215, 0, 0.15);
+  border-radius: 50%;
+  padding: 6px;
+}
+
+.sound-item.playing {
+  background-color: rgba(255, 215, 0, 0.2);
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+.sound-item.playing i {
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.2); }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 140px;
+  color: rgba(255,255,255,0.5);
+  font-style: italic;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.empty-state::before {
+  content: '\f028';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  font-size: 2rem;
+  margin-bottom: 10px;
+  opacity: 0.3;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 140px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-top: 8px;
+  gap: 12px;
+}
+
+.loading-state i {
+  font-size: 1.5rem;
+  color: var(--primary);
+}
+
+/* Servo control widget styles */
+.servo-control {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.servo-info {
+  margin-bottom: 12px;
+}
+
+.servo-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.servo-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+/* Gamepad view styles */
+.gamepad-view {
+  padding: 20px;
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.button-indicator {
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.button-indicator.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.axis-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.axis-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.axis-bar-container {
+  flex: 1;
+  height: 20px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.axis-bar {
+  height: 100%;
+  background-color: var(--primary);
+  min-width: 10px;
+  transition: width 0.1s ease-out;
+}
+
+/* Volume control styles */
+.volume-control {
+  position: relative;
+}
+
+.volume-slider-container {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--surface);
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  width: 200px;
+}
+
+/* Servo debug view styles */
+.servo-debug {
+  padding: 20px;
+}
+
+.servo-description {
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.servo-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.position-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.helper-text {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+.calibration-controls {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }

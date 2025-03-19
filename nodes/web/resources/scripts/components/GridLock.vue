@@ -1,36 +1,36 @@
 <template>
   <div class="grid-lock">
     <a @click="toggleLock" class="lock-button">
-      <i :class="['fas', isLocked ? 'fa-lock' : 'fa-lock-open']"></i>
+      <i :class="['fas', isEditable && isEditable.value ? 'fa-lock-open' : 'fa-lock']"></i>
     </a>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { inject, ref, watch, onMounted } from 'vue';
 
-const isLocked = ref(true);
+// Get grid editing state and toggle function from Dashboard
+const isEditable = inject('isGridEditable', ref(false));
+const toggleGridEditing = inject('toggleGridEditing', () => {});
+
+// For debugging 
+onMounted(() => {
+  console.log("GridLock mounted, isEditable:", isEditable);
+});
+
+// Watch for changes to isEditable
+watch(isEditable, (newVal) => {
+  console.log("isEditable changed to:", newVal);
+}, { immediate: true });
 
 // Toggle lock state
 function toggleLock() {
-  console.log("Lock button clicked");
-  isLocked.value = !isLocked.value;
-  
-  const gridInstance = window.gridStackInstance;
-  
-  if (gridInstance) {
-    if (isLocked.value) {
-      // Lock the grid
-      console.log("Locking grid");
-      gridInstance.setStatic(true);
-    } else {
-      // Unlock the grid
-      console.log("Unlocking grid");
-      gridInstance.setStatic(false);
-    }
-  } else {
-    console.warn("GridStack instance not found");
-  }
+  console.log("Lock button clicked, before toggle:", isEditable.value);
+  toggleGridEditing();
+  // Log after toggle for debugging
+  setTimeout(() => {
+    console.log("After toggle:", isEditable.value);
+  }, 10);
 }
 </script>
 
@@ -43,7 +43,7 @@ function toggleLock() {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
   color: white;
 }
 
@@ -51,15 +51,8 @@ function toggleLock() {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-.material-icons {
-  font-size: 22px;
-}
-
-.locked {
-  color: #ffffff;
-}
-
-.unlocked {
-  color: #4fc3f7;
+/* Add a highlight color when grid is unlocked/editable */
+.lock-button i.fa-lock-open {
+  color: var(--primary, #ffb300);
 }
 </style>
