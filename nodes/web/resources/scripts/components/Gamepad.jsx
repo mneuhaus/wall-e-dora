@@ -88,7 +88,14 @@ const Gamepad = () => {
       </button>
       
       {isOpen && (
-        <div className="menu">
+        <div 
+          className="menu"
+          style={{
+            top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 'px' : '50px',
+            left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left + 'px' : 'auto',
+            right: 'auto'
+          }}
+        >
           {gamepads.length > 0 ? (
             gamepads.map(gamepad => (
               <Link 
@@ -97,7 +104,7 @@ const Gamepad = () => {
                 className="item"
                 onClick={() => setIsOpen(false)}
               >
-                <i className="fa-solid fa-gamepad"></i>
+                <i className="fa-solid fa-gamepad amber-text"></i>
                 <span className="text">
                   <div>{formatGamepadName(gamepad.id)}</div>
                   <small>Controller #{gamepad.index}</small>

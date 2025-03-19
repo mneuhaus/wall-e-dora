@@ -317,14 +317,12 @@ nav button:hover, nav a:hover {
 }
 
 .dropdown .menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  position: fixed; /* Changed from absolute to fixed */
   margin-top: 8px;
   border: 1px solid rgba(255, 215, 0, 0.2);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   background-color: var(--surface);
-  z-index: 1000;
+  z-index: 1500; /* Higher z-index */
   border-radius: 8px;
   overflow: hidden;
   min-width: 160px;

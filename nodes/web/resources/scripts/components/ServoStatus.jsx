@@ -79,7 +79,14 @@ const ServoStatus = () => {
       </button>
       
       {isOpen && (
-        <div className="menu">
+        <div 
+          className="menu"
+          style={{
+            top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 'px' : '50px',
+            left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left + 'px' : 'auto',
+            right: 'auto'
+          }}
+        >
           {servoData.length > 0 ? (
             servoData.map(servo => (
               <Link 

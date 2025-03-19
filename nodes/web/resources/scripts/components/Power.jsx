@@ -94,7 +94,14 @@ const Power = () => {
         </span>
       </button>
       {isOpen && (
-        <div className="menu">
+        <div 
+          className="menu"
+          style={{
+            top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 'px' : '50px',
+            left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left + 'px' : 'auto',
+            right: dropdownRef.current ? (window.innerWidth - dropdownRef.current.getBoundingClientRect().right) + 'px' : 'auto'
+          }}
+        >
           <div className="item" style={{ flexDirection: 'column', alignItems: 'start' }}>
             <div className="padded power-info">
               <div><i className="fa-solid fa-bolt amber-text"></i> Voltage: {voltage} V</div>
