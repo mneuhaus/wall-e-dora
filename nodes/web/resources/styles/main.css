@@ -545,6 +545,11 @@ nav {
   border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
+.dropdown .menu.left-aligned {
+  left: 0;
+  right: auto;
+}
+
 .dropdown .menu-title {
   padding: 12px 16px;
   font-size: 0.9rem;

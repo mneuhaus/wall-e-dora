@@ -81,8 +81,7 @@ const Gamepad = () => {
       </button>
       
       {isOpen && (
-        <div className="menu">
-          <div className="menu-title">Connected Gamepads</div>
+        <div className="menu left-aligned">
           {gamepads.length > 0 ? (
             gamepads.map(gamepad => (
               <Link 
