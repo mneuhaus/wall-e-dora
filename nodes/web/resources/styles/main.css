@@ -1,6 +1,6 @@
 /* General styles */
 button {
-  padding: 0 0.75rem;
+  padding: 0 0.5rem;
 }
 
 /* Text colors for status */
@@ -17,30 +17,52 @@ button {
 }
 
 nav {
-  gap: 0.3rem;
-  padding: 0.3rem 0.5rem !important;
+  gap: 0.1rem;
+  padding: 0.2rem 0.3rem !important;
   height: auto !important;
   min-height: 0 !important;
+}
+
+nav button.circle {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+}
+
+nav button:not(.circle) {
+  padding: 0 0.3rem;
+}
+
+/* Navigation elements */
+nav button, nav a {
+  transition: all 0.2s ease;
+  margin: 0;
 }
 
 /* Smaller navigation icons and text for mobile */
 @media (max-width: 768px) {
   nav {
-    gap: 0.2rem;
-    padding: 0.2rem 0.3rem !important;
+    gap: 0.1rem;
+    padding: 0.15rem 0.25rem !important;
   }
   
   nav a, nav button {
     font-size: 0.85rem !important;
-    padding: 0.2rem 0.4rem !important;
+    padding: 0 !important;
+  }
+  
+  nav button.circle {
+    width: 1.8rem;
+    height: 1.8rem;
   }
   
   nav i, nav svg {
-    font-size: 1rem !important;
+    font-size: 0.9rem !important;
   }
   
   .top-app-bar__title {
-    font-size: 1.2rem !important;
+    font-size: 1.1rem !important;
+    margin-right: 0.25rem !important;
   }
 }
 
@@ -279,14 +301,9 @@ nav {
   backdrop-filter: blur(5px);
 }
 
-/* Navigation elements */
-nav button, nav a {
-  transition: all 0.2s ease;
-}
-
 nav button:hover, nav a:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Dropdown menus */

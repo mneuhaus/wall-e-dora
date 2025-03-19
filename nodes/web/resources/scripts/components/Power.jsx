@@ -90,7 +90,7 @@ const Power = () => {
       >
         <span>
           <i className={`fa-solid ${getBatteryIcon()} ${getBatteryStatusColor()}`}></i>
-          <span style={{ marginLeft: '6px', display: 'inline-block' }}>{soc}%</span>
+          <span style={{ marginLeft: '3px', display: 'inline-block' }}>{soc}%</span>
         </span>
       </button>
       {isOpen && (
