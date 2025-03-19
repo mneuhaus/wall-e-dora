@@ -38,7 +38,7 @@ const App = () => {
             v7_relativeSplatPath: true
           }}
         >
-          <header style={{ flex: '0 0 auto', overflow: 'hidden', minBlockSize: '2.5rem' }}>
+          <header style={{ flex: '0 0 auto', overflow: 'visible', minBlockSize: '2.5rem' }}>
             <nav>
               <Link className="top-app-bar__title" style={{ alignItems: 'left' }} to="/">wall-e</Link>
               <div className="max">&nbsp;</div>

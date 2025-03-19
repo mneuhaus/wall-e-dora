@@ -50,14 +50,7 @@ const Volume = () => {
       </button>
       
       {showVolumeSlider && (
-        <div 
-          className="menu volume-menu"
-          style={{
-            top: volumeRef.current ? volumeRef.current.getBoundingClientRect().bottom + 'px' : '50px',
-            left: volumeRef.current ? volumeRef.current.getBoundingClientRect().left + 'px' : 'auto',
-            right: volumeRef.current ? (window.innerWidth - volumeRef.current.getBoundingClientRect().right) + 'px' : 'auto'
-          }}
-        >
+        <div className="menu volume-menu">
           <div className="item">
             <input 
               type="range" 

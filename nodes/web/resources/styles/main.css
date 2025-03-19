@@ -317,7 +317,9 @@ nav button:hover, nav a:hover {
 }
 
 .dropdown .menu {
-  position: fixed; /* Changed from absolute to fixed */
+  position: absolute; /* Changed back to absolute */
+  top: 100%;
+  right: 0;
   margin-top: 8px;
   border: 1px solid rgba(255, 215, 0, 0.2);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);

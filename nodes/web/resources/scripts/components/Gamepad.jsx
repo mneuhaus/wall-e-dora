@@ -88,14 +88,7 @@ const Gamepad = () => {
       </button>
       
       {isOpen && (
-        <div 
-          className="menu"
-          style={{
-            top: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().bottom + 'px' : '50px',
-            left: dropdownRef.current ? dropdownRef.current.getBoundingClientRect().left + 'px' : 'auto',
-            right: 'auto'
-          }}
-        >
+        <div className="menu">
           {gamepads.length > 0 ? (
             gamepads.map(gamepad => (
               <Link 
