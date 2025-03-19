@@ -1,6 +1,9 @@
 <template>
   <div class="widget-container">
-    <div class="widget-header">
+    <div class="widget-header" :class="{ 'edit-mode': isEditable }">
+      <div v-if="isEditable" class="drag-handle">
+        <i class="fas fa-grip-lines"></i>
+      </div>
       <div class="widget-title">{{ getWidgetTitle() }}</div>
       <div class="widget-actions">
         <button v-if="isEditable" @click="$emit('remove')" class="widget-remove-btn">
@@ -73,6 +76,11 @@ function getWidgetTitle() {
   switch (props.type) {
     case 'servo-control':
       const servoId = props.widgetProps.servoId;
+      // Check if the servo ID is defined
+      if (servoId === undefined || servoId === null) {
+        console.warn('Servo widget missing servoId property:', props.widgetProps);
+        return 'Servo (unassigned)';
+      }
       return `Servo ${servoId}`;
     case 'separator':
       return 'Separator';
@@ -102,17 +110,42 @@ function getWidgetTitle() {
   padding: 8px 12px;
   background-color: rgba(0, 0, 0, 0.1);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  pointer-events: auto;
+}
+
+.widget-header.edit-mode {
+  cursor: default;
+  background-color: rgba(0, 0, 0, 0.15);
 }
 
 .widget-title {
   font-size: 0.9rem;
   font-weight: 500;
   opacity: 0.9;
+  flex: 1;
+  pointer-events: none;
 }
 
 .widget-actions {
   display: flex;
   gap: 6px;
+}
+
+.drag-handle {
+  cursor: move;
+  padding: 4px 8px;
+  margin-right: 6px;
+  color: var(--text);
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .widget-remove-btn {

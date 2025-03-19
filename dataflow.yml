@@ -1,11 +1,4 @@
 nodes:
-  # - id: gamepad
-  #   path: nodes/gamepad/gamepad/main.py
-  #   inputs:
-  #     tick: dora/timer/millis/100
-  #   outputs:
-  #     - gamepad_input
-
   - id: power
     path: nodes/power/power/main.py
     inputs:

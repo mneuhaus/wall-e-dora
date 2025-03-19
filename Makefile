@@ -4,6 +4,9 @@ run:
 	dora run dataflow.yml --uv
 
 web/build:
+	cd nodes/web/resources && ./node_modules/.bin/encore dev
+
+web/build-watch:
 	cd nodes/web/resources && ./node_modules/.bin/encore dev --watch
 
 tracks/build:

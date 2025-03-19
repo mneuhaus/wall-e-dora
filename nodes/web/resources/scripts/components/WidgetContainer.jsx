@@ -59,7 +59,6 @@ const WidgetContainer = ({ type, widgetProps }) => {
       case 'servo-control': {
         const servoId = widgetProps.servoId;
         if (servoId === undefined || servoId === null) {
-          console.warn('[SERVO-DEBUG] Widget missing servoId property:', widgetProps);
           return 'Servo (unassigned)';
         }
         return `Servo ${servoId}`;

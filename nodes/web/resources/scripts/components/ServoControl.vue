@@ -65,7 +65,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, defineAsyncComponent } from 'vue';
 import node from '../Node.js';
 
 // Attempt to load the round slider component
@@ -144,12 +144,32 @@ const servoData = ref(null);
 
 // Computed
 const servoTitle = computed(() => {
-  if (!servoData.value) return `Servo ${props.servoId}`;
-  return servoData.value.alias ? `${servoData.value.alias} (${props.servoId})` : `Servo ${props.servoId}`;
+  // Check if servoId is defined
+  if (props.servoId === undefined || props.servoId === null) {
+    console.warn('ServoControl: undefined servoId in props', props);
+    return 'Servo (unassigned)';
+  }
+  
+  // Check if servo data is available
+  if (!servoData.value) {
+    return `Servo ${props.servoId}`;
+  }
+  
+  // Return alias if available
+  return servoData.value.alias 
+    ? `${servoData.value.alias} (${props.servoId})` 
+    : `Servo ${props.servoId}`;
 });
 
-const minPos = computed(() => servoData.value?.min_pos || 0);
-const maxPos = computed(() => servoData.value?.max_pos || 1024);
+const minPos = computed(() => {
+  if (!servoData.value || servoData.value.min_pos === undefined) return 0;
+  return servoData.value.min_pos;
+});
+
+const maxPos = computed(() => {
+  if (!servoData.value || servoData.value.max_pos === undefined) return 1024;
+  return servoData.value.max_pos;
+});
 
 // Methods
 function handlePositionUpdate(newValue) {
@@ -178,22 +198,66 @@ function calibrate() {
 // Event handlers
 function updateServoData() {
   const servos = window.availableServos || [];
-  servoData.value = servos.find(s => s.id === parseInt(props.servoId)) || null;
+  
+  // Convert id to number for consistent comparison 
+  const targetId = parseInt(props.servoId);
+  
+  console.log(`[SERVO-DEBUG] Looking for servo ID ${targetId} in ${servos.length} available servos`);
+  
+  if (servos.length > 0) {
+    // Log IDs for comparison debug
+    const availableIds = servos.map(s => typeof s.id === 'string' ? parseInt(s.id) : s.id);
+    console.log(`[SERVO-DEBUG] Available servo IDs: ${JSON.stringify(availableIds)}`);
+  }
+  
+  // Try to find the matching servo
+  servoData.value = servos.find(s => {
+    const servoId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
+    const matches = servoId === targetId;
+    console.log(`[SERVO-DEBUG] Comparing ${servoId} (${typeof servoId}) with ${targetId} (${typeof targetId}): ${matches}`);
+    return matches;
+  }) || null;
   
   if (servoData.value) {
-    currentPosition.value = servoData.value.position;
-    currentSpeed.value = servoData.value.speed;
+    console.log(`[SERVO-DEBUG] Found servo data for ID ${props.servoId}:`, JSON.stringify(servoData.value));
+    currentPosition.value = servoData.value.position || 0;
+    currentSpeed.value = servoData.value.speed || 100;
+  } else {
+    console.warn(`[SERVO-DEBUG] Servo ${props.servoId} not found in available servos`);
   }
 }
 
 // Listen for servo status updates
-node.on('servo_status', (event) => {
-  window.availableServos = event.value;
+const unsubscribe = node.on('servo_status', (event) => {
+  console.log(`[SERVO-DEBUG] Widget for servo ${props.servoId} received servo_status event with ${event.value ? event.value.length : 0} servos`);
+  
+  // For debugging, log all servos received
+  if (event.value && event.value.length > 0) {
+    event.value.forEach(servo => {
+      console.log(`[SERVO-DEBUG] Available servo: ID=${servo.id}, position=${servo.position}, min=${servo.min_pos}, max=${servo.max_pos}`);
+    });
+  }
+  
+  window.availableServos = event.value || [];
   updateServoData();
 });
 
 onMounted(() => {
+  console.log(`[SERVO-DEBUG] Component mounted for servo ${props.servoId}`);
   updateServoData();
+  
+  // Request a scan to get fresh servo data
+  if (props.servoId !== undefined && props.servoId !== null) {
+    console.log(`[SERVO-DEBUG] Requesting servo scan for ${props.servoId}`);
+    node.emit('SCAN', []);
+  }
+});
+
+// Make sure to clean up event listeners when component is unmounted
+onUnmounted(() => {
+  if (typeof unsubscribe === 'function') {
+    unsubscribe();
+  }
 });
 </script>
 

@@ -103,7 +103,7 @@ async def websocket_handler(request):
         # Send initial servo data if available
         try:
             # Send a SCAN request to get current servo status
-            logging.info("[SERVO-BACKEND] Sending SCAN request for new client connection")
+            logging.info("Sending SCAN request for new client connection")
             global_web_inputs.append({"output_id": "SCAN", "data": [], "metadata": {}})
             
             # Provide fallback data in case servos are not connected
@@ -112,20 +112,15 @@ async def websocket_handler(request):
                 {"id": 5, "position": 800, "speed": 100, "min_pos": 692, "max_pos": 1003}
             ]
             
-            # Log detailed fallback data
-            logging.info(f"[SERVO-BACKEND] Sending fallback data for {len(servo_data)} servos")
-            for servo in servo_data:
-                logging.info(f"[SERVO-BACKEND] Fallback servo data: ID={servo['id']}, position={servo['position']}, min={servo['min_pos']}, max={servo['max_pos']}")
-            
             status_msg = {
                 "id": "servo_status",
                 "value": servo_data,
                 "type": "EVENT"
             }
             await ws.send_str(json.dumps(status_msg))
-            logging.info("[SERVO-BACKEND] Sent initial servo fallback data successfully")
+            logging.info("Sent initial servo fallback data")
         except Exception as e:
-            logging.error(f"[SERVO-BACKEND] Error sending initial servo data: {e}")
+            logging.error(f"Error sending initial servo data: {e}")
         
         # Process incoming messages
         async for msg in ws:
@@ -138,17 +133,12 @@ async def websocket_handler(request):
                     
                     # Handle immediate feedback for some messages
                     if event.get("output_id") == "SCAN":
-                        logging.info("[SERVO-BACKEND] Received explicit SCAN request from client")
+                        logging.info("Received SCAN request from client")
                         # Send servo data immediately
                         servo_data = [
                             {"id": 13, "position": 500, "speed": 100, "min_pos": 150, "max_pos": 1005},
                             {"id": 5, "position": 800, "speed": 100, "min_pos": 692, "max_pos": 1003}
                         ]
-                        
-                        # Log detailed response data
-                        logging.info(f"[SERVO-BACKEND] Responding to SCAN with {len(servo_data)} servos")
-                        for servo in servo_data:
-                            logging.info(f"[SERVO-BACKEND] SCAN response servo: ID={servo['id']}, position={servo['position']}, min={servo['min_pos']}, max={servo['max_pos']}")
                         
                         status_msg = {
                             "id": "servo_status",
@@ -156,7 +146,7 @@ async def websocket_handler(request):
                             "type": "EVENT"
                         }
                         await ws.send_str(json.dumps(status_msg))
-                        logging.info("[SERVO-BACKEND] SCAN response sent successfully")
+                        logging.info("SCAN response sent with fallback servo data")
                 except Exception as e:
                     logging.error(f"Error processing WebSocket text message: {e}")
                     global_web_inputs.append({"raw": msg.data})
@@ -303,14 +293,12 @@ def main():
                 
                 # Store servo status data when we get it
                 if event["id"] == "waveshare_servo/servo_status":
-                    # Log more detailed info about servos
+                    # Log minimal info about servos
                     if event_value:
                         servo_ids = [s.get('id') for s in event_value]
-                        logging.info(f"[SERVO-BACKEND] Status update for {len(event_value)} servos: {servo_ids}")
-                        for servo in event_value:
-                            logging.info(f"[SERVO-BACKEND] Servo ID={servo.get('id')}: position={servo.get('position')}, min={servo.get('min_pos')}, max={servo.get('max_pos')}")
+                        logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
                     else:
-                        logging.warning("[SERVO-BACKEND] Received empty servo status update")
+                        logging.warning("Received empty servo status update")
                     
                 serialized = json.dumps(event_data, default=str).encode('utf-8')
                 if web_loop is not None:

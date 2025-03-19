@@ -22,11 +22,15 @@ export function AppProvider({ children }) {
   // Listen for servo status
   useEffect(() => {
     const unsubscribe = node.on('servo_status', (event) => {
-      setAvailableServos(event.value);
-      
-      // Legacy support
-      window.availableServos = event.value;
+      if (event && event.value) {
+        setAvailableServos(event.value);
+        // Legacy support
+        window.availableServos = event.value;
+      }
     });
+    
+    // Request servo status on mount
+    node.emit('SCAN', []);
     
     return unsubscribe;
   }, []);

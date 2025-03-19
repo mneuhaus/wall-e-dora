@@ -295,7 +295,6 @@ export function GridProvider({ children }) {
     let needsSave = false;
     Object.entries(receivedWidgetsData).forEach(([id, config]) => {
       if (config.type === 'servo-control' && (config.servoId === undefined || config.servoId === null)) {
-        console.warn(`[SERVO-DEBUG] Fixing missing servoId for widget ${id} in saved state`);
         config.servoId = 13; // Default to ID 13
         needsSave = true;
       }
@@ -303,7 +302,6 @@ export function GridProvider({ children }) {
     
     // Save the fixed state if needed
     if (needsSave) {
-      console.log("[SERVO-DEBUG] Saving state with fixed servo widgets");
       saveWidgetsState(receivedWidgetsData);
     }
     
@@ -316,13 +314,11 @@ export function GridProvider({ children }) {
       
       // Fix missing type
       if (!updatedItem.type) {
-        console.warn(`Widget ${updatedItem.i} is missing type property, defaulting to 'unknown'`);
         updatedItem.type = 'unknown';
       }
       
       // Fix missing servoId for servo-control widgets
       if (updatedItem.type === 'servo-control' && (updatedItem.servoId === undefined || updatedItem.servoId === null)) {
-        console.warn(`[SERVO-DEBUG] Servo widget ${updatedItem.i} is missing servoId, setting default 13`);
         updatedItem.servoId = 13;
       }
       
@@ -330,7 +326,6 @@ export function GridProvider({ children }) {
     });
     
     setLayout(validatedLayout);
-    console.log("Initialized grid with saved state:", validatedLayout);
   };
   
   // Context value

@@ -144,15 +144,37 @@ function onLayoutUpdated(newLayout) {
 }
 
 onMounted(() => {
-  // Request initial servo status
-  node.emit('SCAN', []);
-  
-  // Request widgets state from backend
+  // Request widgets state from backend first
   node.emit('get_widgets_state', []);
   
   // Listen for widgets state
   node.on('widgets_state', (event) => {
     const receivedWidgetsData = event.value || {};
+    
+    console.log("Received widgets state:", receivedWidgetsData);
+    
+    // Check if any servo widgets need to be fixed
+    let hasServoWidgets = false;
+    let needsSave = false;
+    Object.entries(receivedWidgetsData).forEach(([id, config]) => {
+      if (config.type === 'servo-control') {
+        hasServoWidgets = true;
+        // If a servo-control widget doesn't have a servoId, assign one
+        if (config.servoId === undefined || config.servoId === null) {
+          console.warn(`Fixing missing servoId for widget ${id}`);
+          config.servoId = 13; // Default to ID 13 (could be more sophisticated based on available servos)
+          needsSave = true;
+        }
+      }
+    });
+    
+    // If we fixed any widgets, save the updated state
+    if (needsSave) {
+      console.log("Saving updated widget state after fixing servoId");
+      // Update widget state before saving
+      widgetsState.value = receivedWidgetsData;
+      saveWidgetsState();
+    }
     
     // Update appState if available
     if (appState) {
@@ -163,8 +185,20 @@ onMounted(() => {
     widgetsState.value = receivedWidgetsData;
     layout.value = convertLegacyWidgetsState(receivedWidgetsData);
     
-    console.log("Received and converted widgets state:", layout.value);
+    console.log("Converted widgets state to layout:", layout.value);
+    
+    // If we have any servo widgets, request servo data from backend
+    if (hasServoWidgets) {
+      console.log("Requesting SCAN for servo widgets");
+      node.emit('SCAN', []);
+    }
   });
+  
+  // Request initial servo status
+  setTimeout(() => {
+    console.log("Initial SCAN request");
+    node.emit('SCAN', []);
+  }, 1000); // Slight delay to ensure the widgets are loaded first
 });
 </script>
 
@@ -180,6 +214,7 @@ onMounted(() => {
         :vertical-compact="true"
         :margin="[10, 10]"
         :use-css-transforms="true"
+        :drag-handle="'.drag-handle'"
         @layout-updated="onLayoutUpdated"
         ref="gridLayoutRef"
       >
@@ -223,7 +258,7 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 :deep(.vue-grid-item:hover) {
@@ -233,6 +268,16 @@ onMounted(() => {
 :deep(.vue-grid-item.vue-draggable-dragging) {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   z-index: 10;
+  opacity: 0.9;
+}
+
+:deep(.vue-grid-item .widget-header.edit-mode) {
+  border-top: 2px solid var(--primary);
+}
+
+:deep(.vue-grid-item-resizing) {
+  opacity: 0.9;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .widget-container {
