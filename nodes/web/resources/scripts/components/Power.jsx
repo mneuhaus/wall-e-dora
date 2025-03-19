@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import node from '../Node';
 
 const Power = () => {
@@ -7,6 +7,8 @@ const Power = () => {
   const [power, setPower] = useState('');
   const [runtime, setRuntime] = useState('');
   const [soc, setSoc] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     // Subscribe to battery/power events
@@ -39,6 +41,19 @@ const Power = () => {
       runtimeUnsub();
     };
   }, []);
+  
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Function to determine which battery icon to show based on SOC
   const getBatteryIcon = () => {
@@ -50,20 +65,47 @@ const Power = () => {
     if (socNumber <= 80) return 'fa-battery-three-quarters';
     return 'fa-battery-full';
   };
+  
+  // Function to determine battery status color
+  const getBatteryStatusColor = () => {
+    const socNumber = parseInt(soc) || 0;
+    
+    if (socNumber <= 20) return 'red-text';
+    if (socNumber <= 50) return 'amber-text';
+    return 'green-text';
+  };
+  
+  const toggleDropdown = () => {
+    setIsOpen(!isOpen);
+  };
 
   return (
-    <button className="transparent">
-      <span>
-        <i className={`fa-solid ${getBatteryIcon()}`}></i>
-        <span style={{ marginLeft: '10px', display: 'inline-block' }}>{soc} %</span>
-      </span>
-      <menu className="no-wrap">
-        <a>Voltage: {voltage} V</a>
-        <a>Current: {current} A</a>
-        <a>Power: {power} W</a>
-        <a style={{ fontSize: '18px' }}>Runtime: {runtime}</a>
-      </menu>
-    </button>
+    <div className="dropdown" ref={dropdownRef}>
+      <button 
+        className="transparent"
+        aria-label="Battery Status"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        onClick={toggleDropdown}
+      >
+        <span>
+          <i className={`fa-solid ${getBatteryIcon()} ${getBatteryStatusColor()}`}></i>
+          <span style={{ marginLeft: '6px', display: 'inline-block' }}>{soc}%</span>
+        </span>
+      </button>
+      {isOpen && (
+        <div className="menu">
+          <div className="item" style={{ flexDirection: 'column', alignItems: 'start' }}>
+            <div className="padded power-info">
+              <div><i className="fa-solid fa-bolt amber-text"></i> Voltage: {voltage} V</div>
+              <div><i className="fa-solid fa-gauge-high amber-text"></i> Current: {current} A</div>
+              <div><i className="fa-solid fa-plug amber-text"></i> Power: {power} W</div>
+              <div><i className="fa-solid fa-clock amber-text"></i> Runtime: {runtime}</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

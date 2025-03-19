@@ -3,6 +3,19 @@ button {
   padding: 0 0.75rem;
 }
 
+/* Text colors for status */
+.green-text {
+  color: #4caf50 !important;
+}
+
+.red-text {
+  color: #f44336 !important;
+}
+
+.amber-text {
+  color: #ffc107 !important;
+}
+
 nav {
   gap: 0.3rem;
   padding: 0.3rem 0.5rem !important;
@@ -264,6 +277,76 @@ nav {
   align-items: center;
   z-index: 1000;
   backdrop-filter: blur(5px);
+}
+
+/* Navigation elements */
+nav button, nav a {
+  transition: all 0.2s ease;
+}
+
+nav button:hover, nav a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Dropdown menus */
+.dropdown {
+  position: relative;
+}
+
+.dropdown .menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  background-color: var(--surface);
+  z-index: 1000;
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 160px;
+}
+
+.dropdown .item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown .item i {
+  margin-right: 8px;
+}
+
+/* Fix for fontawesome icons */
+.fa-volume-high:before,
+.fa-volume:before,
+.fa-volume-low:before,
+.fa-volume-xmark:before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+
+.volume-menu {
+  min-width: 200px;
+  padding: 10px;
+}
+
+.power-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.power-info i {
+  width: 20px;
+  margin-right: 8px;
+  text-align: center;
+}
+
+.padded {
+  padding: 8px 0;
 }
 
 /* Global modal that's independent of widget position */
