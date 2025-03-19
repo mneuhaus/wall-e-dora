@@ -22,6 +22,7 @@ nav {
   height: auto !important;
   min-height: 0 !important;
   max-height: 2.2rem !important;
+  min-block-size: 2.5rem !important;
 }
 
 nav button.circle {
@@ -47,6 +48,7 @@ nav button, nav a {
     gap: 0.1rem;
     padding: 0.1rem 0.25rem !important;
     max-height: 2rem !important;
+    min-block-size: 2.5rem !important;
   }
   
   nav a, nav button {
