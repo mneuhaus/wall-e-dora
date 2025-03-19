@@ -24,8 +24,7 @@ export function GridProvider({ children }) {
       const initialGridState = e.detail;
       
       if (initialGridState && Object.keys(initialGridState).length > 0) {
-        console.log("Using initial grid state from server template:", initialGridState);
-        initializeGrid(initialGridState);
+            initializeGrid(initialGridState);
         setBackendSynced(true);
         
         // Save to localStorage as fallback
@@ -53,13 +52,9 @@ export function GridProvider({ children }) {
     const handleWidgetsState = (event) => {
       const receivedWidgetsData = event.value || {};
       
-      // Debug received data structure
-      console.log("Raw received widget data:", JSON.stringify(receivedWidgetsData, null, 2));
-      
       // Only initialize from backend if we have data and haven't synced yet
       // or if this is an update from another client
       if (Object.keys(receivedWidgetsData).length > 0) {
-        console.log("Received backend widget state via WebSocket:", receivedWidgetsData);
         initializeGrid(receivedWidgetsData);
         
         // Save to localStorage as fallback
@@ -76,7 +71,6 @@ export function GridProvider({ children }) {
           const savedLayout = localStorage.getItem(STORAGE_KEY);
           if (savedLayout) {
             const parsedState = JSON.parse(savedLayout);
-            console.log("Using localStorage fallback:", parsedState);
             initializeGrid(parsedState);
             
             // Push the localStorage data to the backend
@@ -102,13 +96,10 @@ export function GridProvider({ children }) {
   
   // Toggle grid editing mode
   const toggleGridEditing = () => {
-    console.log('Before toggle - isEditable was:', isEditable);
     setIsEditable(prevState => !prevState);
-    console.log('Grid editing mode toggled');
     
     // Force layout update to refresh the grid with new settings
     if (layout && layout.length > 0) {
-      console.log('Forcing layout update with items:', layout.length);
       setTimeout(() => {
         const updatedLayout = [...layout];
         setLayout(updatedLayout);
@@ -180,7 +171,7 @@ export function GridProvider({ children }) {
       // Make sure the type property is preserved and has higher precedence
       const widgetType = config.type || 'unknown';
       
-      console.log(`Converting widget ${widgetId} with type: ${widgetType}`);
+      // Process widget conversion
       
       newLayout.push({
         i: widgetId,
@@ -200,7 +191,6 @@ export function GridProvider({ children }) {
   
   // Handle layout changes
   const onLayoutChange = (newLayout) => {
-    console.log('Layout updated:', newLayout);
     
     // Ensure all widgets have a proper type
     const fixedLayout = newLayout.map(item => {
@@ -208,7 +198,7 @@ export function GridProvider({ children }) {
         // Try to get the type from the existing state
         const existingWidget = widgetsState[item.i];
         const widgetType = existingWidget?.type || 'unknown';
-        console.warn(`Widget ${item.i} missing type in layout update, using: ${widgetType}`);
+        // Use existing widget type or default to unknown
         return { ...item, type: widgetType };
       }
       return item;
@@ -243,12 +233,11 @@ export function GridProvider({ children }) {
     // Ensure each widget in the state has a valid type
     Object.keys(stateToSave).forEach(widgetId => {
       if (!stateToSave[widgetId].type || stateToSave[widgetId].type === 'unknown') {
-        console.warn(`Widget ${widgetId} has invalid type, setting to default for debugging`);
+        // Set default type for widget without valid type
         stateToSave[widgetId].type = stateToSave[widgetId].type || 'sounds-widget';
       }
     });
     
-    console.log("Saving grid layout to backend:", JSON.stringify(stateToSave, null, 2));
     node.emit('save_grid_state', stateToSave);
   };
   
@@ -260,13 +249,13 @@ export function GridProvider({ children }) {
       // Ensure each widget in the state has a valid type (same as in saveWidgetsState)
       Object.keys(stateToSave).forEach(widgetId => {
         if (!stateToSave[widgetId].type || stateToSave[widgetId].type === 'unknown') {
-          console.warn(`Widget ${widgetId} has invalid type in localStorage, fixing`);
+          // Fix widget with invalid type
           stateToSave[widgetId].type = stateToSave[widgetId].type || 'sounds-widget';
         }
       });
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-      console.log("Saved grid layout to localStorage (fallback)");
+      // Successfully saved to localStorage
     } catch (error) {
       console.error("Error saving to localStorage:", error);
     }
@@ -284,7 +273,6 @@ export function GridProvider({ children }) {
     
     // We don't need a dedicated reset event since saving an empty state
     // effectively resets the grid on all devices
-    console.log("Grid layout reset");
   };
   
   // Initialize grid with saved state
