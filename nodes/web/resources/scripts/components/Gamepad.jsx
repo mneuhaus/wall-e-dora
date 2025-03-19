@@ -52,12 +52,36 @@ const Gamepad = () => {
   
   // Format the gamepad name to be shorter and more readable
   const formatGamepadName = (id) => {
-    // Extract brand and model if possible
-    let name = id.split('(')[0].trim();
-    // If name is too long, truncate it
-    if (name.length > 25) {
-      name = name.substring(0, 22) + '...';
+    // Remove common verbose parts
+    let name = id
+      .replace('Vendor: ', '')
+      .replace('Product: ', '')
+      .split('(')[0]
+      .replace(/\bXInput\b/, '')
+      .replace(/\bController\b/i, '')
+      .replace(/\bGamepad\b/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Try to extract a meaningful name
+    if (name.includes('Xbox')) {
+      name = 'Xbox Controller';
+    } else if (name.includes('Sony') || name.includes('DUALSHOCK') || name.includes('PlayStation')) {
+      name = 'PlayStation Controller';
+    } else if (name.includes('Nintendo') || name.includes('Switch')) {
+      name = 'Nintendo Controller';
     }
+    
+    // If name is too long, truncate it
+    if (name.length > 20) {
+      name = name.substring(0, 17) + '...';
+    }
+    
+    // If we got an empty name after cleanup, show something generic
+    if (!name) {
+      name = 'Game Controller';
+    }
+    
     return name;
   };
   
@@ -92,8 +116,8 @@ const Gamepad = () => {
               >
                 <i className="fa-solid fa-gamepad"></i>
                 <span className="text">
-                  <div>Gamepad {gamepad.index}</div>
-                  <small>{formatGamepadName(gamepad.id)}</small>
+                  <div>{formatGamepadName(gamepad.id)}</div>
+                  <small>Controller #{gamepad.index}</small>
                 </span>
               </Link>
             ))
