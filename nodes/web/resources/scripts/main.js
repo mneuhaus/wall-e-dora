@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 (async () => {
   try {
     let theme = await ui("theme", "#ffd700");
-    console.log("Theme initialized:", theme);
+    // Theme initialized successfully
   } catch (e) {
     console.warn("Could not initialize BeerCSS theme:", e);
   }

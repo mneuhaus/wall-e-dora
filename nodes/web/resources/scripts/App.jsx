@@ -1,5 +1,14 @@
 import React, { useRef } from 'react';
-import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { 
+  HashRouter as Router, 
+  Routes, 
+  Route, 
+  Link,
+  createRoutesFromElements,
+  createBrowserRouter, 
+  RouterProvider 
+} from 'react-router-dom';
+import { UNSAFE_createBrowserHistory } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import { GridProvider } from './contexts/GridContext';
 
@@ -23,7 +32,12 @@ const App = () => {
   return (
     <AppProvider>
       <GridProvider>
-        <Router>
+        <Router
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
           <header>
             <nav>
               <Link className="top-app-bar__title" style={{ fontSize: '24px', alignItems: 'left' }} to="/">wall-e</Link>
