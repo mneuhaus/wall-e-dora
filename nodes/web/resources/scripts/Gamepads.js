@@ -7,6 +7,7 @@ class Gamepad {
     this.index = gamepadApi.index;
     this.api = gamepadApi;
     this.emitter = mitt();
+    this._forceUpdateHandlers = new Set();
 
     this.axes = {
       0: "LEFT_ANALOG_STICK_X",
@@ -37,7 +38,7 @@ class Gamepad {
       18: "MISCBUTTON_2"
     };
 
-    // Initialize values without Vue reactivity
+    // Initialize values
     Object.keys(this.axes).forEach((index) => {
       this[this.axes[index]] = { value: 0 };
     });
@@ -48,48 +49,68 @@ class Gamepad {
 
     // Start polling
     this.pollIntervalId = setInterval(() => {
-      let gamepad = navigator.getGamepads()[this.index];
-      if (!gamepad) return;
+      this.updateState();
+    }, 50); // 50ms for responsive updates
+  }
 
-      let hasChanges = false;
+  updateState() {
+    const gamepad = navigator.getGamepads()[this.index];
+    if (!gamepad) return;
 
-      Object.keys(this.buttons).forEach((index) => {
-        if (!this.buttons[index] || !gamepad.buttons[index]) return;
-        
-        if(index == 6 || index == 7) {
-          // Analog triggers (L2/R2)
-          const newValue = parseFloat(gamepad.buttons[index].value).toFixed(4);
-          if (this[this.buttons[index]].value != newValue) {
-            this[this.buttons[index]].value = newValue;
-            node.emit('GAMEPAD_' + this.buttons[index], [gamepad.buttons[index].value]);
-            hasChanges = true;
-          }
-        } else {
-          // Regular buttons
-          if (this[this.buttons[index]].value != gamepad.buttons[index].value) {
-            this[this.buttons[index]].value = gamepad.buttons[index].value;
-            node.emit('GAMEPAD_' + this.buttons[index], [gamepad.buttons[index].value]);
-            hasChanges = true;
-          }
-        }
-      });
+    let hasChanges = false;
 
-      Object.keys(this.axes).forEach((index) => {
-        if (!this.axes[index] || gamepad.axes[index] === undefined) return;
-        
-        const newValue = parseFloat(gamepad.axes[index]).toFixed(4);
-        if (this[this.axes[index]].value != newValue) {
-          this[this.axes[index]].value = newValue;
-          node.emit('GAMEPAD_' + this.axes[index], [gamepad.axes[index]]);
+    // Update button values
+    Object.keys(this.buttons).forEach((index) => {
+      if (!this.buttons[index] || !gamepad.buttons[parseInt(index)]) return;
+      
+      if(index == 6 || index == 7) {
+        // Analog triggers (L2/R2)
+        const newValue = parseFloat(gamepad.buttons[parseInt(index)].value).toFixed(4);
+        if (this[this.buttons[index]].value != newValue) {
+          this[this.buttons[index]].value = newValue;
+          node.emit('GAMEPAD_' + this.buttons[index], [gamepad.buttons[parseInt(index)].value]);
           hasChanges = true;
         }
-      });
-
-      // Emit a general update event if any values changed
-      if (hasChanges) {
-        this.emitter.emit('gamepad_update', this);
+      } else {
+        // Regular buttons
+        const newValue = gamepad.buttons[parseInt(index)].value ? 1 : 0;
+        if (this[this.buttons[index]].value != newValue) {
+          this[this.buttons[index]].value = newValue;
+          node.emit('GAMEPAD_' + this.buttons[index], [newValue]);
+          hasChanges = true;
+        }
       }
-    }, 50); // Increased frequency for more responsive updates
+    });
+
+    // Update axis values
+    Object.keys(this.axes).forEach((index) => {
+      if (!this.axes[index] || gamepad.axes[parseInt(index)] === undefined) return;
+      
+      const newValue = parseFloat(gamepad.axes[parseInt(index)]).toFixed(4);
+      if (this[this.axes[index]].value != newValue) {
+        this[this.axes[index]].value = newValue;
+        node.emit('GAMEPAD_' + this.axes[index], [gamepad.axes[parseInt(index)]]);
+        hasChanges = true;
+      }
+    });
+
+    // If any values changed, notify subscribers
+    if (hasChanges) {
+      this.emitter.emit('gamepad_update', this);
+      
+      // Call any registered force update handlers
+      this._forceUpdateHandlers.forEach(handler => {
+        if (typeof handler === 'function') {
+          handler();
+        }
+      });
+    }
+  }
+
+  // Register a function to be called when gamepad data changes
+  registerForceUpdate(handler) {
+    this._forceUpdateHandlers.add(handler);
+    return () => this._forceUpdateHandlers.delete(handler);
   }
 
   on(eventName, callback) {
@@ -102,6 +123,7 @@ class Gamepad {
 
   dispose() {
     clearInterval(this.pollIntervalId);
+    this._forceUpdateHandlers.clear();
     this.emitter.all.clear();
   }
 }

@@ -1,179 +1,57 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import node from '../Node';
 import gamepads from '../Gamepads';
 
 const GamepadView = () => {
   const { index } = useParams();
-  const [gamepad, setGamepad] = useState(null);
-  const [counter, setCounter] = useState(0);
-  const gamepadRef = useRef(null);
+  const [, forceUpdate] = useState({});
+  const [gamepadInstance, setGamepadInstance] = useState(null);
+  
+  // Force re-render function that we'll register with the gamepad
+  const handleForceUpdate = useCallback(() => {
+    forceUpdate({});
+  }, []);
   
   useEffect(() => {
     // Set initial gamepad if available
     if (gamepads.gamepads[index]) {
-      gamepadRef.current = gamepads.gamepads[index];
-      setGamepad({...gamepadRef.current});
+      setGamepadInstance(gamepads.gamepads[index]);
+      
+      // Register for force updates when gamepad data changes
+      const unregister = gamepads.gamepads[index].registerForceUpdate(handleForceUpdate);
+      
+      return () => {
+        // Clean up
+        unregister();
+      };
     }
     
     // Listen for gamepad connection
     const handleGamepadConnected = (connectedGamepad) => {
       if (connectedGamepad.index === parseInt(index)) {
-        gamepadRef.current = connectedGamepad;
-        setGamepad({...gamepadRef.current});
+        setGamepadInstance(connectedGamepad);
+        
+        // Register for force updates
+        const unregister = connectedGamepad.registerForceUpdate(handleForceUpdate);
+        
+        // Clean up previous registration if component unmounts before this cleanup runs
+        return () => {
+          unregister();
+        };
       }
     };
     
-    // Listen for gamepad updates
-    const handleGamepadUpdate = (updatedGamepad) => {
-      if (updatedGamepad.index === parseInt(index)) {
-        gamepadRef.current = updatedGamepad;
-        // Force a re-render 
-        setCounter(prev => prev + 1);
-      }
-    };
-    
-    // Set up event listeners
+    // Set up event listener
     gamepads.on('gamepadconnected', handleGamepadConnected);
     
-    // Directly subscribe to the gamepad update events
-    if (gamepads.gamepads[index]) {
-      gamepads.gamepads[index].on('gamepad_update', handleGamepadUpdate);
-    }
-    
     return () => {
-      // Clean up event listeners
+      // Clean up event listener
       gamepads.off('gamepadconnected', handleGamepadConnected);
-      if (gamepads.gamepads[index]) {
-        gamepads.gamepads[index].off('gamepad_update', handleGamepadUpdate);
-      }
     };
-  }, [index]);
+  }, [index, handleForceUpdate]);
   
-  // Render current gamepad state on each update
-  const renderGamepad = () => {
-    if (!gamepadRef.current) return null;
-    
-    return (
-      <div className="controller" style={{ margin: '20px' }}>
-        <h6>{gamepadRef.current.id}</h6>
-        <div className="grid">
-          <div className="s4">
-            <table className="stripes">
-              <tbody>
-                <tr>
-                  <th>LEFT_ANALOG_STICK X</th>
-                  <td>{gamepadRef.current.LEFT_ANALOG_STICK_X?.value}</td>
-                </tr>
-                <tr>
-                  <th>LEFT_ANALOG_STICK Y</th>
-                  <td>{gamepadRef.current.LEFT_ANALOG_STICK_Y?.value}</td>
-                </tr>
-                <tr>
-                  <th>RIGHT_ANALOG_STICK X</th>
-                  <td>{gamepadRef.current.RIGHT_ANALOG_STICK_X?.value}</td>
-                </tr>
-                <tr>
-                  <th>RIGHT_ANALOG_STICK Y</th>
-                  <td>{gamepadRef.current.RIGHT_ANALOG_STICK_Y?.value}</td>
-                </tr>
-                <tr>
-                  <th>DPAD_UP</th>
-                  <td>{gamepadRef.current.DPAD_UP?.value}</td>
-                </tr>
-                <tr>
-                  <th>DPAD_DOWN</th>
-                  <td>{gamepadRef.current.DPAD_DOWN?.value}</td>
-                </tr>
-                <tr>
-                  <th>DPAD_LEFT</th>
-                  <td>{gamepadRef.current.DPAD_LEFT?.value}</td>
-                </tr>
-                <tr>
-                  <th>DPAD_RIGHT</th>
-                  <td>{gamepadRef.current.DPAD_RIGHT?.value}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="s4">
-            <table className="stripes">
-              <tbody>
-                <tr>
-                  <th>FACE_1</th>
-                  <td>{gamepadRef.current.FACE_1?.value}</td>
-                </tr>
-                <tr>
-                  <th>FACE_2</th>
-                  <td>{gamepadRef.current.FACE_2?.value}</td>
-                </tr>
-                <tr>
-                  <th>FACE_3</th>
-                  <td>{gamepadRef.current.FACE_3?.value}</td>
-                </tr>
-                <tr>
-                  <th>FACE_4</th>
-                  <td>{gamepadRef.current.FACE_4?.value}</td>
-                </tr>
-                <tr>
-                  <th>LEFT_SHOULDER</th>
-                  <td>{gamepadRef.current.LEFT_SHOULDER?.value}</td>
-                </tr>
-                <tr>
-                  <th>RIGHT_SHOULDER</th>
-                  <td>{gamepadRef.current.RIGHT_SHOULDER?.value}</td>
-                </tr>
-                <tr>
-                  <th>LEFT_SHOULDER_BOTTOM</th>
-                  <td>{gamepadRef.current.LEFT_SHOULDER_BOTTOM?.value}</td>
-                </tr>
-                <tr>
-                  <th>RIGHT_SHOULDER_BOTTOM</th>
-                  <td>{gamepadRef.current.RIGHT_SHOULDER_BOTTOM?.value}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="s4">
-            <table className="stripes">
-              <tbody>
-                <tr>
-                  <th>SELECT</th>
-                  <td>{gamepadRef.current.SELECT?.value}</td>
-                </tr>
-                <tr>
-                  <th>START</th>
-                  <td>{gamepadRef.current.START?.value}</td>
-                </tr>
-                <tr>
-                  <th>LEFT_ANALOG_BUTTON</th>
-                  <td>{gamepadRef.current.LEFT_ANALOG_BUTTON?.value}</td>
-                </tr>
-                <tr>
-                  <th>RIGHT_ANALOG_BUTTON</th>
-                  <td>{gamepadRef.current.RIGHT_ANALOG_BUTTON?.value}</td>
-                </tr>
-                <tr>
-                  <th>HOME</th>
-                  <td>{gamepadRef.current.HOME?.value}</td>
-                </tr>
-                <tr>
-                  <th>MISCBUTTON_1</th>
-                  <td>{gamepadRef.current.MISCBUTTON_1?.value}</td>
-                </tr>
-                <tr>
-                  <th>MISCBUTTON_2</th>
-                  <td>{gamepadRef.current.MISCBUTTON_2?.value}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
-  if (!gamepadRef.current) {
+  if (!gamepadInstance) {
     return (
       <div className="controller" style={{ margin: '20px' }}>
         <h3>Gamepad {index} Not Connected</h3>
@@ -182,7 +60,123 @@ const GamepadView = () => {
     );
   }
   
-  return renderGamepad();
+  return (
+    <div className="controller" style={{ margin: '20px' }}>
+      <h6>{gamepadInstance.id}</h6>
+      <div className="grid">
+        <div className="s4">
+          <table className="stripes">
+            <tbody>
+              <tr>
+                <th>LEFT_ANALOG_STICK X</th>
+                <td>{gamepadInstance.LEFT_ANALOG_STICK_X?.value}</td>
+              </tr>
+              <tr>
+                <th>LEFT_ANALOG_STICK Y</th>
+                <td>{gamepadInstance.LEFT_ANALOG_STICK_Y?.value}</td>
+              </tr>
+              <tr>
+                <th>RIGHT_ANALOG_STICK X</th>
+                <td>{gamepadInstance.RIGHT_ANALOG_STICK_X?.value}</td>
+              </tr>
+              <tr>
+                <th>RIGHT_ANALOG_STICK Y</th>
+                <td>{gamepadInstance.RIGHT_ANALOG_STICK_Y?.value}</td>
+              </tr>
+              <tr>
+                <th>DPAD_UP</th>
+                <td>{gamepadInstance.DPAD_UP?.value}</td>
+              </tr>
+              <tr>
+                <th>DPAD_DOWN</th>
+                <td>{gamepadInstance.DPAD_DOWN?.value}</td>
+              </tr>
+              <tr>
+                <th>DPAD_LEFT</th>
+                <td>{gamepadInstance.DPAD_LEFT?.value}</td>
+              </tr>
+              <tr>
+                <th>DPAD_RIGHT</th>
+                <td>{gamepadInstance.DPAD_RIGHT?.value}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="s4">
+          <table className="stripes">
+            <tbody>
+              <tr>
+                <th>FACE_1</th>
+                <td>{gamepadInstance.FACE_1?.value}</td>
+              </tr>
+              <tr>
+                <th>FACE_2</th>
+                <td>{gamepadInstance.FACE_2?.value}</td>
+              </tr>
+              <tr>
+                <th>FACE_3</th>
+                <td>{gamepadInstance.FACE_3?.value}</td>
+              </tr>
+              <tr>
+                <th>FACE_4</th>
+                <td>{gamepadInstance.FACE_4?.value}</td>
+              </tr>
+              <tr>
+                <th>LEFT_SHOULDER</th>
+                <td>{gamepadInstance.LEFT_SHOULDER?.value}</td>
+              </tr>
+              <tr>
+                <th>RIGHT_SHOULDER</th>
+                <td>{gamepadInstance.RIGHT_SHOULDER?.value}</td>
+              </tr>
+              <tr>
+                <th>LEFT_SHOULDER_BOTTOM</th>
+                <td>{gamepadInstance.LEFT_SHOULDER_BOTTOM?.value}</td>
+              </tr>
+              <tr>
+                <th>RIGHT_SHOULDER_BOTTOM</th>
+                <td>{gamepadInstance.RIGHT_SHOULDER_BOTTOM?.value}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className="s4">
+          <table className="stripes">
+            <tbody>
+              <tr>
+                <th>SELECT</th>
+                <td>{gamepadInstance.SELECT?.value}</td>
+              </tr>
+              <tr>
+                <th>START</th>
+                <td>{gamepadInstance.START?.value}</td>
+              </tr>
+              <tr>
+                <th>LEFT_ANALOG_BUTTON</th>
+                <td>{gamepadInstance.LEFT_ANALOG_BUTTON?.value}</td>
+              </tr>
+              <tr>
+                <th>RIGHT_ANALOG_BUTTON</th>
+                <td>{gamepadInstance.RIGHT_ANALOG_BUTTON?.value}</td>
+              </tr>
+              <tr>
+                <th>HOME</th>
+                <td>{gamepadInstance.HOME?.value}</td>
+              </tr>
+              <tr>
+                <th>MISCBUTTON_1</th>
+                <td>{gamepadInstance.MISCBUTTON_1?.value}</td>
+              </tr>
+              <tr>
+                <th>MISCBUTTON_2</th>
+                <td>{gamepadInstance.MISCBUTTON_2?.value}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default GamepadView;
