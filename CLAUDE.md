@@ -80,3 +80,13 @@
 - Leverage TypeScript types for better tooling
 - Use nullish coalescing (??) and optional chaining (?.)
 - Implement proper error handling
+
+## Custom UI Widgets
+- **Joystick Control**: 
+  - Uses `rc-joystick` library for joystick UI
+  - Can link X and Y axes to separate servos
+  - Configuration done in edit mode using ServoSelector components
+  - Commands sent via `node.emit('set_servo', [servoId, position, speed])`
+  - Register in WidgetContainer.jsx as 'joystick-control'
+  - Add to dashboard using GridContext's addWidget() method
+  - User handles building web resources and running the server

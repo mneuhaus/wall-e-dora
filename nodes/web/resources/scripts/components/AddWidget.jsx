@@ -59,6 +59,10 @@ const AddWidget = () => {
                       <i className="fas fa-volume-up amber-text"></i>
                       <span>Sounds Widget</span>
                     </li>
+                    <li onClick={() => handleAddWidget('joystick-control')} className="widget-list-item">
+                      <i className="fas fa-gamepad amber-text"></i>
+                      <span>Joystick Control</span>
+                    </li>
                   </ul>
                 </div>
                 

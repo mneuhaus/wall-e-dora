@@ -316,6 +316,31 @@ export function GridProvider({ children }) {
     setLayout(validatedLayout);
   };
   
+  // Update specific widget properties
+  const updateWidgetProps = (widgetId, newProps) => {
+    if (!widgetsState[widgetId]) return;
+    
+    // Create new widget state with updated props
+    const updatedWidget = { ...widgetsState[widgetId], ...newProps };
+    const newWidgetsState = { ...widgetsState, [widgetId]: updatedWidget };
+    
+    // Update layout
+    const newLayout = layout.map(item => {
+      if (item.i === widgetId) {
+        return { ...item, ...newProps };
+      }
+      return item;
+    });
+    
+    // Update state
+    setWidgetsState(newWidgetsState);
+    setLayout(newLayout);
+    
+    // Save to backend and localStorage
+    saveWidgetsState(newWidgetsState);
+    saveToLocalStorage(newWidgetsState);
+  };
+
   // Context value
   const value = {
     layout,
@@ -331,7 +356,8 @@ export function GridProvider({ children }) {
     initializeGrid,
     saveWidgetsState,
     saveToLocalStorage,
-    resetGridLayout
+    resetGridLayout,
+    updateWidgetProps
   };
   
   return (

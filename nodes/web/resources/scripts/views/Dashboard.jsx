@@ -34,6 +34,7 @@ const Dashboard = forwardRef((props, ref) => {
           rowHeight={80}
           isDraggable={isEditable}
           isResizable={isEditable}
+          draggableHandle=".drag-handle"
           onLayoutChange={(layout) => onLayoutChange(layout)}
           margin={[10, 10]}
           useCSSTransforms={true}

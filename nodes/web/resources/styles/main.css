@@ -101,11 +101,32 @@ nav {
   border-top-right-radius: 8px;
 }
 
+.drag-handle {
+  margin-right: 10px;
+  cursor: grab;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  background-color: rgba(255, 215, 0, 0.3);
+}
+
+.drag-handle i {
+  color: rgba(255, 215, 0, 0.8);
+}
+
 .widget-title {
   font-size: 1rem;
   font-weight: 500;
   color: var(--primary);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  flex: 1;
 }
 
 .widget-actions {
@@ -113,6 +134,7 @@ nav {
   gap: 6px;
 }
 
+.widget-settings-btn,
 .widget-remove-btn {
   background: transparent;
   border: none;
@@ -126,6 +148,12 @@ nav {
   justify-content: center;
   border-radius: 50%;
   transition: all 0.2s ease;
+}
+
+.widget-settings-btn:hover {
+  background-color: rgba(255, 215, 0, 0.25);
+  transform: scale(1.05);
+  color: var(--primary);
 }
 
 .widget-remove-btn:hover {
@@ -606,14 +634,15 @@ nav {
   align-items: center;
   padding: 10px 16px;
   border-bottom: 1px solid rgba(0,0,0,0.1);
-  background-color: rgba(255, 215, 0, 0.1);
+  background-color: rgba(255, 215, 0, 0.15);
 }
 
 .servo-control-widget .title {
   margin: 0;
   font-size: 16px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--primary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .flex-spacer {
@@ -636,6 +665,24 @@ nav {
   padding: 16px;
   display: flex;
   flex-direction: column;
+}
+
+/* Simplified Servo Control */
+.simple-slider-container {
+  padding: 10px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.position-display {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--primary);
+  margin-top: 8px;
 }
 
 .control-area {
@@ -835,4 +882,193 @@ nav {
 .badge.amber {
   background-color: var(--primary);
   color: #000;
+}
+
+/* Joystick Control Widget */
+.joystick-control-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.joystick-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  padding: 10px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.joystick-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 10px 15px;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.joystick-position {
+  font-size: 14px;
+  color: var(--primary);
+  font-weight: bold;
+  margin: 2px 0;
+}
+
+.joystick-speed {
+  font-size: 12px;
+  color: rgba(255, 215, 0, 0.8);
+  margin-top: 4px;
+}
+
+/* Joystick settings */
+.joystick-settings {
+  padding: 15px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Servo selector styles */
+.servo-selector {
+  position: relative;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.servo-selector-label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: var(--primary);
+}
+
+.servo-selector-button {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.servo-selector-button:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-color: var(--primary);
+}
+
+.servo-selector-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: 4px;
+  background-color: var(--surface);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.servo-selector-option {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s;
+}
+
+.servo-selector-option:last-child {
+  border-bottom: none;
+}
+
+.servo-selector-option:hover {
+  background-color: rgba(255, 215, 0, 0.15);
+}
+
+.servo-selector-option.selected {
+  background-color: rgba(255, 215, 0, 0.2);
+}
+
+.servo-option-text {
+  font-size: 14px;
+}
+
+.servo-name {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+/* Joystick config styles */
+.joystick-config {
+  width: 100%;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.speed-control {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.speed-label {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: var(--primary);
+}
+
+.speed-slider {
+  width: 100%;
+  height: 6px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #222;
+  cursor: pointer;
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #222;
+  cursor: pointer;
+}
+
+.speed-value {
+  text-align: center;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--primary);
+  font-weight: bold;
 }
