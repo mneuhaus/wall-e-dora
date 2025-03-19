@@ -13,7 +13,6 @@ class Node {
     };
     this.connectWebSocket();
     this.processEventQueue();
-    console.log("JS Node initialized - Vanilla JS (class based)");
   }
 
   processEventQueue() {
@@ -81,7 +80,6 @@ class Node {
     };
     
     this.state.ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
       // No need to call close, the onclose handler will be called automatically
     };
     
@@ -92,11 +90,10 @@ class Node {
           rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
         }
         
-        console.log("Received WebSocket message:", rawData);
         const data = JSON.parse(rawData);
         this.state.eventQueue.push(data);
       } catch (e) {
-        console.error("Failed to parse message:", e, event.data);
+        // Silent error handling for parse issues
       }
     });
   }
@@ -113,7 +110,7 @@ class Node {
 
 let node = new Node();
 
-// For debugging
-window.debugNode = node;
+// Make node available globally for advanced usage scenarios
+window.node = node;
 
 export default node;

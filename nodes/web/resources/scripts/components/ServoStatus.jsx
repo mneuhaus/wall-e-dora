@@ -12,7 +12,6 @@ const ServoStatus = () => {
   // Direct connection to node events for more reliable updates
   useEffect(() => {
     const unsubscribe = node.on('servo_status', (event) => {
-      console.log('Direct servo_status event in ServoStatus component:', event);
       if (event && event.value) {
         setServos(event.value);
       }
@@ -26,7 +25,6 @@ const ServoStatus = () => {
   
   // Use either direct event data or context data
   const servoData = servos.length > 0 ? servos : (availableServos || []);
-  console.log('Servo data used for rendering:', servoData);
   
   const iconColor = servoData.length > 0 ? '#69ac5a' : '#15130e';
   
