@@ -8,7 +8,7 @@
 - Create new node: `dora new --kind node [node_name] --lang python`
 
 ## Tech Stack
-- Frontend: Vue.js 3 with Composition API (NO jQuery)
+- Frontend: React 18 with Hooks (NO jQuery)
 - CSS: BeerCSS with amber theme
 - Package Manager: pnpm
 - Python: 3.12+
@@ -16,16 +16,16 @@
 - Node Communication: Dora framework with Apache Arrow
 
 ## Frontend Best Practices
-- Use the Composition API for component logic
-- One Vue app instance per page, no multiple createApp calls
-- Register components globally for dynamic usage
-- Use provide/inject for deep prop passing
-- Prefer teleport for DOM element relocation
-- Use Pinia for state management when needed
-- Use Vue's reactivity system instead of direct DOM manipulation
-- Lazy-load components with defineAsyncComponent
-- Use TypeScript for type safety where possible
-- Avoid jQuery or direct DOM manipulation
+- Use React Hooks for component logic (useState, useEffect, useContext)
+- Use functional components instead of class components
+- Use React Context API for state management (AppContext, GridContext)
+- Properly handle cleanup in useEffect hooks to prevent memory leaks
+- Use event listener cleanup to avoid memory leaks
+- Implement robust error handling for WebSocket communication
+- Ensure type safety in comparisons (especially for IDs)
+- Use proper prop validation
+- Apply the principle of single responsibility to components
+- Avoid direct DOM manipulation
 
 ## UI Theme
 - The project uses BeerCSS with amber theme

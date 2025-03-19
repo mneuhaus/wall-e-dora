@@ -118,47 +118,81 @@ def main():
         # Only scan reasonable ID range and use shorter timeout
         portHandler.setPacketTimeout(5)  # 5ms timeout instead of default
         
-        for servo_id in range(1, 21):  # Most servos use IDs 1-20
-            ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
-            if comm_result == COMM_SUCCESS and error == 0:
-                if servo_id == 1:
-                    new_id = settings["unique_id_counter"]
-                    portHandler.closePort()
-                    change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
-                    if not portHandler.openPort():
-                        print("Failed to reopen the port after id change")
-                    settings["unique_id_counter"] += 1
-                    save_settings(settings)
-                    print(f"Updated servo id 1 to {new_id}")
-                    servo_id = new_id
-
-                # Read current servo status
-                pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
-                    portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
-                )
-                speed_data, speed_result, speed_error = packetHandler.read2ByteTxRx(
-                    portHandler, servo_id, 57  # Present speed register
-                )
-                torque_data, torque_result, torque_error = packetHandler.read2ByteTxRx(
-                    portHandler, servo_id, 60  # Present load (torque) register
-                )
-
-                servo_data = {
-                    "id": servo_id,
-                    "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
-                    "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
-                    "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0,
-                    "alias": settings.get("servo_aliases", {}).get(str(servo_id), "")
-                }
-                
-                # Add calibration data if available
-                if str(servo_id) in settings.get("servo_limits", {}):
-                    servo_data["min_pos"] = settings["servo_limits"][str(servo_id)]["min"]
-                    servo_data["max_pos"] = settings["servo_limits"][str(servo_id)]["max"]
-                
-                available_servos.append(servo_data)
+        try:
+            for servo_id in range(1, 21):  # Most servos use IDs 1-20
+                try:
+                    ping_result, comm_result, error = packetHandler.ping(portHandler, servo_id)
+                    if comm_result == COMM_SUCCESS and error == 0:
+                        if servo_id == 1:
+                            try:
+                                new_id = settings["unique_id_counter"]
+                                portHandler.closePort()
+                                change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
+                                if not portHandler.openPort():
+                                    print("Failed to reopen the port after id change")
+                                settings["unique_id_counter"] += 1
+                                save_settings(settings)
+                                print(f"Updated servo id 1 to {new_id}")
+                                servo_id = new_id
+                            except Exception as e:
+                                print(f"Error changing servo ID: {e}")
+                                # Continue with original ID if there was an error
+        
+                        # Read current servo status
+                        try:
+                            pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+                                portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+                            )
+                            speed_data, speed_result, speed_error = packetHandler.read2ByteTxRx(
+                                portHandler, servo_id, 57  # Present speed register
+                            )
+                            torque_data, torque_result, torque_error = packetHandler.read2ByteTxRx(
+                                portHandler, servo_id, 60  # Present load (torque) register
+                            )
+        
+                            servo_data = {
+                                "id": servo_id,
+                                "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
+                                "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
+                                "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0,
+                                "alias": settings.get("servo_aliases", {}).get(str(servo_id), "")
+                            }
+                            
+                            # Add calibration data if available
+                            if str(servo_id) in settings.get("servo_limits", {}):
+                                servo_data["min_pos"] = settings["servo_limits"][str(servo_id)]["min"]
+                                servo_data["max_pos"] = settings["servo_limits"][str(servo_id)]["max"]
+                            
+                            available_servos.append(servo_data)
+                        except Exception as e:
+                            print(f"Error reading servo {servo_id} data: {e}")
+                except Exception as e:
+                    print(f"Error pinging servo {servo_id}: {e}")
+        except Exception as e:
+            print(f"Error during servo scan: {e}")
         
         print(f"Available servos found: {[s['id'] for s in available_servos]}")
+        
+        # If no servos found, use fallback data from settings
+        if not available_servos and settings.get("servo_limits"):
+            print("No servos found, using fallback data from settings")
+            for servo_id, limits in settings.get("servo_limits", {}).items():
+                try:
+                    servo_id = int(servo_id)
+                    fallback_data = {
+                        "id": servo_id,
+                        "position": 500,
+                        "speed": 100,
+                        "torque": 0,
+                        "min_pos": limits["min"],
+                        "max_pos": limits["max"],
+                        "alias": settings.get("servo_aliases", {}).get(str(servo_id), ""),
+                        "is_fallback": True
+                    }
+                    available_servos.append(fallback_data)
+                except Exception as e:
+                    print(f"Error creating fallback data for servo {servo_id}: {e}")
+        
         node.send_output(output_id="servo_status", data=pa.array(available_servos), metadata={})
     
     def handle_set_servo_event(event):

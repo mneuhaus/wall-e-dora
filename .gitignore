@@ -15,3 +15,6 @@ node_modules/
 
 # Dora
 out
+
+# Old Vue files (migrated to React)
+nodes/web/resources/scripts/**/*.vue

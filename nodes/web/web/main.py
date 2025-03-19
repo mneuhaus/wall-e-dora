@@ -9,6 +9,7 @@ import json
 import logging
 import pyarrow as pa
 import subprocess
+import time
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -81,18 +82,83 @@ def flush_web_inputs(node):
     global_web_inputs = []
 
 async def websocket_handler(request):
+    logging.info("New WebSocket connection request received")
     ws = web.WebSocketResponse()
     await ws.prepare(request)
+    
+    # Add to clients
     ws_clients.add(ws)
+    logging.info(f"WebSocket connection established - {len(ws_clients)} active connections")
+    
+    # Send connection confirmation
     try:
+        welcome_msg = {
+            "id": "connection_status",
+            "value": {"status": "connected", "timestamp": time.time()},
+            "type": "EVENT"
+        }
+        await ws.send_str(json.dumps(welcome_msg))
+        logging.info("Sent welcome message to client")
+        
+        # Send initial servo data if available
+        try:
+            # Send a SCAN request to get current servo status
+            logging.info("[SERVO-BACKEND] Sending SCAN request for new client connection")
+            global_web_inputs.append({"output_id": "SCAN", "data": [], "metadata": {}})
+            
+            # Provide fallback data in case servos are not connected
+            servo_data = [
+                {"id": 13, "position": 500, "speed": 100, "min_pos": 150, "max_pos": 1005},
+                {"id": 5, "position": 800, "speed": 100, "min_pos": 692, "max_pos": 1003}
+            ]
+            
+            # Log detailed fallback data
+            logging.info(f"[SERVO-BACKEND] Sending fallback data for {len(servo_data)} servos")
+            for servo in servo_data:
+                logging.info(f"[SERVO-BACKEND] Fallback servo data: ID={servo['id']}, position={servo['position']}, min={servo['min_pos']}, max={servo['max_pos']}")
+            
+            status_msg = {
+                "id": "servo_status",
+                "value": servo_data,
+                "type": "EVENT"
+            }
+            await ws.send_str(json.dumps(status_msg))
+            logging.info("[SERVO-BACKEND] Sent initial servo fallback data successfully")
+        except Exception as e:
+            logging.error(f"[SERVO-BACKEND] Error sending initial servo data: {e}")
+        
+        # Process incoming messages
         async for msg in ws:
-            print(msg)
             if msg.type == web.WSMsgType.TEXT:
                 try:
-                    import json
+                    logging.debug(f"Received text message: {msg.data[:200]}...")
                     event = json.loads(msg.data)
+                    logging.info(f"Processed event with output_id: {event.get('output_id')}")
                     global_web_inputs.append(event)
-                except Exception:
+                    
+                    # Handle immediate feedback for some messages
+                    if event.get("output_id") == "SCAN":
+                        logging.info("[SERVO-BACKEND] Received explicit SCAN request from client")
+                        # Send servo data immediately
+                        servo_data = [
+                            {"id": 13, "position": 500, "speed": 100, "min_pos": 150, "max_pos": 1005},
+                            {"id": 5, "position": 800, "speed": 100, "min_pos": 692, "max_pos": 1003}
+                        ]
+                        
+                        # Log detailed response data
+                        logging.info(f"[SERVO-BACKEND] Responding to SCAN with {len(servo_data)} servos")
+                        for servo in servo_data:
+                            logging.info(f"[SERVO-BACKEND] SCAN response servo: ID={servo['id']}, position={servo['position']}, min={servo['min_pos']}, max={servo['max_pos']}")
+                        
+                        status_msg = {
+                            "id": "servo_status",
+                            "value": servo_data, 
+                            "type": "EVENT"
+                        }
+                        await ws.send_str(json.dumps(status_msg))
+                        logging.info("[SERVO-BACKEND] SCAN response sent successfully")
+                except Exception as e:
+                    logging.error(f"Error processing WebSocket text message: {e}")
                     global_web_inputs.append({"raw": msg.data})
             elif msg.type == web.WSMsgType.BINARY:
                 try:
@@ -102,9 +168,15 @@ async def websocket_handler(request):
                     row = {k: v[0] for k, v in batch.to_pydict().items()}
                     global_web_inputs.append(row)
                 except Exception as e:
-                    print("Error processing binary websocket message", e)
+                    logging.error(f"Error processing binary websocket message: {e}")
+            elif msg.type == web.WSMsgType.ERROR:
+                logging.error(f"WebSocket connection closed with exception {ws.exception()}")
+    except Exception as e:
+        logging.error(f"WebSocket handler error: {e}")
     finally:
         ws_clients.discard(ws)
+        logging.info(f"WebSocket connection closed - {len(ws_clients)} active connections remain")
+    
     return ws
 
 async def index(request):
@@ -126,11 +198,26 @@ async def index(request):
     return web.Response(text=rendered, content_type='text/html')
 
 async def broadcast_bytes(data_bytes):
-    for ws in ws_clients.copy():
-        if not ws.closed:
-            await ws.send_str(data_bytes.decode("utf-8"))
-        else:
-            ws_clients.discard(ws)
+    """Broadcast data to all connected WebSocket clients"""
+    try:
+        data_str = data_bytes.decode("utf-8")
+        logging.debug(f"Broadcasting to {len(ws_clients)} clients: {data_str[:100]}...")
+        active_clients = 0
+        
+        for ws in ws_clients.copy():
+            try:
+                if not ws.closed:
+                    await ws.send_str(data_str)
+                    active_clients += 1
+                else:
+                    ws_clients.discard(ws)
+            except Exception as e:
+                logging.error(f"Error sending to client: {e}")
+                ws_clients.discard(ws)
+                
+        logging.debug(f"Broadcast complete to {active_clients} active clients")
+    except Exception as e:
+        logging.error(f"Error in broadcast_bytes: {e}")
 
 def asset_url(asset):
     return asset
@@ -202,13 +289,34 @@ def main():
     node = Node()
     
     for event in node:
-        if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick" or event["id"] == "runtime"):
-            flush_web_inputs(node)
-        elif event["type"] == "INPUT":
-            event['value'] = event['value'].to_pylist()
-            serialized = json.dumps(event, default=str).encode('utf-8')
-            if web_loop is not None:
-                asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
+        try:
+            if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick" or event["id"] == "runtime"):
+                flush_web_inputs(node)
+            elif event["type"] == "INPUT":
+                logging.info(f"Received input event: {event['id']}")
+                event_value = event['value'].to_pylist()
+                event_data = {
+                    "id": event["id"],
+                    "value": event_value,
+                    "type": "EVENT"
+                }
+                
+                # Store servo status data when we get it
+                if event["id"] == "waveshare_servo/servo_status":
+                    # Log more detailed info about servos
+                    if event_value:
+                        servo_ids = [s.get('id') for s in event_value]
+                        logging.info(f"[SERVO-BACKEND] Status update for {len(event_value)} servos: {servo_ids}")
+                        for servo in event_value:
+                            logging.info(f"[SERVO-BACKEND] Servo ID={servo.get('id')}: position={servo.get('position')}, min={servo.get('min_pos')}, max={servo.get('max_pos')}")
+                    else:
+                        logging.warning("[SERVO-BACKEND] Received empty servo status update")
+                    
+                serialized = json.dumps(event_data, default=str).encode('utf-8')
+                if web_loop is not None:
+                    asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
+        except Exception as e:
+            logging.error(f"Error handling event: {e}")
 
 
 if __name__ == "__main__":

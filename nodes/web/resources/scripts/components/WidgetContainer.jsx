@@ -56,9 +56,14 @@ const WidgetContainer = ({ type, widgetProps }) => {
   const getWidgetTitle = () => {
     
     switch (type) {
-      case 'servo-control':
+      case 'servo-control': {
         const servoId = widgetProps.servoId;
+        if (servoId === undefined || servoId === null) {
+          console.warn('[SERVO-DEBUG] Widget missing servoId property:', widgetProps);
+          return 'Servo (unassigned)';
+        }
         return `Servo ${servoId}`;
+      }
       case 'separator':
         return 'Separator';
       case 'test-widget':

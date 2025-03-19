@@ -14,35 +14,74 @@ const ServoControl = ({ servoId }) => {
   
   // Find the servo data from available servos
   useEffect(() => {
+    console.log('[SERVO-DEBUG] ServoControl useEffect for servoId:', servoId);
+    console.log('[SERVO-DEBUG] Available servos:', availableServos);
+    
     if (availableServos && availableServos.length > 0) {
-      const servo = availableServos.find(s => s.id === servoId || s.id === parseInt(servoId));
+      // Ensure we're comparing the same types
+      const targetId = parseInt(servoId);
+      
+      // Log all servo IDs for debugging
+      const allIds = availableServos.map(s => typeof s.id === 'string' ? parseInt(s.id) : s.id);
+      console.log('[SERVO-DEBUG] Available servo IDs:', allIds);
+      console.log('[SERVO-DEBUG] Looking for ID:', targetId);
+      
+      // Flexible matching with type conversion
+      const servo = availableServos.find(s => {
+        const currentId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
+        const matches = currentId === targetId;
+        console.log(`[SERVO-DEBUG] Comparing ${currentId} with ${targetId}: ${matches}`);
+        return matches;
+      });
+      
       if (servo) {
+        console.log('[SERVO-DEBUG] Found servo:', servo);
         setServoInfo(servo);
         setPosition(servo.position || 0);
         setSpeed(servo.speed || 100);
         setMin(servo.min_pos || 0);
         setMax(servo.max_pos || 180);
+      } else {
+        console.warn(`[SERVO-DEBUG] No servo found with ID ${targetId} in:`, allIds);
       }
     }
   }, [availableServos, servoId]);
   
   // Listen for servo updates from WebSocket
   useEffect(() => {
+    console.log('[SERVO-DEBUG] Setting up servo_status listener for servoId:', servoId);
+    
     const unsubscribe = node.on('servo_status', (event) => {
+      console.log('[SERVO-DEBUG] Servo status update received for widget:', servoId);
+      
       if (event && event.value) {
         const servos = event.value || [];
-        const servo = servos.find(s => s.id === servoId || s.id === parseInt(servoId));
+        console.log('[SERVO-DEBUG] Received servos in status event:', servos.length);
+        
+        // Ensure we're comparing the same types
+        const targetId = parseInt(servoId);
+        
+        // Flexible matching with type conversion
+        const servo = servos.find(s => {
+          const currentId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
+          return currentId === targetId;
+        });
+        
         if (servo) {
+          console.log('[SERVO-DEBUG] Found updated servo data:', servo);
           setServoInfo(servo);
           setPosition(servo.position || 0);
           setSpeed(servo.speed || 100);
-          setMin(servo.min_pos || 0);
-          setMax(servo.max_pos || 180);
+          setMin(servo.min_pos !== undefined ? servo.min_pos : 0);
+          setMax(servo.max_pos !== undefined ? servo.max_pos : 180);
+        } else {
+          console.warn(`[SERVO-DEBUG] No servo found with ID ${targetId} in status update`);
         }
       }
     });
     
     // Request servo data on mount
+    console.log('[SERVO-DEBUG] Requesting SCAN for servo:', servoId);
     node.emit('SCAN', []);
     
     return unsubscribe;
@@ -71,9 +110,20 @@ const ServoControl = ({ servoId }) => {
     node.emit('calibrate', [parseInt(servoId)]);
   };
   
-  const servoTitle = servoInfo && servoInfo.alias 
-    ? `${servoInfo.alias} (${servoId})` 
-    : `Servo ${servoId}`;
+  const servoTitle = (() => {
+    // Handle undefined servoId
+    if (servoId === undefined || servoId === null) {
+      return "Servo (unassigned)";
+    }
+    
+    // Handle case with servoInfo and alias
+    if (servoInfo && servoInfo.alias) {
+      return `${servoInfo.alias} (${servoId})`;
+    }
+    
+    // Default case
+    return `Servo ${servoId}`;
+  })();
   
   // Fallback slider for small screens
   const FallbackSlider = () => (

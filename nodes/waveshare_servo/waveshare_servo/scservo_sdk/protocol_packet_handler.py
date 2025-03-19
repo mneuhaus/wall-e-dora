@@ -68,6 +68,13 @@ class protocol_packet_handler(object):
 
     def txPacket(self, port, txpacket):
         checksum = 0
+        
+        # Validate txpacket
+        if not isinstance(txpacket, list) or PKT_LENGTH >= len(txpacket) or txpacket[PKT_LENGTH] is None:
+            print("txPacket error: invalid packet data")
+            port.is_using = False
+            return COMM_TX_ERROR
+            
         total_packet_length = txpacket[PKT_LENGTH] + 4  # 4: HEADER0 HEADER1 ID LENGTH
 
         if port.is_using:
@@ -83,9 +90,19 @@ class protocol_packet_handler(object):
         txpacket[PKT_HEADER0] = 0xFF
         txpacket[PKT_HEADER1] = 0xFF
 
+        # Ensure all packet values are initialized and not None
+        for i in range(2, total_packet_length - 1):
+            if i < len(txpacket) and txpacket[i] is None:
+                txpacket[i] = 0
+                print(f"Warning: txpacket[{i}] was None, setting to 0")
+
         # add a checksum to the packet
         for idx in range(2, total_packet_length - 1):  # except header, checksum
-            checksum += txpacket[idx]
+            if idx < len(txpacket) and txpacket[idx] is not None:
+                checksum += txpacket[idx]
+            else:
+                print(f"Warning: txpacket[{idx}] is out of range or None")
+                checksum += 0
 
         txpacket[total_packet_length - 1] = ~checksum & 0xFF
 
@@ -209,16 +226,22 @@ class protocol_packet_handler(object):
         model_number = 0
         error = 0
 
-        txpacket = [0] * 6
+        # Initialize with explicit zeros for all required packet fields
+        txpacket = [0] * 6  # [HEADER0, HEADER1, ID, LENGTH, INSTRUCTION, CHECKSUM]
 
         if scs_id >= BROADCAST_ID:
             return model_number, COMM_NOT_AVAILABLE, error
 
+        # Ensure all values are set properly
         txpacket[PKT_ID] = scs_id
         txpacket[PKT_LENGTH] = 2
         txpacket[PKT_INSTRUCTION] = INST_PING
-
-        rxpacket, result, error = self.txRxPacket(port, txpacket)
+        
+        try:
+            rxpacket, result, error = self.txRxPacket(port, txpacket)
+        except Exception as e:
+            print(f"Error in ping: {e}")
+            return model_number, COMM_RX_FAIL, error
 
         if result == COMM_SUCCESS:
             data_read, result, error = self.readTxRx(port, scs_id, 3, 2)  # Address 3 : Model Number
@@ -280,19 +303,25 @@ class protocol_packet_handler(object):
         return data, result, error
 
     def readTxRx(self, port, scs_id, address, length):
-        txpacket = [0] * 8
+        # Initialize with explicit zeros for all required packet fields
+        txpacket = [0] * 8  # [HEADER0, HEADER1, ID, LENGTH, INSTRUCTION, PARAM0, PARAM1, CHECKSUM]
         data = []
 
         if scs_id >= BROADCAST_ID:
             return data, COMM_NOT_AVAILABLE, 0
 
+        # Ensure all values are set properly
         txpacket[PKT_ID] = scs_id
         txpacket[PKT_LENGTH] = 4
         txpacket[PKT_INSTRUCTION] = INST_READ
         txpacket[PKT_PARAMETER0 + 0] = address
         txpacket[PKT_PARAMETER0 + 1] = length
-
-        rxpacket, result, error = self.txRxPacket(port, txpacket)
+        
+        try:
+            rxpacket, result, error = self.txRxPacket(port, txpacket)
+        except Exception as e:
+            print(f"Error in readTxRx: {e}")
+            return data, COMM_RX_FAIL, 0
         if result == COMM_SUCCESS:
             error = rxpacket[PKT_ERROR]
 
