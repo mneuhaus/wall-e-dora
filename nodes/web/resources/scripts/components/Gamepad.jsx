@@ -50,35 +50,17 @@ const Gamepad = () => {
     };
   }, []);
   
-  // Format the gamepad name to be shorter and more readable
+  // Format the gamepad name with minimal processing
   const formatGamepadName = (id) => {
-    // Remove common verbose parts
+    // Just do basic cleanup but preserve the full name
     let name = id
       .replace('Vendor: ', '')
       .replace('Product: ', '')
       .split('(')[0]
-      .replace(/\bXInput\b/, '')
-      .replace(/\bController\b/i, '')
-      .replace(/\bGamepad\b/i, '')
       .replace(/\s+/g, ' ')
       .trim();
     
-    // Try to extract a meaningful name
-    if (name.includes('Xbox')) {
-      name = 'Xbox Controller';
-    } else if (name.includes('Sony') || name.includes('DUALSHOCK') || name.includes('PlayStation')) {
-      name = 'PlayStation Controller';
-    } else if (name.includes('Nintendo') || name.includes('Switch')) {
-      name = 'Nintendo Controller';
-    }
-    
-    // No longer truncating names - show full controller name
-    // Special case for long 3Dconnexion names
-    if (name.includes('3Dconnexion')) {
-      name = name.replace('3Dconnexion', '3D');
-    }
-    
-    // If we got an empty name after cleanup, show something generic
+    // If we got an empty name after cleanup, use a generic name
     if (!name) {
       name = 'Game Controller';
     }
