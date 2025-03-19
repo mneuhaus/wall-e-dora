@@ -38,9 +38,9 @@ const App = () => {
             v7_relativeSplatPath: true
           }}
         >
-          <header style={{ flex: '0 0 auto' }}>
+          <header style={{ flex: '0 0 auto', overflow: 'hidden' }}>
             <nav>
-              <Link className="top-app-bar__title" style={{ fontSize: '20px', alignItems: 'left' }} to="/">wall-e</Link>
+              <Link className="top-app-bar__title" style={{ alignItems: 'left' }} to="/">wall-e</Link>
               <div className="max">&nbsp;</div>
               <Gamepad />
               <ServoStatus />
