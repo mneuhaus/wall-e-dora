@@ -47,9 +47,11 @@ class Gamepad {
     });
 
     // Start polling
-    setInterval(() => {
+    this.pollIntervalId = setInterval(() => {
       let gamepad = navigator.getGamepads()[this.index];
       if (!gamepad) return;
+
+      let hasChanges = false;
 
       Object.keys(this.buttons).forEach((index) => {
         if (!this.buttons[index] || !gamepad.buttons[index]) return;
@@ -60,30 +62,47 @@ class Gamepad {
           if (this[this.buttons[index]].value != newValue) {
             this[this.buttons[index]].value = newValue;
             node.emit('GAMEPAD_' + this.buttons[index], [gamepad.buttons[index].value]);
+            hasChanges = true;
           }
         } else {
           // Regular buttons
           if (this[this.buttons[index]].value != gamepad.buttons[index].value) {
             this[this.buttons[index]].value = gamepad.buttons[index].value;
             node.emit('GAMEPAD_' + this.buttons[index], [gamepad.buttons[index].value]);
+            hasChanges = true;
           }
         }
       });
 
       Object.keys(this.axes).forEach((index) => {
-        if (!this.axes[index] || !gamepad.axes[index]) return;
+        if (!this.axes[index] || gamepad.axes[index] === undefined) return;
         
         const newValue = parseFloat(gamepad.axes[index]).toFixed(4);
         if (this[this.axes[index]].value != newValue) {
           this[this.axes[index]].value = newValue;
           node.emit('GAMEPAD_' + this.axes[index], [gamepad.axes[index]]);
+          hasChanges = true;
         }
       });
-    }, 100);
+
+      // Emit a general update event if any values changed
+      if (hasChanges) {
+        this.emitter.emit('gamepad_update', this);
+      }
+    }, 50); // Increased frequency for more responsive updates
   }
 
   on(eventName, callback) {
     return this.emitter.on(eventName, callback);
+  }
+
+  off(eventName, callback) {
+    return this.emitter.off(eventName, callback);
+  }
+
+  dispose() {
+    clearInterval(this.pollIntervalId);
+    this.emitter.all.clear();
   }
 }
 
@@ -94,12 +113,19 @@ class Gamepads {
 
     window.addEventListener("gamepadconnected", (event) => {
       console.log("Gamepad connected:", event);
+      if (this.gamepads[event.gamepad.index]) {
+        // Clean up existing gamepad instance if there was one
+        this.gamepads[event.gamepad.index].dispose();
+      }
       this.gamepads[event.gamepad.index] = new Gamepad(event.gamepad);
       this.emitter.emit('gamepadconnected', this.gamepads[event.gamepad.index]);
     });
 
     window.addEventListener("gamepaddisconnected", (event) => {
       console.log("Lost connection with the gamepad.", event);
+      if (this.gamepads[event.gamepad.index]) {
+        this.gamepads[event.gamepad.index].dispose();
+      }
       this.emitter.emit('gamepaddisconnected', event);
       delete this.gamepads[event.gamepad.index];
     });
@@ -107,6 +133,10 @@ class Gamepads {
 
   on(eventName, callback) {
     return this.emitter.on(eventName, callback);
+  }
+
+  off(eventName, callback) {
+    return this.emitter.off(eventName, callback);
   }
 }
 
