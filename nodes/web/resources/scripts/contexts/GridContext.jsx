@@ -118,8 +118,8 @@ export function GridProvider({ children }) {
       y: Math.max(0, ...layout.map(item => item.y + item.h), 0),
       w: config.w || 3,
       h: config.h || 4,
-      minW: config.minW || 2,
-      minH: config.minH || 2,
+      minW: config.minW || 1,
+      minH: config.minH || 1,
     };
     
     // Add to layout
@@ -318,7 +318,12 @@ export function GridProvider({ children }) {
   
   // Update specific widget properties
   const updateWidgetProps = (widgetId, newProps) => {
-    if (!widgetsState[widgetId]) return;
+    if (!widgetsState[widgetId]) {
+      console.error(`Widget ${widgetId} not found in widgetsState:`, widgetsState);
+      return;
+    }
+    
+    console.log(`GridContext.updateWidgetProps for ${widgetId}:`, newProps);
     
     // Create new widget state with updated props
     const updatedWidget = { ...widgetsState[widgetId], ...newProps };
@@ -337,6 +342,7 @@ export function GridProvider({ children }) {
     setLayout(newLayout);
     
     // Save to backend and localStorage
+    console.log("Saving updated widget state:", newWidgetsState[widgetId]);
     saveWidgetsState(newWidgetsState);
     saveToLocalStorage(newWidgetsState);
   };

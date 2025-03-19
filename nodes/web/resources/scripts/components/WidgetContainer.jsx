@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { useGridContext } from '../contexts/GridContext';
 
 // Import widget components
@@ -6,6 +6,43 @@ import ServoControl from './ServoControl';
 import TestWidget from './TestWidget';
 import SoundsWidget from './SoundsWidget';
 import JoystickControl from './JoystickControl';
+
+// Memoized modal component to prevent re-renders
+const WidgetSettingsModal = memo(({ onClose, componentProps, type, title }) => {
+  // Map of widget types to their settings components
+  const settingsComponentMap = {
+    'joystick-control': JoystickControl,
+  };
+  
+  const SettingsComponent = settingsComponentMap[type];
+  
+  if (!SettingsComponent) {
+    return null; // No settings component for this widget type
+  }
+  
+  console.log(`Opening settings modal for ${type} with props:`, componentProps);
+  
+  return (
+    <div className="modal active global-modal" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h5>{title || 'Widget Settings'}</h5>
+          <button onClick={onClose} className="btn-close">×</button>
+        </div>
+        <div className="modal-body">
+          <SettingsComponent 
+            {...componentProps} 
+            inSettingsModal={true} 
+            i={componentProps.i}
+          />
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} className="btn-flat">Close</button>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 const WidgetContainer = ({ type, widgetProps }) => {
   const { isEditable, removeWidget } = useGridContext();
@@ -19,6 +56,9 @@ const WidgetContainer = ({ type, widgetProps }) => {
     'sounds-widget': SoundsWidget,
     'joystick-control': JoystickControl
   };
+  
+  // Define which widget types have settings
+  const widgetsWithSettings = ['joystick-control'];
   
   
   // Determine which component to render
@@ -111,22 +151,21 @@ const WidgetContainer = ({ type, widgetProps }) => {
 
   return (
     <div className="widget-container">
-      <div className="widget-header">
-        {isEditable && <div className="drag-handle"><i className="fas fa-grip-horizontal"></i></div>}
-        <div className="widget-title">{getWidgetTitle()}</div>
-        <div className="widget-actions">
-          {(isEditable || type === 'joystick-control') && (
-            <button onClick={openSettings} className="widget-settings-btn">
+      {isEditable && (
+        <div className="widget-badges">
+          <button className="widget-badge drag-handle">
+            <i className="fas fa-grip-horizontal"></i>
+          </button>
+          {widgetsWithSettings.includes(type) && (
+            <button onClick={openSettings} className="widget-badge settings">
               <i className="fas fa-cog"></i>
             </button>
           )}
-          {isEditable && (
-            <button onClick={handleRemove} className="widget-remove-btn">
-              <i className="fas fa-times"></i>
-            </button>
-          )}
+          <button onClick={handleRemove} className="widget-badge remove">
+            <i className="fas fa-times"></i>
+          </button>
         </div>
-      </div>
+      )}
       <div className="widget-content">
         {isUnknownType ? (
           <div className="widget-error">
@@ -139,24 +178,17 @@ const WidgetContainer = ({ type, widgetProps }) => {
         )}
       </div>
       
-      {/* Settings Modal */}
-      {showSettings && type === 'joystick-control' && (
-        <div className="modal active">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5>Joystick Settings</h5>
-              <button onClick={closeSettings} className="btn-close">×</button>
-            </div>
-            <div className="modal-body">
-              {/* We'll pass the settings content as props to Component */}
-              <Component {...componentProps} inSettingsModal={true} />
-            </div>
-            <div className="modal-footer">
-              <button onClick={closeSettings} className="btn-flat">Close</button>
-            </div>
-          </div>
-        </div>
+      {/* Global Settings Modal - rendered at body level for positioning */}
+      {showSettings && widgetsWithSettings.includes(type) && (
+        <WidgetSettingsModal
+          onClose={closeSettings}
+          componentProps={componentProps}
+          type={type}
+          title={getWidgetTitle() + " Settings"}
+        />
       )}
+      
+      {/* Extracted to a separate component to prevent re-rendering */}
     </div>
   );
 };

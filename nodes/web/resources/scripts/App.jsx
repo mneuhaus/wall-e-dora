@@ -38,9 +38,9 @@ const App = () => {
             v7_relativeSplatPath: true
           }}
         >
-          <header>
+          <header style={{ flex: '0 0 auto' }}>
             <nav>
-              <Link className="top-app-bar__title" style={{ fontSize: '24px', alignItems: 'left' }} to="/">wall-e</Link>
+              <Link className="top-app-bar__title" style={{ fontSize: '20px', alignItems: 'left' }} to="/">wall-e</Link>
               <div className="max">&nbsp;</div>
               <Gamepad />
               <ServoStatus />
@@ -52,7 +52,7 @@ const App = () => {
             </nav>
           </header>
           
-          <main>
+          <main style={{ flex: '1 1 auto', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <Routes>
               <Route path="/" element={<Dashboard ref={dashboardRef} />} />
               <Route path="/gamepad/:index" element={<GamepadView />} />

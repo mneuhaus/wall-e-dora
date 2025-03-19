@@ -22,6 +22,7 @@ def flush_web_inputs(node):
     if not global_web_inputs:
         return
     import os, json
+    logging.info(f"Processing {len(global_web_inputs)} web events")
     for web_event in global_web_inputs:
         if web_event.get("output_id") == "save_grid_state":
             grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
@@ -45,6 +46,55 @@ def flush_web_inputs(node):
                         print(f"Error broadcasting grid state: {e}")
                 else:
                     ws_clients.discard(ws)
+                    
+        elif web_event.get("output_id") == "save_joystick_servo":
+            # Handle joystick servo selection persistence
+            widget_id = web_event.get("data", {}).get("id")
+            axis = web_event.get("data", {}).get("axis")
+            servo_id = web_event.get("data", {}).get("servoId")
+            
+            if widget_id and axis in ['x', 'y']:
+                # Load current grid state
+                grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+                grid_state = {}
+                if os.path.exists(grid_state_path):
+                    try:
+                        with open(grid_state_path, "r", encoding="utf-8") as f:
+                            grid_state = json.load(f)
+                    except Exception as e:
+                        print(f"Error loading grid state: {e}")
+                
+                # Update the widget with the new servo ID
+                if widget_id in grid_state:
+                    # Update the appropriate servo ID property
+                    servo_prop = f"{axis}ServoId"
+                    grid_state[widget_id][servo_prop] = servo_id
+                    
+                    # Save the updated grid state
+                    with open(grid_state_path, "w", encoding="utf-8") as f:
+                        json.dump(grid_state, f)
+                    
+                    # Broadcast the updated grid state
+                    for ws in ws_clients.copy():
+                        if not ws.closed:
+                            try:
+                                response = {
+                                    "id": "grid_state",
+                                    "value": grid_state,
+                                    "type": "EVENT"
+                                }
+                                asyncio.run_coroutine_threadsafe(
+                                    ws.send_str(json.dumps(response)), 
+                                    web_loop
+                                )
+                            except Exception as e:
+                                print(f"Error broadcasting updated joystick state: {e}")
+                        else:
+                            ws_clients.discard(ws)
+                    
+                    print(f"Updated joystick {widget_id} {axis}-axis to servo {servo_id}")
+                else:
+                    print(f"Cannot update joystick {widget_id}: widget not found in grid state")
         
         elif web_event.get("output_id") == "get_grid_state":
             # Load and send grid state to the requesting client
@@ -128,7 +178,19 @@ async def websocket_handler(request):
                 try:
                     logging.debug(f"Received text message: {msg.data[:200]}...")
                     event = json.loads(msg.data)
-                    logging.info(f"Processed event with output_id: {event.get('output_id')}")
+                    output_id = event.get('output_id')
+                    logging.info(f"Processed event with output_id: {output_id}")
+                    
+                    # Log additional details for joystick-related events
+                    if output_id in ['save_joystick_servo', 'save_grid_state']:
+                        if output_id == 'save_joystick_servo':
+                            logging.info(f"Joystick servo assignment: {event.get('data')}")
+                        elif output_id == 'save_grid_state':
+                            # Find and log joystick widgets in the grid state
+                            for widget_id, widget_data in event.get('data', {}).items():
+                                if widget_data.get('type') == 'joystick-control':
+                                    logging.info(f"Grid state update for joystick {widget_id}: x={widget_data.get('xServoId')}, y={widget_data.get('yServoId')}")
+                    
                     global_web_inputs.append(event)
                     
                     # Handle immediate feedback for some messages

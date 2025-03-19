@@ -24,19 +24,19 @@ const Dashboard = forwardRef((props, ref) => {
   }, []);
 
   return (
-    <div className="dashboard" ref={ref}>
-      <div className="grid-container">
+    <div className="dashboard" ref={ref} style={{ height: '100%', overflow: 'hidden' }}>
+      <div className="grid-container" style={{ height: '100%', overflow: 'auto' }}>
         <ResponsiveGridLayout
           className="layout"
           layouts={{ lg: layout }}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
+          cols={{ lg: 12, md: 10, sm: 8, xs: 6, xxs: 4 }}
           rowHeight={80}
           isDraggable={isEditable}
           isResizable={isEditable}
           draggableHandle=".drag-handle"
           onLayoutChange={(layout) => onLayoutChange(layout)}
-          margin={[10, 10]}
+          margin={[5, 15]}
           useCSSTransforms={true}
           compactType="vertical"
         >
