@@ -39,17 +39,14 @@ const Dashboard = forwardRef((props, ref) => {
           useCSSTransforms={true}
           compactType="vertical"
         >
-          {layout.map(item => {
-            console.log("Grid item:", item);
-            return (
-              <div key={item.i} data-grid={item}>
-                <WidgetContainer 
-                  type={item.type}
-                  widgetProps={item}
-                />
-              </div>
-            );
-          })}
+          {layout.map(item => (
+            <div key={item.i} data-grid={item}>
+              <WidgetContainer 
+                type={item.type}
+                widgetProps={item}
+              />
+            </div>
+          ))}
         </ResponsiveGridLayout>
       </div>
     </div>

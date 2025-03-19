@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import node from '../Node';
 
 const SoundsWidget = (props) => {
-  console.log("SoundsWidget props:", props);
   const [sounds, setSounds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
@@ -14,7 +13,6 @@ const SoundsWidget = (props) => {
     
     // Listen for sounds list
     const unsubscribe = node.on('available_sounds', (event) => {
-      console.log('Received sounds list:', event.value);
       setSounds(event.value || []);
       setLoading(false);
     });

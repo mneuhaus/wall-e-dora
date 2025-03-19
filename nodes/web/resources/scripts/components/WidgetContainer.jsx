@@ -17,8 +17,6 @@ const WidgetContainer = ({ type, widgetProps }) => {
     'sounds-widget': SoundsWidget
   };
   
-  // Debug widget type and component selection
-  console.log("Widget type:", type, "Props:", widgetProps, "Component:", componentMap[type] || 'div');
   
   // Determine which component to render
   let Component = componentMap[type];
@@ -56,7 +54,6 @@ const WidgetContainer = ({ type, widgetProps }) => {
   
   // Get a title for the widget
   const getWidgetTitle = () => {
-    console.log("Getting title for widget type:", type);
     
     switch (type) {
       case 'servo-control':
