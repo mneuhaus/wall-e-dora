@@ -72,9 +72,10 @@ const Gamepad = () => {
       name = 'Nintendo Controller';
     }
     
-    // If name is too long, truncate it
-    if (name.length > 20) {
-      name = name.substring(0, 17) + '...';
+    // No longer truncating names - show full controller name
+    // Special case for long 3Dconnexion names
+    if (name.includes('3Dconnexion')) {
+      name = name.replace('3Dconnexion', '3D');
     }
     
     // If we got an empty name after cleanup, show something generic
