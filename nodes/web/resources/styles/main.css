@@ -319,14 +319,7 @@ nav button:hover, nav a:hover {
   margin-right: 8px;
 }
 
-/* Fix for fontawesome icons */
-.fa-volume-high:before,
-.fa-volume:before,
-.fa-volume-low:before,
-.fa-volume-xmark:before {
-  font-family: "Font Awesome 6 Free";
-  font-weight: 900;
-}
+/* We don't need custom icon fixes as we're using standard FA names now */
 
 .volume-menu {
   min-width: 200px;
