@@ -3,6 +3,7 @@ import "material-dynamic-colors";
 import '@fortawesome/fontawesome-free/css/all.css';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import 'rc-slider/assets/index.css';
 import '../styles/main.css';
 
 import React from 'react';

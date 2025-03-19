@@ -526,6 +526,188 @@ nav {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Additional ServoDebug styles */
+.status-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.servo-debug .circular-slider-container {
+  padding: 15px 0;
+  margin-bottom: 10px;
+  min-height: 100px;
+  position: relative;
+}
+
+.slider-container {
+  width: 100%;
+  padding: 30px 20px;
+}
+
+.position-display {
+  position: relative;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.status-item:last-child {
+  border-bottom: none;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actions button {
+  flex: 1;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .actions {
+    flex-direction: column;
+  }
+  
+  .actions button {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ServoControl widget styles */
+.servo-control-widget {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.servo-control-widget .widget-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  background-color: rgba(255, 215, 0, 0.1);
+}
+
+.servo-control-widget .title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.flex-spacer {
+  flex: 1;
+}
+
+.settings-button {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 5px;
+  transition: color 0.2s;
+}
+
+.settings-button:hover {
+  color: var(--primary);
+}
+
+.servo-control-widget .widget-content {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.control-area {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.status-info {
+  margin-top: 16px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.info-item .label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.info-item .value {
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.settings-panel {
+  padding: 16px;
+}
+
+.round-slider-container,
+.circular-slider-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  overflow: visible;
+  padding: 10px;
+  position: relative;
+}
+
+.fallback-slider {
+  width: 100%;
+  text-align: center;
+}
+
+.fallback-slider input {
+  width: 100%;
+}
+
+.slider-value {
+  margin-top: 10px;
+  font-weight: bold;
+  color: var(--primary);
+}
+
+.full-width {
+  width: 100%;
+}
+
+.m-bottom-2 {
+  margin-bottom: 16px;
+}
+
+.m-right-1 {
+  margin-right: 8px;
+}
+
 /* Dropdown menu styles */
 .dropdown {
   position: relative;
@@ -544,6 +726,48 @@ nav {
   z-index: 1000;
   overflow: hidden;
   border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+/* Servo status specific styles */
+.servo-status-container {
+  position: relative;
+}
+
+.servo-status svg {
+  width: 30px;
+  margin-top: 5px;
+}
+
+.servo-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 10px;
+  background-color: var(--surface);
+  border-radius: 8px;
+  min-width: 200px;
+  max-width: 300px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.servo-menu .dropdown-item {
+  display: block;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.2s;
+}
+
+.servo-menu .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.servo-menu .dropdown-item:hover {
+  background-color: rgba(255, 215, 0, 0.15);
 }
 
 .dropdown .menu.left-aligned {
