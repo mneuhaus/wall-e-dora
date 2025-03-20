@@ -154,8 +154,8 @@ const ServoDebug = () => {
                 <div className="circular-slider-container">
                   <CircularSlider
                     width={180}
-                    min={min}
-                    max={max}
+                    min={0}
+                    max={180}
                     initialValue={position}
                     direction={-1}
                     knobPosition="right"

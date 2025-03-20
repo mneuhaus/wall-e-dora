@@ -326,12 +326,12 @@ def main():
         slow_speed = 100
         packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, slow_speed)
         
-        # Step 1: Move to minimum position (0 degrees)
-        MIN_POS = 0
-        print(f"Moving to 0 degrees position...")
+        # Step 1: Move to minimum position
+        MIN_POS = SCS_MINIMUM_POSITION_VALUE
+        print(f"Moving to minimum calibrated position...")
         
         packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, MIN_POS)
-        time.sleep(2.0)  # Give servo time to reach position
+        time.sleep(3.0)  # Increased wait time for reliable movement
         
         # Read the actual position achieved
         min_pos_data, min_pos_result, min_pos_error = packetHandler.read2ByteTxRx(
@@ -342,12 +342,12 @@ def main():
             print("Failed to read minimum position")
             min_pos_data = MIN_POS
         
-        # Step 2: Move to maximum position (180 degrees)
-        MAX_POS = 4095  # Maximum position value
-        print(f"Moving to 180 degrees position...")
+        # Step 2: Move to maximum position
+        MAX_POS = SCS_MAXIMUM_POSITION_VALUE
+        print(f"Moving to maximum calibrated position...")
         
         packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, MAX_POS)
-        time.sleep(2.0)  # Give servo time to reach position
+        time.sleep(3.0)  # Increased waiting time
         
         # Read the actual position achieved
         max_pos_data, max_pos_result, max_pos_error = packetHandler.read2ByteTxRx(
