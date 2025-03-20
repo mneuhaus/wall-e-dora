@@ -9,6 +9,15 @@ class Gamepad {
     this.emitter = mitt();
     this._forceUpdateHandlers = new Set();
 
+    // Log gamepad details for debugging
+    console.log('Gamepad connected:', {
+      id: gamepadApi.id,
+      index: gamepadApi.index,
+      axes: gamepadApi.axes.length,
+      buttons: gamepadApi.buttons.length
+    });
+
+    // Default mappings
     this.axes = {
       0: "LEFT_ANALOG_STICK_X",
       1: "LEFT_ANALOG_STICK_Y",
@@ -58,6 +67,18 @@ class Gamepad {
     if (!gamepad) return;
 
     let hasChanges = false;
+
+    // Debug output for raw gamepad values 
+    if (Math.random() < 0.01) { // Only log occasionally to avoid console spam
+      console.log('Raw Gamepad Values:', {
+        axes: Array.from(gamepad.axes).map(v => parseFloat(v).toFixed(4)),
+        buttons: Array.from(gamepad.buttons).map((b, i) => ({
+          index: i,
+          value: parseFloat(b.value).toFixed(4),
+          pressed: b.pressed
+        })).filter(b => b.value > 0 || b.pressed)
+      });
+    }
 
     // Update button values
     Object.keys(this.buttons).forEach((index) => {
@@ -135,6 +156,25 @@ class Gamepads {
 
     window.addEventListener("gamepadconnected", (event) => {
       console.log("Gamepad connected:", event);
+      // Debug log for finding proper gamepad mapping
+      console.log("Gamepad details for mapping:", {
+        id: event.gamepad.id,
+        index: event.gamepad.index, 
+        mapping: event.gamepad.mapping,
+        axes: {
+          count: event.gamepad.axes.length,
+          values: Array.from(event.gamepad.axes).map(v => parseFloat(v).toFixed(4))
+        },
+        buttons: {
+          count: event.gamepad.buttons.length,
+          values: Array.from(event.gamepad.buttons).map((b, i) => ({
+            index: i,
+            value: parseFloat(b.value).toFixed(4),
+            pressed: b.pressed
+          }))
+        }
+      });
+      
       if (this.gamepads[event.gamepad.index]) {
         // Clean up existing gamepad instance if there was one
         this.gamepads[event.gamepad.index].dispose();
