@@ -13,6 +13,8 @@ const ServoDebug = () => {
   const [max, setMax] = useState(1024);
   const [newId, setNewId] = useState('');
   const [aliasInput, setAliasInput] = useState('');
+  const [attachType, setAttachType] = useState("button");
+  const [attachIndex, setAttachIndex] = useState("");
   
   useEffect(() => {
     // Listen for servo updates
@@ -105,7 +107,12 @@ const ServoDebug = () => {
       setAliasInput(''); // Clear input after sending
     }
   };
-  
+          
+  const handleAttachServo = () => {
+    node.emit('attach_servo', [parseInt(id), attachType, parseInt(attachIndex)]);
+    alert(`Attached servo ${id} to ${attachType} ${attachIndex}`);
+  };
+          
   const handleResetServo = () => {
     if (window.confirm('Are you sure you want to reset this servo to factory defaults? This will remove all calibration settings and aliases.')) {
       node.emit('reset_servo', [parseInt(id)]);
@@ -252,6 +259,29 @@ const ServoDebug = () => {
                     Set Alias
                   </button>
                 </div>
+              </div>
+              <div className="config-attach m-bottom-2" style={{ display: 'flex' }}>
+                  <select value={attachType} onChange={(e) => setAttachType(e.target.value)} aria-label="Control Type">
+                    <option value="button">Button</option>
+                    <option value="axis">Axis</option>
+                  </select>
+                  <input 
+                    className="border"
+                    type="number"
+                    value={attachIndex}
+                    onChange={(e) => setAttachIndex(e.target.value)}
+                    aria-label="Control Index"
+                    placeholder="Control Index"
+                    style={{ width: '100px', marginLeft: '10px' }}
+                  />
+                  <button 
+                    onClick={handleAttachServo}
+                    disabled={attachIndex === ''}
+                    aria-label="Attach servo to gamepad control"
+                    style={{ marginLeft: '10px' }}
+                  >
+                    Attach to Gamepad
+                  </button>
               </div>
               <div className="config-actions m-top-2">
                 <button 
