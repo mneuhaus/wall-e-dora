@@ -138,22 +138,22 @@ const ServoDebug = () => {
   
   return (
     <div className="servo-debug">
-      <article className="responsive">
+      <article className="beer-container">
         {/* Header Section */}
-        <header className="servo-header m-bottom-2">
-          <div className="breadcrumb">
-            <Link to="/" className="small">Home</Link>
-            <span className="small">/</span>
-            <span className="small" aria-current="page">Servo {id}</span>
+        <header className="beer-header mb-2">
+          <div className="beer-breadcrumb">
+            <Link to="/" className="beer-small">Home</Link>
+            <span className="beer-small">/</span>
+            <span className="beer-small" aria-current="page">Servo {id}</span>
           </div>
-          <h1 className="m-top-1">Servo Control Panel</h1>
-          <p className="text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
+          <h1 className="mt-1">Servo Control Panel</h1>
+          <p className="beer-text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
         </header>
 
         <div className="grid gap-2">
           {/* Position Control Section */}
-          <div className="s12 m6 l4">
-            <section className="card p-3 position-control">
+          <div className="col-12 col-md-6 col-lg-4">
+            <section className="beer-card p-3 position-control">
               <h6 className="m-bottom-2">Position Control</h6>
               <div className="control-group" role="group" aria-label="Position control">
                 <div className="slider-wrapper">
@@ -187,8 +187,8 @@ const ServoDebug = () => {
           </div>
 
           {/* Status & Calibration Section */}
-          <div className="s12 m6 l4">
-            <section className="card p-3 status-section m-bottom-2">
+          <div className="col-12 col-md-6 col-lg-4">
+            <section className="beer-card p-3 status-section mb-2">
               <h6 className="m-bottom-2">Servo Status</h6>
               <div className="status-grid">
                 {Object.entries(servoStatus).map(([key, value]) => (
@@ -217,8 +217,8 @@ const ServoDebug = () => {
           </div>
 
           {/* Configuration Section */}
-          <div className="s12 m12 l4">
-            <section className="card p-3 config-section">
+          <div className="col-12 col-md-12 col-lg-4">
+            <section className="beer-card p-3 config-section">
               <h6 className="m-bottom-2">Servo Configuration</h6>
               <div className="config-inputs">
                 <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
