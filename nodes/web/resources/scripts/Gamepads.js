@@ -8,6 +8,7 @@ class Gamepad {
     this.api = gamepadApi;
     this.emitter = mitt();
     this._forceUpdateHandlers = new Set();
+    this.servoMapping = {};
 
     // Log gamepad details for debugging
     console.log('Gamepad connected:', {

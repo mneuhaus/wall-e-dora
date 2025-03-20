@@ -82,6 +82,7 @@ class Gamepad:
         self.lastTimestamp = 0
         self.updateThread = None
         self.connected = True
+        self.servo_mapping = {}
         self.pressedEventMap = {}
         self.releasedEventMap = {}
         self.changedEventMap = {}
@@ -540,6 +541,16 @@ class Gamepad:
         self.removeAllEventHandlers()
         self.stopBackgroundUpdates()
         del self.joystickFile
+
+    def attach_servo(self, servo_id, control_type, control_index):
+        """
+        Attach a servo to a gamepad control.
+        control_type: 'button' or 'axis'
+        control_index: the index of the button or axis
+        """
+        key = (control_type, control_index)
+        self.servo_mapping[key] = servo_id
+        print(f"Attached servo {servo_id} to {control_type} {control_index}")
 
 ###########################
 # Import gamepad mappings #
