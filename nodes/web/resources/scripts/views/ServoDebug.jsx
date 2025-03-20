@@ -109,7 +109,7 @@ const ServoDebug = () => {
   };
           
   const handleAttachServo = () => {
-    node.emit('attach_servo', [parseInt(id), attachType, parseInt(attachIndex)]);
+    node.emit('attach_servo', [parseInt(id), attachType, attachIndex]);
     alert(`Attached servo ${id} to ${attachType} ${attachIndex}`);
   };
           
@@ -267,12 +267,12 @@ const ServoDebug = () => {
                   </select>
                   <input 
                     className="border"
-                    type="number"
+                    type="text"
                     value={attachIndex}
                     onChange={(e) => setAttachIndex(e.target.value)}
-                    aria-label="Control Index"
-                    placeholder="Control Index"
-                    style={{ width: '100px', marginLeft: '10px' }}
+                    aria-label="Control Name"
+                    placeholder="Control Name"
+                    style={{ width: '150px', marginLeft: '10px' }}
                   />
                   <button 
                     onClick={handleAttachServo}
