@@ -2,14 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import node from '../Node';
 import Slider from 'rc-slider';
+import CircularSlider from '@fseehawer/react-circular-slider';
 
 const ServoDebug = () => {
   const { id } = useParams();
   const [servo, setServo] = useState(null);
   const [position, setPosition] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [speed, setSpeed] = useState(100);
   const [min, setMin] = useState(0);
-  const [max, setMax] = useState(180);
+  const [max, setMax] = useState(1024);
   const [newId, setNewId] = useState('');
   const [aliasInput, setAliasInput] = useState('');
   
@@ -20,10 +22,24 @@ const ServoDebug = () => {
       const servo = servos.find(s => s.id === parseInt(id));
       if (servo) {
         setServo(servo);
-        setPosition(servo.position || 0);
+        
+        // Get range from servo
+        const servoMinPos = servo.min_pos || 0;
+        const servoMaxPos = servo.max_pos || 4095;
+        setMin(servoMinPos);
+        setMax(servoMaxPos);
+        
+        // Get current servo position
+        const servoPosition = servo.position || 0;
+        
+        // Map servo position (min-max) to UI range (0-180)
+        const uiPosition = Math.round(
+          180 * (servoPosition - servoMinPos) / (servoMaxPos - servoMinPos)
+        );
+        
+        console.log(`Mapped servo ${servoPosition} to UI position ${uiPosition}°`);
+        setPosition(uiPosition);
         setSpeed(servo.speed || 100);
-        setMin(servo.min_pos || 0);
-        setMax(servo.max_pos || 180);
       }
     });
     
@@ -33,9 +49,35 @@ const ServoDebug = () => {
     return unsubscribe;
   }, [id]);
   
-  const handlePositionUpdate = (newPosition) => {
-    setPosition(newPosition);
-    node.emit('set_servo', [parseInt(id), newPosition, parseInt(speed)]);
+  const handlePositionChange = (newPosition) => {
+    // Ensure we have a valid number
+    const positionValue = parseInt(newPosition);
+    
+    if (!isNaN(positionValue)) {
+      console.log("UI position:", positionValue);
+      
+      // Update the local state immediately for responsive UI
+      setPosition(positionValue);
+      
+      // Map UI slider value (0-180) to servo range (min-max)
+      let servoMinPos = min || 0;
+      let servoMaxPos = max || 4095;
+      
+      // Linear mapping from UI range (0-180) to servo range
+      const servoPosition = Math.round(
+        servoMinPos + (positionValue / 180) * (servoMaxPos - servoMinPos)
+      );
+      
+      console.log(`Mapped ${positionValue}° to servo position ${servoPosition}`);
+      
+      // Use stronger debounce to limit servo commands
+      clearTimeout(window.servoUpdateTimeout);
+      window.servoUpdateTimeout = setTimeout(() => {
+        // Only send if position hasn't changed in the debounce period
+        console.log("Sending to servo:", servoPosition);
+        node.emit('set_servo', [parseInt(id), servoPosition]);
+      }, 300); // 300ms debounce for smoother experience
+    }
   };
   
   const handleSpeedChange = (e) => {
@@ -65,10 +107,15 @@ const ServoDebug = () => {
     }
   };
   
+  const handleResetServo = () => {
+    if (window.confirm('Are you sure you want to reset this servo to factory defaults? This will remove all calibration settings and aliases.')) {
+      node.emit('reset_servo', [parseInt(id)]);
+    }
+  };
+  
   const servoStatus = servo ? {
     Position: servo.position || 'N/A',
     Speed: servo.speed || 'N/A',
-    Torque: servo.torque || 'N/A',
     Alias: servo.alias || 'None'
   } : {};
   
@@ -105,26 +152,25 @@ const ServoDebug = () => {
               <h6 className="m-bottom-2">Position Control</h6>
               <div className="center-align" role="group" aria-label="Position control">
                 <div className="circular-slider-container">
-                  <div className="position-display">{position}</div>
-                  <div className="slider-container">
-                    <Slider
-                      value={position}
-                      min={min}
-                      max={max}
-                      onChange={handlePositionUpdate}
-                      railStyle={{ backgroundColor: '#37474F', height: 10 }}
-                      trackStyle={{ backgroundColor: '#00bfa5', height: 10 }}
-                      handleStyle={{
-                        borderColor: '#00bfa5',
-                        height: 24,
-                        width: 24,
-                        marginTop: -7,
-                        backgroundColor: '#fff',
-                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.3)'
-                      }}
-                      aria-label="Servo position control"
-                    />
-                  </div>
+                  <CircularSlider
+                    width={180}
+                    min={min}
+                    max={max}
+                    initialValue={position}
+                    direction={-1}
+                    knobPosition="right"
+                    appendToValue="°"
+                    valueFontSize="2.5rem"
+                    trackColor="rgba(55, 71, 79, 0.3)"
+                    progressColorFrom="var(--primary)"
+                    progressColorTo="var(--primary)"
+                    progressSize={12}
+                    trackSize={12}
+                    labelColor="var(--primary)"
+                    knobColor="var(--primary)"
+                    label=""
+                    onChange={handlePositionChange}
+                  />
                 </div>
                 <div className="field label border round m-top-2">
                   <label className="slider">
@@ -237,6 +283,17 @@ const ServoDebug = () => {
                   Calibrate Range
                 </button>
               </div>
+              
+              <div className="divider m-top-3 m-bottom-3"></div>
+              
+              <button 
+                className="border error p-2 full-width"
+                onClick={handleResetServo}
+                aria-label="Reset servo to factory defaults"
+              >
+                <i className="fa-solid fa-rotate-left m-right-1"></i>
+                Reset to Factory Defaults
+              </button>
             </section>
           </div>
         </div>

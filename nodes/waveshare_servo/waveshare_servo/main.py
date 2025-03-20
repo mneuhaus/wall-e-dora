@@ -14,7 +14,8 @@ def load_settings():
             "unique_id_counter": 10,
             "id_mapping": {},
             "servo_limits": {},  # Store min/max positions for each servo
-            "servo_aliases": {}  # Store aliases for servos
+            "servo_aliases": {},  # Store aliases for servos
+            "servo_speeds": {}   # Store preferred speed for each servo
         }
     return settings
 
@@ -150,10 +151,14 @@ def main():
                                 portHandler, servo_id, 60  # Present load (torque) register
                             )
         
+                            # Get the saved speed setting (or default to current speed)
+                            saved_speed = settings.get("servo_speeds", {}).get(str(servo_id), 
+                                speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 200)
+                            
                             servo_data = {
                                 "id": servo_id,
                                 "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
-                                "speed": speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 0,
+                                "speed": saved_speed,  # Use the saved speed from settings
                                 "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0,
                                 "alias": settings.get("servo_aliases", {}).get(str(servo_id), "")
                             }
@@ -179,10 +184,13 @@ def main():
             for servo_id, limits in settings.get("servo_limits", {}).items():
                 try:
                     servo_id = int(servo_id)
+                    # Get saved speed or use default
+                    saved_speed = settings.get("servo_speeds", {}).get(str(servo_id), 200)
+                    
                     fallback_data = {
                         "id": servo_id,
                         "position": 500,
-                        "speed": 100,
+                        "speed": saved_speed,  # Use the saved speed from settings
                         "torque": 0,
                         "min_pos": limits["min"],
                         "max_pos": limits["max"],
@@ -197,24 +205,103 @@ def main():
     
     def handle_set_servo_event(event):
         cmd = event["value"].to_pylist()
-        if len(cmd) != 3:
+        if len(cmd) < 2:
             print("Invalid set_servo command received")
             return
-        # Unpack command using the provided servo_id
-        servo_id, target_position, target_speed = cmd
+            
+        # Check if speed is provided
+        if len(cmd) == 3:
+            servo_id, target_position, target_speed = cmd
+        else:
+            # Use saved speed if not provided
+            servo_id, target_position = cmd
+            # Get the saved speed setting or default to 200
+            target_speed = settings.get("servo_speeds", {}).get(str(servo_id), 200)
+        
+        # Convert to integers
+        servo_id = int(servo_id)
+        target_position = int(target_position)
+        target_speed = int(target_speed)
+        
+        # Check if this servo has calibration limits and apply them
+        if str(servo_id) in settings.get("servo_limits", {}):
+            min_pos = settings["servo_limits"][str(servo_id)]["min"]
+            max_pos = settings["servo_limits"][str(servo_id)]["max"]
+            # Constrain target position to the calibrated range
+            target_position = max(min_pos, min(max_pos, target_position))
+        else:
+            # Default safe range if no calibration exists
+            target_position = max(0, min(4095, target_position))
+            
+        # Ensure speed is in a safe range (lower is safer)
+        target_speed = min(target_speed, 500)  # Cap speed at 500 to prevent overload
+        
+        # Get current position first to avoid sudden large movements
+        try:
+            pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+                portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+            )
+            
+            # If we could read the current position, check if target is too far
+            if pos_result == COMM_SUCCESS and pos_error == 0:
+                current_pos = pos_data
+                # If target is too far from current position, move in smaller steps
+                if abs(target_position - current_pos) > 500:
+                    print(f"Target position {target_position} too far from current position {current_pos}. Moving incrementally.")
+                    # Use a much lower speed for large movements
+                    safe_speed = min(target_speed, 200)
+                    # Set the safe speed
+                    packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, safe_speed)
+                    # Move halfway first
+                    halfway_pos = current_pos + (target_position - current_pos) // 2
+                    packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, halfway_pos)
+                    time.sleep(0.5)  # Give servo time to reach halfway
+        except Exception as e:
+            print(f"Error reading current position: {e}")
+            
         print(f"Setting servo {servo_id} to position {target_position} at speed {target_speed}")
         
-        comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, int(target_speed))
-        if comm_result != COMM_SUCCESS or error != 0:
-            print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
-            return
-            
-        comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, int(target_position))
-        if comm_result != COMM_SUCCESS or error != 0:
-            print(f"Error setting goal position: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
-            return
-            
-        print(f"Successfully set servo {servo_id} position and speed")
+        # Try to recover from overload first by using a very low speed and moving to current position
+        try:
+            # Use extremely low speed to "unstick" servos
+            recovery_speed = 50
+            comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, recovery_speed)
+            if comm_result != COMM_SUCCESS or error != 0:
+                error_msg = packetHandler.getRxPacketError(error) if error != 0 else packetHandler.getTxRxResult(comm_result)
+                if "Overload" in str(error_msg):
+                    print(f"Servo {servo_id} is overloaded. Attempting recovery...")
+                    # Try to turn off torque to clear overload (may not work for all servos)
+                    packetHandler.write1ByteTxRx(portHandler, servo_id, 40, 0)  # 40 is torque enable register
+                    time.sleep(0.5)  # Give servo time to relax
+                    packetHandler.write1ByteTxRx(portHandler, servo_id, 40, 1)  # Turn torque back on
+                    time.sleep(0.3)  # Wait a moment
+        except Exception as e:
+            print(f"Servo recovery attempt error: {e}")
+        
+        # Try several attempts with increasing speeds
+        for attempt_speed in [300, target_speed]:
+            try:
+                # Apply speed first
+                comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, attempt_speed)
+                if comm_result != COMM_SUCCESS or error != 0:
+                    error_msg = packetHandler.getRxPacketError(error) if error != 0 else packetHandler.getTxRxResult(comm_result)
+                    print(f"Error setting goal speed to {attempt_speed}: {error_msg}")
+                    continue  # Try next speed
+                
+                # Then apply position
+                comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, target_position)
+                if comm_result != COMM_SUCCESS or error != 0:
+                    error_msg = packetHandler.getRxPacketError(error) if error != 0 else packetHandler.getTxRxResult(comm_result)
+                    print(f"Error setting goal position to {target_position}: {error_msg}")
+                    continue  # Try next speed
+                
+                # If we got here, it worked!
+                print(f"Successfully set servo {servo_id} position to {target_position} at speed {attempt_speed}")
+                return
+            except Exception as e:
+                print(f"Attempt error with speed {attempt_speed}: {e}")
+        
+        print(f"Failed to set servo {servo_id} after all attempts")
     
     def handle_change_servo_id_event(event):
         data = event["value"].to_pylist()
@@ -233,78 +320,70 @@ def main():
     
     def handle_calibrate_event(event):
         servo_id = event["value"].to_pylist()[0]
-        print(f"Starting calibration for servo {servo_id}")
+        print(f"Calibrating servo {servo_id}")
         
-        # Start from current position
-        pos_data, pos_result, pos_error = packetHandler.read2ByteTxRx(
+        # Set a slow speed for calibration
+        slow_speed = 100
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, slow_speed)
+        
+        # Step 1: Move to minimum position (0 degrees)
+        MIN_POS = 0
+        print(f"Moving to 0 degrees position...")
+        
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, MIN_POS)
+        time.sleep(2.0)  # Give servo time to reach position
+        
+        # Read the actual position achieved
+        min_pos_data, min_pos_result, min_pos_error = packetHandler.read2ByteTxRx(
             portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
         )
-        if pos_result != COMM_SUCCESS or pos_error != 0:
-            print("Failed to read current position")
-            return
         
-        # Set slow speed for calibration
-        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, 100)
+        if min_pos_result != COMM_SUCCESS or min_pos_error != 0:
+            print("Failed to read minimum position")
+            min_pos_data = MIN_POS
         
-        # Find minimum position
-        min_pos = pos_data
-        ABSOLUTE_MIN = 0  # Servo's absolute minimum
-        while True:
-            test_pos = max(ABSOLUTE_MIN, min_pos - 50)
-            if test_pos == ABSOLUTE_MIN:
-                min_pos = ABSOLUTE_MIN
-                break
-                
-            packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, test_pos)
-            time.sleep(0.5)  # Wait for movement
+        # Step 2: Move to maximum position (180 degrees)
+        MAX_POS = 4095  # Maximum position value
+        print(f"Moving to 180 degrees position...")
+        
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, MAX_POS)
+        time.sleep(2.0)  # Give servo time to reach position
+        
+        # Read the actual position achieved
+        max_pos_data, max_pos_result, max_pos_error = packetHandler.read2ByteTxRx(
+            portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
+        )
+        
+        if max_pos_result != COMM_SUCCESS or max_pos_error != 0:
+            print("Failed to read maximum position")
+            max_pos_data = MAX_POS
             
-            actual_pos, pos_result, pos_error = packetHandler.read2ByteTxRx(
-                portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
-            )
-            if pos_result != COMM_SUCCESS or pos_error != 0:
-                print("Error reading position during calibration")
-                break
-                
-            if abs(actual_pos - min_pos) < 10:  # If barely moved, we found the limit
-                break
-            min_pos = actual_pos
+        # Step 3: Move back to center position
+        MID_POS = (min_pos_data + max_pos_data) // 2
+        print(f"Moving to center position...")
         
-        # Find maximum position
-        max_pos = pos_data
-        ABSOLUTE_MAX = 4095  # Servo's absolute maximum
-        while True:
-            test_pos = min(ABSOLUTE_MAX, max_pos + 50)
-            if test_pos == ABSOLUTE_MAX:
-                max_pos = ABSOLUTE_MAX
-                break
-                
-            packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, test_pos)
-            time.sleep(0.5)  # Wait for movement
-            
-            actual_pos, pos_result, pos_error = packetHandler.read2ByteTxRx(
-                portHandler, servo_id, ADDR_SCS_PRESENT_POSITION
-            )
-            if pos_result != COMM_SUCCESS or pos_error != 0:
-                print("Error reading position during calibration")
-                break
-                
-            if abs(actual_pos - max_pos) < 10:  # If barely moved, we found the limit
-                break
-            max_pos = actual_pos
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, MID_POS)
+        time.sleep(1.0)  # Give servo time to reach position
         
-        # Save calibration to settings
+        # Step 4: Save the calibration data
+        print(f"Saving calibration: min={min_pos_data}, max={max_pos_data}")
+        
         settings.setdefault("servo_limits", {})
         settings["servo_limits"][str(servo_id)] = {
-            "min": min_pos,
-            "max": max_pos
+            "min": min_pos_data,
+            "max": max_pos_data
         }
         save_settings(settings)
         
-        # Return to center position
-        center_pos = min_pos + (max_pos - min_pos) // 2
-        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, center_pos)
+        # Set a safe speed for this servo if not already set
+        if str(servo_id) not in settings.get("servo_speeds", {}):
+            settings.setdefault("servo_speeds", {})
+            settings["servo_speeds"][str(servo_id)] = 200
+            save_settings(settings)
         
-        print(f"Calibration complete for servo {servo_id}. Range: {min_pos}-{max_pos}")
+        print(f"Calibration complete for servo {servo_id}.")
+        print(f"Measured servo range: {min_pos_data}-{max_pos_data}")
+        print(f"Servo is now at center position {MID_POS}")
         
         # Trigger a scan to update the UI with new calibration data
         handle_scan_event()
@@ -321,6 +400,12 @@ def main():
         # Ensure speed is within valid range (100-2000)
         target_speed = max(100, min(2000, int(target_speed)))
         
+        # Save the speed setting for this servo
+        settings.setdefault("servo_speeds", {})
+        settings["servo_speeds"][str(servo_id)] = target_speed
+        save_settings(settings)
+        
+        # Apply the speed to the current servo state
         comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, target_speed)
         if comm_result != COMM_SUCCESS or error != 0:
             print(f"Error setting goal speed: {packetHandler.getTxRxResult(comm_result) if comm_result != COMM_SUCCESS else packetHandler.getRxPacketError(error)}")
@@ -360,6 +445,31 @@ def main():
         # Return to center
         packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, center_pos)
     
+    def handle_reset_servo_event(event):
+        servo_id = event["value"].to_pylist()[0]
+        print(f"Resetting servo {servo_id} to default settings")
+        
+        # Remove servo limits from settings
+        if str(servo_id) in settings.get("servo_limits", {}):
+            del settings["servo_limits"][str(servo_id)]
+            save_settings(settings)
+            print(f"Removed calibration settings for servo {servo_id}")
+            
+        # Remove alias if present
+        if str(servo_id) in settings.get("servo_aliases", {}):
+            del settings["servo_aliases"][str(servo_id)]
+            save_settings(settings)
+            print(f"Removed alias for servo {servo_id}")
+        
+        # Reset servo to factory defaults
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, 0)  # Default speed
+        
+        # Move to center position
+        packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_POSITION, 2048)
+        
+        print(f"Reset servo {servo_id} to factory defaults")
+        handle_scan_event()  # Update UI with reset status
+    
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "SCAN":
@@ -374,6 +484,8 @@ def main():
                 handle_calibrate_event(event)
             elif event["id"] == "set_speed":
                 handle_set_speed_event(event)
+            elif event["id"] == "reset_servo":
+                handle_reset_servo_event(event)
             elif event["id"] == "set_alias":
                 data = event["value"].to_pylist()
                 if len(data) == 2:
