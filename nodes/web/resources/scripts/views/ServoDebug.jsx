@@ -7,13 +7,13 @@ const ServoDebug = () => {
   const { id } = useParams();
   const [servo, setServo] = useState(null);
   const [position, setPosition] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const [speed, setSpeed] = useState(100);
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(1024);
   const [newId, setNewId] = useState('');
   const [aliasInput, setAliasInput] = useState('');
   const [attachIndex, setAttachIndex] = useState("");
+  const [isCalibrating, setIsCalibrating] = useState(false);
   
   useEffect(() => {
     // Listen for servo updates
@@ -32,12 +32,11 @@ const ServoDebug = () => {
         // Get current servo position
         const servoPosition = servo.position || 0;
         
-        // Map servo position (min-max) to UI range (0-180)
+        // Map servo position (min-max) to UI range (0-300)
         const uiPosition = Math.round(
           300 * (servoPosition - servoMinPos) / (servoMaxPos - servoMinPos)
         );
         
-        console.log(`Mapped servo ${servoPosition} to UI position ${uiPosition}°`);
         setPosition(uiPosition);
         setSpeed(servo.speed || 100);
       }
@@ -54,8 +53,6 @@ const ServoDebug = () => {
     const positionValue = parseInt(newPosition);
     
     if (!isNaN(positionValue)) {
-      console.log("UI position:", positionValue);
-      
       // Update the local state immediately for responsive UI
       setPosition(positionValue);
       
@@ -68,13 +65,9 @@ const ServoDebug = () => {
         servoMinPos + (positionValue / 300) * (servoMaxPos - servoMinPos)
       );
       
-      console.log(`Mapped ${positionValue}° to servo position ${servoPosition}`);
-      
       // Use stronger debounce to limit servo commands
       clearTimeout(window.servoUpdateTimeout);
       window.servoUpdateTimeout = setTimeout(() => {
-        // Only send if position hasn't changed in the debounce period
-        console.log("Sending to servo:", servoPosition);
         node.emit('set_servo', [parseInt(id), servoPosition]);
       }, 300); // 300ms debounce for smoother experience
     }
@@ -91,12 +84,19 @@ const ServoDebug = () => {
   };
   
   const handleCalibrate = () => {
+    setIsCalibrating(true);
     node.emit('calibrate', [parseInt(id)]);
+    
+    // Auto-disable calibration mode after 3 seconds
+    setTimeout(() => {
+      setIsCalibrating(false);
+    }, 3000);
   };
   
   const handleChangeId = () => {
     if (newId.trim() !== '') {
       node.emit('change_servo_id', [parseInt(id), parseInt(newId)]);
+      setNewId(''); // Clear input after sending
     }
   };
   
@@ -106,12 +106,24 @@ const ServoDebug = () => {
       setAliasInput(''); // Clear input after sending
     }
   };
-          
+        
   const handleAttachServo = () => {
-    node.emit('attach_servo', [parseInt(id), attachIndex]);
-    alert(`Attached servo ${id} to ${attachIndex}`);
+    if (attachIndex) {
+      node.emit('attach_servo', [parseInt(id), attachIndex]);
+      
+      // Show toast notification instead of alert
+      const toast = document.createElement('aside');
+      toast.className = 'toast top-right success';
+      toast.innerHTML = `<div>${attachIndex} attached to Servo ${id}</div>`;
+      document.body.appendChild(toast);
+      
+      // Clean up toast after animation
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 3000);
+    }
   };
-          
+        
   const handleResetServo = () => {
     if (window.confirm('Are you sure you want to reset this servo to factory defaults? This will remove all calibration settings and aliases.')) {
       node.emit('reset_servo', [parseInt(id)]);
@@ -128,9 +140,16 @@ const ServoDebug = () => {
     return (
       <div className="servo-debug">
         <article className="responsive">
-          <header className="m-bottom-2">
-            <h5>Loading Servo {id}...</h5>
+          <header>
+            <nav>
+              <Link to="/" className="circle icon"><i className="fa-solid fa-arrow-left"></i></Link>
+              <h5>Loading Servo Data...</h5>
+            </nav>
           </header>
+          <div className="center-align large-space">
+            <div className="loader medium"></div>
+            <p className="text-secondary">Connecting to Servo {id}</p>
+          </div>
         </article>
       </div>
     );
@@ -138,25 +157,29 @@ const ServoDebug = () => {
   
   return (
     <div className="servo-debug">
-      <main className="container">
+      <article className="responsive">
         {/* Header Section */}
-        <header className="header">
-          <div className="breadcrumb">
-            <Link to="/" className="small">Home</Link>
-            <span>/</span>
-            <span aria-current="page">Servo {id}</span>
-          </div>
-          <h1 className="mt1">Servo Control Panel</h1>
-          <p className="text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
+        <header>
+          <nav>
+            <Link to="/" className="circle icon"><i className="fa-solid fa-arrow-left"></i></Link>
+            <h5>Servo {id}{servo.alias ? `: ${servo.alias}` : ''}</h5>
+          </nav>
         </header>
-
-        <div className="columns">
+        
+        <div className="grid">
           {/* Position Control Section */}
-          <div className="column is-one-third">
-            <section className="beer-card p-3 position-control">
-              <h6 className="m-bottom-2">Position Control</h6>
-              <div className="control-group" role="group" aria-label="Position control">
-                <div className="slider-wrapper">
+          <div className="s12 m6 l4">
+            <section className="card servo-control-card">
+              <header>
+                <h5 className="amber-text">Position Control</h5>
+              </header>
+              <div>
+                <div className="position-display center-align">
+                  <div className="large">{position}°</div>
+                  <div className="small text-secondary">Servo Angle</div>
+                </div>
+                
+                <div className="field">
                   <Slider
                     min={0}
                     max={300}
@@ -166,165 +189,202 @@ const ServoDebug = () => {
                     trackStyle={{ backgroundColor: "var(--primary)" }}
                     handleStyle={{ borderColor: "var(--primary)" }}
                   />
-                  <div className="slider-value">Position: {position}°</div>
+                  <span className="helper">Min: 0° | Max: 300°</span>
                 </div>
-                <div className="slider-control m-top-2">
-                  <label className="slider">
-                    <input 
-                      type="range" 
-                      min="100" 
-                      max="2000" 
-                      step="1" 
-                      value={speed}
-                      onChange={handleSpeedChange}
-                      aria-label="Servo speed control"
-                    />
-                    <span className="small">Speed: {speed}</span>
-                  </label>
-                </div>
+              </div>
+              
+              <div className="field">
+                <label>Speed Control</label>
+                <input
+                  type="range"
+                  min="100"
+                  max="2000"
+                  step="1"
+                  value={speed}
+                  onChange={handleSpeedChange}
+                  className="amber"
+                />
+                <span className="helper">Current Speed: {speed}</span>
+              </div>
+              
+              <div className="field buttons">
+                <button 
+                  className="border round"
+                  onClick={handleWiggle}
+                  aria-label="Test servo movement"
+                >
+                  <i className="fa-solid fa-arrows-left-right left"></i>
+                  Test Motion
+                </button>
+                <button 
+                  className={`border round ${isCalibrating ? 'amber' : ''}`}
+                  onClick={handleCalibrate}
+                  aria-label="Calibrate servo range"
+                >
+                  <i className="fa-solid fa-ruler left"></i>
+                  Calibrate
+                </button>
               </div>
             </section>
           </div>
 
           {/* Status & Calibration Section */}
-          <div className="col-12 col-md-6 col-lg-4">
-            <section className="beer-card p-3 status-section mb-2">
-              <h6 className="m-bottom-2">Servo Status</h6>
-              <div className="status-grid">
-                {Object.entries(servoStatus).map(([key, value]) => (
-                  <div key={key} className="status-item p-1">
-                    <span className="label text-gray">{key}</span>
-                    <span className="value">{value}</span>
-                  </div>
-                ))}
+          <div className="s12 m6 l4">
+            <section className="card servo-status-card">
+              <header>
+                <h5 className="amber-text">Servo Status</h5>
+              </header>
+              
+              <div>
+                <ul className="list">
+                  {Object.entries(servoStatus).map(([key, value]) => (
+                    <li key={key} className="border-bottom">
+                      <div className="grid">
+                        <div className="s6 text-secondary">{key}</div>
+                        <div className="s6 text-right amber-text">{value}</div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </section>
+            
             {servo.min_pos !== undefined && (
-              <section className="card p-3 calibration-section">
-                <h6 className="m-bottom-2">Calibration Range</h6>
-                <div className="status-grid">
-                  <div className="status-item p-1">
-                    <span className="label text-gray">Min Pos</span>
-                    <span className="value">{servo.min_pos || 'Not calibrated'}</span>
-                  </div>
-                  <div className="status-item p-1">
-                    <span className="label text-gray">Max Pos</span>
-                    <span className="value">{servo.max_pos || 'Not calibrated'}</span>
-                  </div>
+              <section className="card calibration-card mt-4">
+                <header>
+                  <h5 className="amber-text">Calibration Range</h5>
+                </header>
+                
+                <div>
+                  <ul className="list">
+                    <li className="border-bottom">
+                      <div className="grid">
+                        <div className="s6 text-secondary">Min Position</div>
+                        <div className="s6 text-right amber-text">{servo.min_pos || 'Not calibrated'}</div>
+                      </div>
+                    </li>
+                    <li className="border-bottom">
+                      <div className="grid">
+                        <div className="s6 text-secondary">Max Position</div>
+                        <div className="s6 text-right amber-text">{servo.max_pos || 'Not calibrated'}</div>
+                      </div>
+                    </li>
+                  </ul>
                 </div>
               </section>
             )}
           </div>
 
           {/* Configuration Section */}
-          <div className="col-12 col-md-12 col-lg-4">
-            <section className="beer-card p-3 config-section">
-              <h6 className="m-bottom-2">Servo Configuration</h6>
-              <div className="config-inputs">
-                <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
-                  <input 
-                    className="border"
-                    type="number" 
+          <div className="s12 m12 l4">
+            <section className="card config-card">
+              <header>
+                <h5 className="amber-text">Servo Configuration</h5>
+              </header>
+              
+              <div>
+                <div className="field label border round">
+                  <input
+                    type="number"
                     value={newId}
                     onChange={(e) => setNewId(e.target.value)}
-                    aria-label="New servo ID"
                     min="1"
                     max="253"
+                    required
                   />
                   <label>New Servo ID</label>
                   <button 
+                    className="round border"
                     onClick={handleChangeId}
                     disabled={!newId}
-                    aria-label="Change servo ID"
                   >
-                    Change ID
+                    Update
                   </button>
                 </div>
-                <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
-                  <input 
-                    className="border"
-                    type="text" 
+              </div>
+              
+              <div>
+                <div className="field label border round">
+                  <input
+                    type="text"
                     value={aliasInput}
                     onChange={(e) => setAliasInput(e.target.value)}
-                    aria-label="Servo alias"
-                    placeholder="Enter alias"
+                    required
                   />
                   <label>Servo Alias</label>
                   <button 
+                    className="round border"
                     onClick={handleSetAlias}
                     disabled={!aliasInput}
-                    aria-label="Set alias"
                   >
-                    Set Alias
+                    Set
                   </button>
                 </div>
               </div>
-              <div className="config-attach mb2 flex items-center">
-                  <select value={attachIndex} onChange={(e) => setAttachIndex(e.target.value)} aria-label="Control Name" className="w-200 ml1">
-                      <option value="">Select Control</option>
-                      <optgroup label="Buttons">
-                          <option value="FACE_1">FACE_1</option>
-                          <option value="FACE_2">FACE_2</option>
-                          <option value="FACE_3">FACE_3</option>
-                          <option value="FACE_4">FACE_4</option>
-                          <option value="LEFT_SHOULDER">LEFT_SHOULDER</option>
-                          <option value="RIGHT_SHOULDER">RIGHT_SHOULDER</option>
-                          <option value="LEFT_SHOULDER_BOTTOM">LEFT_SHOULDER_BOTTOM</option>
-                          <option value="RIGHT_SHOULDER_BOTTOM">RIGHT_SHOULDER_BOTTOM</option>
-                          <option value="SELECT">SELECT</option>
-                          <option value="START">START</option>
-                          <option value="LEFT_ANALOG_BUTTON">LEFT_ANALOG_BUTTON</option>
-                          <option value="RIGHT_ANALOG_BUTTON">RIGHT_ANALOG_BUTTON</option>
-                          <option value="DPAD_UP">DPAD_UP</option>
-                          <option value="DPAD_DOWN">DPAD_DOWN</option>
-                          <option value="DPAD_LEFT">DPAD_LEFT</option>
-                          <option value="DPAD_RIGHT">DPAD_RIGHT</option>
-                          <option value="HOME">HOME</option>
-                          <option value="MISCBUTTON_1">MISCBUTTON_1</option>
-                          <option value="MISCBUTTON_2">MISCBUTTON_2</option>
-                      </optgroup>
-                      <optgroup label="Axes">
-                          <option value="LEFT_ANALOG_STICK_X">LEFT_ANALOG_STICK_X</option>
-                          <option value="LEFT_ANALOG_STICK_Y">LEFT_ANALOG_STICK_Y</option>
-                          <option value="RIGHT_ANALOG_STICK_X">RIGHT_ANALOG_STICK_X</option>
-                          <option value="RIGHT_ANALOG_STICK_Y">RIGHT_ANALOG_STICK_Y</option>
-                      </optgroup>
+              
+              <div>
+                <div className="field label border">
+                  <select 
+                    value={attachIndex} 
+                    onChange={(e) => setAttachIndex(e.target.value)}
+                    required
+                  >
+                    <option value="" disabled>Choose a control</option>
+                    <optgroup label="Buttons">
+                      <option value="FACE_1">FACE_1</option>
+                      <option value="FACE_2">FACE_2</option>
+                      <option value="FACE_3">FACE_3</option>
+                      <option value="FACE_4">FACE_4</option>
+                      <option value="LEFT_SHOULDER">LEFT_SHOULDER</option>
+                      <option value="RIGHT_SHOULDER">RIGHT_SHOULDER</option>
+                      <option value="LEFT_SHOULDER_BOTTOM">LEFT_SHOULDER_BOTTOM</option>
+                      <option value="RIGHT_SHOULDER_BOTTOM">RIGHT_SHOULDER_BOTTOM</option>
+                      <option value="SELECT">SELECT</option>
+                      <option value="START">START</option>
+                      <option value="LEFT_ANALOG_BUTTON">LEFT_ANALOG_BUTTON</option>
+                      <option value="RIGHT_ANALOG_BUTTON">RIGHT_ANALOG_BUTTON</option>
+                      <option value="DPAD_UP">DPAD_UP</option>
+                      <option value="DPAD_DOWN">DPAD_DOWN</option>
+                      <option value="DPAD_LEFT">DPAD_LEFT</option>
+                      <option value="DPAD_RIGHT">DPAD_RIGHT</option>
+                      <option value="HOME">HOME</option>
+                      <option value="MISCBUTTON_1">MISCBUTTON_1</option>
+                      <option value="MISCBUTTON_2">MISCBUTTON_2</option>
+                    </optgroup>
+                    <optgroup label="Axes">
+                      <option value="LEFT_ANALOG_STICK_X">LEFT_ANALOG_STICK_X</option>
+                      <option value="LEFT_ANALOG_STICK_Y">LEFT_ANALOG_STICK_Y</option>
+                      <option value="RIGHT_ANALOG_STICK_X">RIGHT_ANALOG_STICK_X</option>
+                      <option value="RIGHT_ANALOG_STICK_Y">RIGHT_ANALOG_STICK_Y</option>
+                    </optgroup>
                   </select>
-                  <button onClick={handleAttachServo} disabled={attachIndex === ''} aria-label="Attach servo to gamepad control" className="ml1">
-                    Attach to Gamepad
+                  <label>Gamepad Control</label>
+                  <button 
+                    className="round border amber"
+                    onClick={handleAttachServo}
+                    disabled={!attachIndex}
+                  >
+                    <i className="fa-solid fa-gamepad left"></i>
+                    Attach
                   </button>
+                </div>
               </div>
-              <div className="config-actions m-top-2">
+              
+              <div className="divider"></div>
+              
+              <div className="danger-zone">
                 <button 
-                  className="border m-right-2 p-2"
-                  onClick={handleWiggle}
-                  aria-label="Test servo movement"
+                  className="border round error full-width"
+                  onClick={handleResetServo}
                 >
-                  <i className="fa-solid fa-arrows-left-right m-right-1"></i>
-                  Test Movement
-                </button>
-                <button 
-                  className="border p-2"
-                  onClick={handleCalibrate}
-                  aria-label="Calibrate servo range"
-                >
-                  <i className="fa-solid fa-ruler m-right-1"></i>
-                  Calibrate Range
+                  <i className="fa-solid fa-rotate-left left"></i>
+                  Reset to Factory Defaults
                 </button>
               </div>
-              <div className="divider m-top-3 m-bottom-3"></div>
-              <button 
-                className="border error p-2 full-width"
-                onClick={handleResetServo}
-                aria-label="Reset servo to factory defaults"
-              >
-                <i className="fa-solid fa-rotate-left m-right-1"></i>
-                Reset to Factory Defaults
-              </button>
             </section>
           </div>
         </div>
-      </main>
+      </article>
     </div>
   );
 };

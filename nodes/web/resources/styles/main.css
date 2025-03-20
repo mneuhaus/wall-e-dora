@@ -622,7 +622,208 @@ nav button:hover, nav a:hover {
 
 /* Gamepad view styles */
 .gamepad-view {
-  padding: 20px;
+  padding: 20px 10px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .gamepad-view {
+    padding: 10px 5px;
+  }
+}
+
+.controller h6 {
+  margin-bottom: 1rem;
+  color: var(--primary);
+}
+
+.controller .grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.controller .stripes {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  table-layout: fixed; /* Fixed layout for better mobile display */
+}
+
+.controller .stripes th,
+.controller .stripes td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  line-height: 1; /* Reduce line height for compact display */
+}
+
+.controller .stripes th {
+  font-weight: 500;
+  color: var(--primary);
+  width: 60%; /* Make label column wider */
+}
+
+.controller .stripes td {
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.1);
+  width: 40%; /* Make value column narrower */
+  transition: background-color 0.5s ease-out;
+}
+
+.controller .stripes td.flash {
+  background-color: rgba(255, 215, 0, 0.6); /* Amber yellow flash */
+}
+
+.pulse {
+  animation: pulse-animation 0.3s ease-out;
+}
+
+@keyframes pulse-animation {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+  }
+}
+
+/* Raw gamepad values display */
+.controller .card-header {
+  display: flex;
+  align-items: center;
+}
+
+.controller .compact {
+  font-size: 0.85rem;
+}
+
+.controller .compact th,
+.controller .compact td {
+  padding: 4px 8px;
+}
+
+.controller .switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  margin-left: auto;
+}
+
+.controller .switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.controller .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  transition: .4s;
+}
+
+.controller .slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+}
+
+.controller input:checked + .slider {
+  background-color: var(--primary);
+}
+
+.controller input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary);
+}
+
+.controller input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.controller .slider.round {
+  border-radius: 20px;
+}
+
+.controller .slider.round:before {
+  border-radius: 50%;
+}
+
+.highlight-row {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+  animation: highlight-pulse 1s infinite alternate;
+}
+
+@keyframes highlight-pulse {
+  0% {
+    background-color: rgba(255, 193, 7, 0.1);
+  }
+  100% {
+    background-color: rgba(255, 193, 7, 0.3);
+  }
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.small.badge {
+  font-size: 0.7rem;
+  padding: 0 0.3rem;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 1.2rem;
+}
+
+.controller th .small.right {
+  font-size: 0.65rem;
+  padding: 0 0.15rem;
+  margin-right: 0;
+  height: 1.2rem;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .controller .grid {
+    flex-direction: row;
+    gap: 8px;
+  }
+  
+  .controller .s6 {
+    width: 49%;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  
+  .controller .stripes th,
+  .controller .stripes td {
+    padding: 6px 4px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+  
+  .controller h6 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
 }
 
 .button-grid {
@@ -689,52 +890,149 @@ nav button:hover, nav a:hover {
 }
 
 /* Servo debug view styles */
-.servo-debug {
-  padding: 20px;
+.page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--surface);
 }
 
-.servo-description {
-  margin-bottom: 16px;
-  font-style: italic;
+.page article {
+  padding: 0.5rem;
 }
 
-.servo-details {
+.page .card {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: var(--surface);
+  border: 1px solid rgba(255, 215, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.page .card:hover {
+  border-color: rgba(255, 215, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.page nav h5 {
+  margin: 0;
+  font-weight: 500;
+}
+
+.position-display {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 12px;
-  border-radius: 4px;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 0;
 }
 
-.detail-item {
-  display: flex;
-  justify-content: space-between;
+.position-display .large {
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--primary);
+  line-height: 1;
 }
 
-.slider-labels {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-}
-
-.position-buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 12px;
-}
-
-.helper-text {
+.position-display .small {
   font-size: 0.9rem;
   opacity: 0.7;
-  margin-top: 8px;
+  margin-top: 0.2rem;
 }
 
-.calibration-controls {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+.danger-zone {
+  padding: 1rem;
+  margin-top: 1rem;
+  border: 1px dashed rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
+/* Custom range slider styles */
+input[type=range].amber::-webkit-slider-thumb {
+  background-color: var(--primary);
+}
+
+input[type=range].amber::-moz-range-thumb {
+  background-color: var(--primary);
+}
+
+input[type=range].amber::-ms-thumb {
+  background-color: var(--primary);
+}
+
+/* Custom select styles */
+.field select option, 
+.field select optgroup {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+.field select optgroup {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+  .position-display .large {
+    font-size: 2rem;
+  }
+  
+  .page .card {
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .page .row .s12 {
+    margin-bottom: 0.5rem;
+  }
+  
+  .field button {
+    padding: 0 0.5rem;
+  }
+}
+
+/* Toast notification styles */
+.toast {
+  position: fixed;
+  right: 1rem;
+  max-width: 300px;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  background-color: #4caf50;
+  color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  animation: fadeInRight 0.3s, fadeOut 0.3s 2.7s;
+}
+
+.toast.top-right {
+  top: 1rem;
+}
+
+.toast.success {
+  background-color: #4caf50;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* Additional ServoDebug styles */
@@ -751,21 +1049,43 @@ nav button:hover, nav a:hover {
 }
 
 .servo-debug .circular-slider-container {
-  padding: 15px 0;
-  margin-bottom: 10px;
-  min-height: 100px;
   position: relative;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  margin-bottom: 10px;
 }
 
 .slider-container {
   width: 100%;
-  padding: 15px 10px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {
   .slider-container {
-    padding: 8px 5px;
+    padding: 5px;
   }
+}
+
+/* Override circular slider styles for better visual */
+.servo-debug .circular-slider-container .CircularSlider-labelValue {
+  font-size: 1.75rem !important;
+  font-weight: bold !important;
+  color: var(--primary) !important;
+  text-shadow: none !important;
+}
+
+.servo-debug .circular-slider-container .CircularSlider-label {
+  color: var(--text) !important;
+  font-size: 0.8rem !important;
+  text-transform: none !important;
+  font-weight: normal !important;
 }
 
 .position-display {
@@ -1291,4 +1611,25 @@ nav button:hover, nav a:hover {
   font-size: 14px;
   color: var(--primary);
   font-weight: bold;
+}
+
+/* Danger zone and reset button styles */
+.text-error {
+  color: #f44336;
+}
+
+button.error {
+  color: #f44336;
+  border-color: #f44336;
+}
+
+button.error:hover {
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.danger-zone {
+  padding: 12px;
+  background-color: rgba(244, 67, 54, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
