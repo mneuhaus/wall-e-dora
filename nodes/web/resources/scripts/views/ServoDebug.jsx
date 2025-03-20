@@ -59,13 +59,13 @@ const ServoDebug = () => {
       // Update the local state immediately for responsive UI
       setPosition(positionValue);
       
-      // Map UI slider value (0-180) to servo range (min-max)
+      // Map UI slider value (0-300) to servo range (min-max)
       let servoMinPos = min || 0;
       let servoMaxPos = max || 4095;
       
-      // Linear mapping from UI range (0-180) to servo range
+      // Linear mapping from UI range (0-300) to servo range
       const servoPosition = Math.round(
-        servoMinPos + (positionValue / 180) * (servoMaxPos - servoMinPos)
+        servoMinPos + (positionValue / 300) * (servoMaxPos - servoMinPos)
       );
       
       console.log(`Mapped ${positionValue}° to servo position ${servoPosition}`);
