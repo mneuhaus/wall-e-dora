@@ -134,24 +134,24 @@ const ServoDebug = () => {
   return (
     <div className="servo-debug">
       <article className="responsive">
-        {/* Header Section with Breadcrumb */}
-        <header className="m-bottom-2">
-          <nav aria-label="breadcrumb">
+        {/* Header Section */}
+        <header className="servo-header m-bottom-2">
+          <div className="breadcrumb">
             <Link to="/" className="small">Home</Link>
             <span className="small">/</span>
             <span className="small" aria-current="page">Servo {id}</span>
-          </nav>
-          <h5 className="m-top-1">Servo Control Panel</h5>
-          <p className="small text-gray">Configure and monitor servo behavior</p>
+          </div>
+          <h1 className="m-top-1">Servo Control Panel</h1>
+          <p className="text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
         </header>
 
         <div className="grid gap-2">
-          {/* Left Column: Position Control */}
+          {/* Position Control Section */}
           <div className="s12 m6 l4">
-            <section className="card p-3">
+            <section className="card p-3 position-control">
               <h6 className="m-bottom-2">Position Control</h6>
-              <div className="center-align" role="group" aria-label="Position control">
-                <div className="circular-slider-container">
+              <div className="control-group" role="group" aria-label="Position control">
+                <div className="circular-slider-wrapper">
                   <CircularSlider
                     width={180}
                     min={0}
@@ -174,7 +174,7 @@ const ServoDebug = () => {
                     onChange={handlePositionChange}
                   />
                 </div>
-                <div className="field label border round m-top-2">
+                <div className="slider-control m-top-2">
                   <label className="slider">
                     <input 
                       type="range" 
@@ -192,10 +192,10 @@ const ServoDebug = () => {
             </section>
           </div>
 
-          {/* Middle Column: Status and Calibration */}
+          {/* Status & Calibration Section */}
           <div className="s12 m6 l4">
-            <section className="card p-3 m-bottom-2">
-              <h6 className="m-bottom-2">Current Status</h6>
+            <section className="card p-3 status-section m-bottom-2">
+              <h6 className="m-bottom-2">Servo Status</h6>
               <div className="status-grid">
                 {Object.entries(servoStatus).map(([key, value]) => (
                   <div key={key} className="status-item p-1">
@@ -205,17 +205,16 @@ const ServoDebug = () => {
                 ))}
               </div>
             </section>
-
             {servo.min_pos !== undefined && (
-              <section className="card p-3">
+              <section className="card p-3 calibration-section">
                 <h6 className="m-bottom-2">Calibration Range</h6>
                 <div className="status-grid">
                   <div className="status-item p-1">
-                    <span className="label text-gray">Min Position</span>
+                    <span className="label text-gray">Min Pos</span>
                     <span className="value">{servo.min_pos || 'Not calibrated'}</span>
                   </div>
                   <div className="status-item p-1">
-                    <span className="label text-gray">Max Position</span>
+                    <span className="label text-gray">Max Pos</span>
                     <span className="value">{servo.max_pos || 'Not calibrated'}</span>
                   </div>
                 </div>
@@ -223,51 +222,50 @@ const ServoDebug = () => {
             )}
           </div>
 
-          {/* Right Column: Controls */}
+          {/* Configuration Section */}
           <div className="s12 m12 l4">
-            <section className="card p-3">
+            <section className="card p-3 config-section">
               <h6 className="m-bottom-2">Servo Configuration</h6>
-              
-              <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
-                <input 
-                  className="border"
-                  type="number" 
-                  value={newId}
-                  onChange={(e) => setNewId(e.target.value)}
-                  aria-label="New servo ID"
-                  min="1"
-                  max="253"
-                />
-                <label>New Servo ID</label>
-                <button 
-                  onClick={handleChangeId}
-                  disabled={!newId}
-                  aria-label="Change servo ID"
-                >
-                  Change ID
-                </button>
+              <div className="config-inputs">
+                <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
+                  <input 
+                    className="border"
+                    type="number" 
+                    value={newId}
+                    onChange={(e) => setNewId(e.target.value)}
+                    aria-label="New servo ID"
+                    min="1"
+                    max="253"
+                  />
+                  <label>New Servo ID</label>
+                  <button 
+                    onClick={handleChangeId}
+                    disabled={!newId}
+                    aria-label="Change servo ID"
+                  >
+                    Change ID
+                  </button>
+                </div>
+                <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
+                  <input 
+                    className="border"
+                    type="text" 
+                    value={aliasInput}
+                    onChange={(e) => setAliasInput(e.target.value)}
+                    aria-label="Servo alias"
+                    placeholder="Enter alias"
+                  />
+                  <label>Servo Alias</label>
+                  <button 
+                    onClick={handleSetAlias}
+                    disabled={!aliasInput}
+                    aria-label="Set alias"
+                  >
+                    Set Alias
+                  </button>
+                </div>
               </div>
-
-              <div className="field label round m-bottom-2" style={{ display: 'flex' }}>
-                <input 
-                  className="border"
-                  type="text" 
-                  value={aliasInput}
-                  onChange={(e) => setAliasInput(e.target.value)}
-                  aria-label="Servo alias"
-                  placeholder="Enter alias"
-                />
-                <label>Servo Alias</label>
-                <button 
-                  onClick={handleSetAlias}
-                  disabled={!aliasInput}
-                  aria-label="Set alias"
-                >
-                  Set Alias
-                </button>
-              </div>
-
-              <div className="actions m-top-2">
+              <div className="config-actions m-top-2">
                 <button 
                   className="border m-right-2 p-2"
                   onClick={handleWiggle}
@@ -285,9 +283,7 @@ const ServoDebug = () => {
                   Calibrate Range
                 </button>
               </div>
-              
               <div className="divider m-top-3 m-bottom-3"></div>
-              
               <button 
                 className="border error p-2 full-width"
                 onClick={handleResetServo}
