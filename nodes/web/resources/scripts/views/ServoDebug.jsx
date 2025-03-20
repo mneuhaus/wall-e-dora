@@ -138,9 +138,9 @@ const ServoDebug = () => {
   
   return (
     <div className="servo-debug">
-      <article className="beer-container">
+      <main className="container">
         {/* Header Section */}
-        <header className="header mb2">
+        <header className="header">
           <div className="breadcrumb">
             <Link to="/" className="small">Home</Link>
             <span>/</span>
@@ -150,9 +150,9 @@ const ServoDebug = () => {
           <p className="text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
         </header>
 
-        <div className="row">
+        <div className="columns">
           {/* Position Control Section */}
-          <div className="col-12 col-md-6 col-lg-4">
+          <div className="column is-one-third">
             <section className="beer-card p-3 position-control">
               <h6 className="m-bottom-2">Position Control</h6>
               <div className="control-group" role="group" aria-label="Position control">
@@ -324,7 +324,7 @@ const ServoDebug = () => {
             </section>
           </div>
         </div>
-      </article>
+      </main>
     </div>
   );
 };
