@@ -544,13 +544,19 @@ class Gamepad:
 
     def attach_servo(self, servo_id, control_type, control_index):
         """
-        Attach a servo to a gamepad control.
+        Attach a servo to a gamepad control using button/axis names.
         control_type: 'button' or 'axis'
         control_index: the index of the button or axis
         """
-        key = (control_type, control_index)
+        if control_type == 'button':
+            control_name = self.buttonNames.get(control_index, control_index)
+        elif control_type == 'axis':
+            control_name = self.axisNames.get(control_index, control_index)
+        else:
+            control_name = control_index
+        key = (control_type, control_name)
         self.servo_mapping[key] = servo_id
-        print(f"Attached servo {servo_id} to {control_type} {control_index}")
+        print(f"Attached servo {servo_id} to {control_type} {control_name}")
 
 ###########################
 # Import gamepad mappings #
