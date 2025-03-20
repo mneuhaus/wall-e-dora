@@ -34,7 +34,7 @@ const ServoDebug = () => {
         
         // Map servo position (min-max) to UI range (0-180)
         const uiPosition = Math.round(
-          180 * (servoPosition - servoMinPos) / (servoMaxPos - servoMinPos)
+          300 * (servoPosition - servoMinPos) / (servoMaxPos - servoMinPos)
         );
         
         console.log(`Mapped servo ${servoPosition} to UI position ${uiPosition}°`);
@@ -155,10 +155,12 @@ const ServoDebug = () => {
                   <CircularSlider
                     width={180}
                     min={0}
-                    max={180}
+                    max={300}
                     initialValue={position}
                     direction={-1}
                     knobPosition="right"
+                    angleArc={300}
+                    angleOffset={-120}
                     appendToValue="°"
                     valueFontSize="2.5rem"
                     trackColor="rgba(55, 71, 79, 0.3)"
