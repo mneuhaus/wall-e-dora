@@ -140,17 +140,17 @@ const ServoDebug = () => {
     <div className="servo-debug">
       <article className="beer-container">
         {/* Header Section */}
-        <header className="beer-header mb-2">
-          <div className="beer-breadcrumb">
-            <Link to="/" className="beer-small">Home</Link>
-            <span className="beer-small">/</span>
-            <span className="beer-small" aria-current="page">Servo {id}</span>
+        <header className="header mb2">
+          <div className="breadcrumb">
+            <Link to="/" className="small">Home</Link>
+            <span>/</span>
+            <span aria-current="page">Servo {id}</span>
           </div>
-          <h1 className="mt-1">Servo Control Panel</h1>
-          <p className="beer-text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
+          <h1 className="mt1">Servo Control Panel</h1>
+          <p className="text-gray">Use the controls below to adjust position, speed, and calibration settings for the servo.</p>
         </header>
 
-        <div className="grid gap-2">
+        <div className="row">
           {/* Position Control Section */}
           <div className="col-12 col-md-6 col-lg-4">
             <section className="beer-card p-3 position-control">
@@ -259,8 +259,8 @@ const ServoDebug = () => {
                   </button>
                 </div>
               </div>
-              <div className="config-attach m-bottom-2" style={{ display: 'flex', alignItems: 'center' }}>
-                  <select value={attachIndex} onChange={(e) => setAttachIndex(e.target.value)} aria-label="Control Name" style={{ width: '200px', marginLeft: '10px' }}>
+              <div className="config-attach mb2 flex items-center">
+                  <select value={attachIndex} onChange={(e) => setAttachIndex(e.target.value)} aria-label="Control Name" className="w-200 ml1">
                       <option value="">Select Control</option>
                       <optgroup label="Buttons">
                           <option value="FACE_1">FACE_1</option>
@@ -290,7 +290,7 @@ const ServoDebug = () => {
                           <option value="RIGHT_ANALOG_STICK_Y">RIGHT_ANALOG_STICK_Y</option>
                       </optgroup>
                   </select>
-                  <button onClick={handleAttachServo} disabled={attachIndex === ''} aria-label="Attach servo to gamepad control" style={{ marginLeft: '10px' }}>
+                  <button onClick={handleAttachServo} disabled={attachIndex === ''} aria-label="Attach servo to gamepad control" className="ml1">
                     Attach to Gamepad
                   </button>
               </div>
