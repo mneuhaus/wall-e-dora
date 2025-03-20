@@ -201,6 +201,11 @@ class Gamepads {
   off(eventName, callback) {
     return this.emitter.off(eventName, callback);
   }
+
+  attachServo(servoId, controlType, controlIndex) {
+    this.servoMapping[`${controlType}_${controlIndex}`] = servoId;
+    console.log(`Attached servo ${servoId} to ${controlType} ${controlIndex}`);
+  }
 }
 
 const gamepads = new Gamepads();
