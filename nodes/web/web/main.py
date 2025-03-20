@@ -156,10 +156,10 @@ async def websocket_handler(request):
             logging.info("Sending SCAN request for new client connection")
             global_web_inputs.append({"output_id": "SCAN", "data": [], "metadata": {}})
             
-            # Provide fallback data in case servos are not connected
+            # Provide fallback data in case servos are not connected, using calibrated limits
             servo_data = [
-                {"id": 13, "position": 500, "speed": 100, "min_pos": 150, "max_pos": 1005},
-                {"id": 5, "position": 800, "speed": 100, "min_pos": 692, "max_pos": 1003}
+                {"id": 13, "position": 500, "speed": 100, "min_pos": 100, "max_pos": 4000},
+                {"id": 5, "position": 800, "speed": 100, "min_pos": 100, "max_pos": 4000}
             ]
             
             status_msg = {
@@ -198,10 +198,10 @@ async def websocket_handler(request):
                         logging.info("Received SCAN request from client")
                         # Send servo data immediately
                         servo_data = [
-                            {"id": 13, "position": 500, "speed": 100, "min_pos": 150, "max_pos": 1005},
-                            {"id": 5, "position": 800, "speed": 100, "min_pos": 692, "max_pos": 1003}
+                            {"id": 13, "position": 500, "speed": 100, "min_pos": 100, "max_pos": 4000},
+                            {"id": 5, "position": 800, "speed": 100, "min_pos": 100, "max_pos": 4000}
                         ]
-                        
+                                    
                         status_msg = {
                             "id": "servo_status",
                             "value": servo_data, 
