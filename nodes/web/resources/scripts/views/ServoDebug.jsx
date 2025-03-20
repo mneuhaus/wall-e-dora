@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import node from '../Node';
 import Slider from 'rc-slider';
-import CircularSlider from '@fseehawer/react-circular-slider';
 
 const ServoDebug = () => {
   const { id } = useParams();
@@ -151,28 +150,17 @@ const ServoDebug = () => {
             <section className="card p-3 position-control">
               <h6 className="m-bottom-2">Position Control</h6>
               <div className="control-group" role="group" aria-label="Position control">
-                <div className="circular-slider-wrapper">
-                  <CircularSlider
-                    width={180}
+                <div className="slider-wrapper">
+                  <Slider
                     min={0}
                     max={300}
-                    initialValue={position}
-                    direction={-1}
-                    knobPosition="right"
-                    angleArc={300}
-                    angleOffset={-120}
-                    appendToValue="°"
-                    valueFontSize="2.5rem"
-                    trackColor="rgba(55, 71, 79, 0.3)"
-                    progressColorFrom="var(--primary)"
-                    progressColorTo="var(--primary)"
-                    progressSize={12}
-                    trackSize={12}
-                    labelColor="var(--primary)"
-                    knobColor="var(--primary)"
-                    label=""
+                    value={position}
                     onChange={handlePositionChange}
+                    railStyle={{ backgroundColor: "rgba(55, 71, 79, 0.3)" }}
+                    trackStyle={{ backgroundColor: "var(--primary)" }}
+                    handleStyle={{ borderColor: "var(--primary)" }}
                   />
+                  <div className="slider-value">Position: {position}°</div>
                 </div>
                 <div className="slider-control m-top-2">
                   <label className="slider">
