@@ -260,26 +260,44 @@ const ServoDebug = () => {
                   </button>
                 </div>
               </div>
-              <div className="config-attach m-bottom-2" style={{ display: 'flex' }}>
+              <div className="config-attach m-bottom-2" style={{ display: 'flex', alignItems: 'center' }}>
                   <select value={attachType} onChange={(e) => setAttachType(e.target.value)} aria-label="Control Type">
                     <option value="button">Button</option>
                     <option value="axis">Axis</option>
                   </select>
-                  <input 
-                    className="border"
-                    type="text"
-                    value={attachIndex}
-                    onChange={(e) => setAttachIndex(e.target.value)}
-                    aria-label="Control Name"
-                    placeholder="Control Name"
-                    style={{ width: '150px', marginLeft: '10px' }}
-                  />
-                  <button 
-                    onClick={handleAttachServo}
-                    disabled={attachIndex === ''}
-                    aria-label="Attach servo to gamepad control"
-                    style={{ marginLeft: '10px' }}
-                  >
+                  { attachType === 'button' ? (
+                    <select value={attachIndex} onChange={(e) => setAttachIndex(e.target.value)} aria-label="Control Name" style={{ width: '200px', marginLeft: '10px' }}>
+                      <option value="">Select Button</option>
+                      <option value="FACE_1">FACE_1</option>
+                      <option value="FACE_2">FACE_2</option>
+                      <option value="FACE_3">FACE_3</option>
+                      <option value="FACE_4">FACE_4</option>
+                      <option value="LEFT_SHOULDER">LEFT_SHOULDER</option>
+                      <option value="RIGHT_SHOULDER">RIGHT_SHOULDER</option>
+                      <option value="LEFT_SHOULDER_BOTTOM">LEFT_SHOULDER_BOTTOM</option>
+                      <option value="RIGHT_SHOULDER_BOTTOM">RIGHT_SHOULDER_BOTTOM</option>
+                      <option value="SELECT">SELECT</option>
+                      <option value="START">START</option>
+                      <option value="LEFT_ANALOG_BUTTON">LEFT_ANALOG_BUTTON</option>
+                      <option value="RIGHT_ANALOG_BUTTON">RIGHT_ANALOG_BUTTON</option>
+                      <option value="DPAD_UP">DPAD_UP</option>
+                      <option value="DPAD_DOWN">DPAD_DOWN</option>
+                      <option value="DPAD_LEFT">DPAD_LEFT</option>
+                      <option value="DPAD_RIGHT">DPAD_RIGHT</option>
+                      <option value="HOME">HOME</option>
+                      <option value="MISCBUTTON_1">MISCBUTTON_1</option>
+                      <option value="MISCBUTTON_2">MISCBUTTON_2</option>
+                    </select>
+                  ) : (
+                    <select value={attachIndex} onChange={(e) => setAttachIndex(e.target.value)} aria-label="Control Name" style={{ width: '200px', marginLeft: '10px' }}>
+                      <option value="">Select Axis</option>
+                      <option value="LEFT_ANALOG_STICK_X">LEFT_ANALOG_STICK_X</option>
+                      <option value="LEFT_ANALOG_STICK_Y">LEFT_ANALOG_STICK_Y</option>
+                      <option value="RIGHT_ANALOG_STICK_X">RIGHT_ANALOG_STICK_X</option>
+                      <option value="RIGHT_ANALOG_STICK_Y">RIGHT_ANALOG_STICK_Y</option>
+                    </select>
+                  )}
+                  <button onClick={handleAttachServo} disabled={attachIndex === ''} aria-label="Attach servo to gamepad control" style={{ marginLeft: '10px' }}>
                     Attach to Gamepad
                   </button>
               </div>
