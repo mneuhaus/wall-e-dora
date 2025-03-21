@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useAppContext } from './AppContext';
+import { loadSettingsWithDefaults } from '../utils/settingsManager';
 
 // Create the context
 const GridContext = createContext(null);
@@ -171,17 +172,20 @@ export function GridProvider({ children }) {
       // Make sure the type property is preserved and has higher precedence
       const widgetType = config.type || 'unknown';
       
-      // Process widget conversion
+      // Process widget conversion and apply default settings
+      const itemWithDefaults = loadSettingsWithDefaults({
+        ...config,
+        type: widgetType
+      });
       
       newLayout.push({
         i: widgetId,
-        x: config.x || 0,
-        y: config.y || 0,
-        w: config.w || 3,
-        h: config.h || 4,
-        type: widgetType,
-        ...config,
-        // Re-specify the type to ensure it's not overwritten by ...config
+        x: itemWithDefaults.x || 0,
+        y: itemWithDefaults.y || 0,
+        w: itemWithDefaults.w || 3,
+        h: itemWithDefaults.h || 4,
+        ...itemWithDefaults,
+        // Re-specify the type to ensure it's not overwritten
         type: widgetType
       });
     });

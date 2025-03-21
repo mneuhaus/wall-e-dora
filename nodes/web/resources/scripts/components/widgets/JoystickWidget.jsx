@@ -4,6 +4,7 @@ import node from '../../Node';
 import { useAppContext } from '../../contexts/AppContext';
 import { useGridContext } from '../../contexts/GridContext';
 import ServoSelect from '../controls/ServoSelect';
+import { updateWidgetSettings } from '../../utils/settingsManager';
 
 /**
  * JoystickWidget - A grid widget that provides joystick control for two servos
@@ -257,32 +258,16 @@ const JoystickWidget = ({
     // Update local state immediately
     setXServoId(servoId);
     
-    // Save to widget props with higher priority
+    // Use standardized settings manager to update widget props
     if (i) {
-      console.log(`Saving X Servo: ${servoId} to widget ${i}`);
-      // Force update with higher priority and ensure it completes
-      try {
-        // Delay to ensure the selection is stable
-        setTimeout(() => {
-          // Use a simpler approach with direct property assignment
-          node.emit('save_joystick_servo', {
-            data: {
-              id: i,
-              axis: 'x',
-              servoId: servoId === null ? null : parseInt(servoId)
-            }
-          });
-          
-          // Also update through the regular mechanism
-          updateWidgetProps(i, { 
-            xServoId: servoId === null ? null : parseInt(servoId) 
-          });
-          
-          console.log(`X servo ${servoId} saved for widget ${i}`);
-        }, 250);
-      } catch (err) {
-        console.error("Error saving X servo:", err);
-      }
+      const parsedValue = servoId === null ? null : parseInt(servoId);
+      updateWidgetSettings(
+        i, 
+        { xServoId: parsedValue }, 
+        updateWidgetProps,
+        true // Sync with backend explicitly for servo assignments
+      );
+      console.log(`X servo ${servoId} saved for widget ${i}`);
     }
   };
 
@@ -291,32 +276,16 @@ const JoystickWidget = ({
     // Update local state immediately
     setYServoId(servoId);
     
-    // Save to widget props with higher priority
+    // Use standardized settings manager to update widget props
     if (i) {
-      console.log(`Saving Y Servo: ${servoId} to widget ${i}`);
-      // Force update with higher priority and ensure it completes
-      try {
-        // Delay to ensure the selection is stable
-        setTimeout(() => {
-          // Use a simpler approach with direct property assignment  
-          node.emit('save_joystick_servo', {
-            data: {
-              id: i,
-              axis: 'y',
-              servoId: servoId === null ? null : parseInt(servoId)
-            }
-          });
-          
-          // Also update through the regular mechanism
-          updateWidgetProps(i, { 
-            yServoId: servoId === null ? null : parseInt(servoId) 
-          });
-          
-          console.log(`Y servo ${servoId} saved for widget ${i}`);
-        }, 250);
-      } catch (err) {
-        console.error("Error saving Y servo:", err);
-      }
+      const parsedValue = servoId === null ? null : parseInt(servoId);
+      updateWidgetSettings(
+        i, 
+        { yServoId: parsedValue }, 
+        updateWidgetProps,
+        true // Sync with backend explicitly for servo assignments
+      );
+      console.log(`Y servo ${servoId} saved for widget ${i}`);
     }
   };
 
@@ -324,7 +293,7 @@ const JoystickWidget = ({
     const speedValue = parseInt(newSpeed);
     setSpeed(speedValue);
     if (i) {
-      updateWidgetProps(i, { speed: speedValue });
+      updateWidgetSettings(i, { speed: speedValue }, updateWidgetProps);
     }
   };
 

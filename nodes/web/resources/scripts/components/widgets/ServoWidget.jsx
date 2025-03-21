@@ -3,6 +3,7 @@ import node from '../../Node';
 import { useAppContext } from '../../contexts/AppContext';
 import { useGridContext } from '../../contexts/GridContext';
 import Slider from 'rc-slider';
+import { updateWidgetSettings } from '../../utils/settingsManager';
 
 /**
  * ServoWidget - A grid widget for controlling a single servo motor
@@ -10,12 +11,15 @@ import Slider from 'rc-slider';
  * @component
  * @param {Object} props - Component props
  * @param {number} props.servoId - ID of the servo to control
+ * @param {number} props.position - Last saved position (optional)
+ * @param {number} props.speed - Speed of servo movement (optional)
+ * @param {string} props.i - Widget ID in grid layout
  */
-const ServoWidget = ({ servoId }) => {
+const ServoWidget = ({ servoId, position: savedPosition, speed: savedSpeed, i }) => {
   const { availableServos } = useAppContext();
-  const { isEditable } = useGridContext();
-  const [position, setPosition] = useState(0);
-  const [speed, setSpeed] = useState(100);
+  const { isEditable, updateWidgetProps } = useGridContext();
+  const [position, setPosition] = useState(savedPosition || 0);
+  const [speed, setSpeed] = useState(savedSpeed || 100);
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(180);
   const [servoInfo, setServoInfo] = useState(null);
@@ -77,7 +81,25 @@ const ServoWidget = ({ servoId }) => {
   const handlePositionUpdate = (newPosition) => {
     const positionValue = parseInt(newPosition);
     setPosition(positionValue);
+    
+    // Send command to servo
     node.emit('set_servo', [parseInt(servoId), positionValue, parseInt(speed)]);
+    
+    // Save position in widget settings
+    if (i) {
+      updateWidgetSettings(i, { position: positionValue }, updateWidgetProps);
+    }
+  };
+  
+  // Handle speed updates
+  const handleSpeedUpdate = (newSpeed) => {
+    const speedValue = parseInt(newSpeed);
+    setSpeed(speedValue);
+    
+    // Save speed in widget settings
+    if (i) {
+      updateWidgetSettings(i, { speed: speedValue }, updateWidgetProps);
+    }
   };
   
   return (

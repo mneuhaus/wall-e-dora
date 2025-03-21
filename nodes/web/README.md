@@ -178,6 +178,52 @@ export const WIDGET_REGISTRY = {
 };
 ```
 
+### Settings Persistence
+
+The application uses a standardized settings persistence mechanism:
+
+```javascript
+// /utils/settingsManager.js
+export const DEFAULT_SETTINGS = {
+  'servo-widget': {
+    servoId: null,
+    speed: 100
+  },
+  'joystick-widget': {
+    xServoId: null,
+    yServoId: null,
+    speed: 100,
+    invertX: false,
+    invertY: false
+  },
+  // etc.
+};
+```
+
+The settings manager provides:
+
+1. **Default Settings** - Each widget type has predefined defaults
+2. **Consistent API** - Standard methods for reading/writing settings
+3. **Backend Sync** - Critical settings are explicitly synced with the server
+4. **Settings Migration** - Backward compatibility with legacy settings
+
+#### Usage Pattern
+
+```javascript
+// In a widget component:
+import { updateWidgetSettings } from '../../utils/settingsManager';
+
+const handleSettingChange = (newValue) => {
+  // Update widget settings with standardized method
+  updateWidgetSettings(
+    widgetId,
+    { setting: newValue },
+    updateWidgetProps,
+    true // Optional: sync with backend
+  );
+};
+```
+
 ## Getting Started
 
 - Install dependencies:
