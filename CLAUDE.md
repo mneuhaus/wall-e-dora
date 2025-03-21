@@ -26,6 +26,12 @@
 - Use proper prop validation
 - Apply the principle of single responsibility to components
 - Avoid direct DOM manipulation
+- Add comprehensive JSDoc comments to all components to describe their purpose and functionality
+- Include a detailed header comment in view components that explains:
+  - The component's purpose and main responsibilities
+  - Key features and capabilities
+  - How it fits into the overall application structure
+  - Important implementation details
 
 ## UI Theme
 - The project uses BeerCSS with amber theme
@@ -70,7 +76,7 @@
 - Use context managers (with) for resource management
 - Follow PEP 8 naming conventions
 
-## JavaScript/TypeScript Best Practices 
+## JavaScript/TypeScript Best Practices
 - Prefer const/let over var
 - Use ES6+ features (arrow functions, destructuring, etc.)
 - Organize code with named exports
@@ -80,13 +86,6 @@
 - Leverage TypeScript types for better tooling
 - Use nullish coalescing (??) and optional chaining (?.)
 - Implement proper error handling
-
-## Custom UI Widgets
-- **Joystick Control**: 
-  - Uses `rc-joystick` library for joystick UI
-  - Can link X and Y axes to separate servos
-  - Configuration done in edit mode using ServoSelector components
-  - Commands sent via `node.emit('set_servo', [servoId, position, speed])`
-  - Register in WidgetContainer.jsx as 'joystick-control'
-  - Add to dashboard using GridContext's addWidget() method
-  - User handles building web resources and running the server
+- Follow KISS (Keep It Simple, Stupid) and DRY (Don't Repeat Yourself) principles
+- If a file exceeds ~200 lines of code, consider refactoring by creating components, helpers, partials, etc.
+- Keep cognitive load low by using clear, self-explanatory code and appropriate abstractions
