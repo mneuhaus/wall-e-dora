@@ -15,6 +15,40 @@
 - Dependency Management: uv
 - Node Communication: Dora framework with Apache Arrow
 
+## Documentation Guidelines
+
+### General Documentation
+- **Keep documentation in sync with code changes**
+- Update node README.md files when changing functionality
+- Use Mermaid diagrams for visualizing architecture and data flows
+- Document all inputs/outputs, their sources, and destinations
+- Include purpose statements for all nodes and major components
+- List specific technical requirements and implementation details
+- Add functional requirements and future enhancement paths
+
+### README Structure
+Each node's README.md should follow this structure:
+1. **Purpose**: Clear statement of what the node does
+2. **Overview**: Brief description with architecture diagram (Mermaid)
+3. **Functional Requirements**: What the node should accomplish
+4. **Technical Requirements**: How the node implements its functionality
+5. **Dora Node Integration**: Data flow details (inputs/outputs)
+6. **Getting Started**: Setup instructions
+7. **Contribution Guide**: Development workflow
+8. **Future Enhancements**: Planned improvements
+9. **License**: License information
+
+When modifying node functionality, update all affected sections of the README.
+
+### System-Level Documentation
+The main README.md provides project-level documentation:
+- System architecture overview with diagrams
+- Node communication flows
+- Core technologies
+- Build and development instructions
+- Links to individual node documentation
+- System-wide requirements and practices
+
 ## Frontend Best Practices
 - Use React Hooks for component logic (useState, useEffect, useContext)
 - Use functional components instead of class components
@@ -56,10 +90,21 @@
 - Format code: `ruff format`
 - Lint code: `ruff check`
 
+## Code Change Workflow
+When making changes to the project, follow this workflow:
+1. Understand the requirements and current implementation
+2. Write tests for new functionality
+3. Implement changes and verify they work
+4. Update documentation to reflect changes
+5. Run linting and formatting
+6. Run tests
+7. Commit changes with a descriptive message
+
 ## Dora-Specific Patterns
 - For new dataflow events:
   1. Add event to outputs in sending node
   2. Add event to inputs in receiving node as `sender_node/event_name`
+  3. **Update README.md files in both nodes to document the new data flow**
 - Use Apache Arrow arrays for data passing between nodes
 - Node event loop: `for event in node: if event["type"] == "INPUT" and event["id"] == "[expected_id]": ...`
 
