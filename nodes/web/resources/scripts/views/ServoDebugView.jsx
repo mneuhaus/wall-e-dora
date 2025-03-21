@@ -1,9 +1,17 @@
+/**
+ * ServoDebugView Component
+ * 
+ * Provides a detailed interface for debugging and configuring a single servo.
+ * Includes position control, speed settings, calibration, and configuration options.
+ * 
+ * @component
+ */
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import node from '../Node';
 import Slider from 'rc-slider';
 
-const ServoDebug = () => {
+const ServoDebugView = () => {
   const { id } = useParams();
   const [servo, setServo] = useState(null);
   const [position, setPosition] = useState(0);
@@ -389,4 +397,4 @@ const ServoDebug = () => {
   );
 };
 
-export default ServoDebug;
+export default ServoDebugView;

@@ -1,22 +1,15 @@
 import React, { useState, memo } from 'react';
 import { useGridContext } from '../contexts/GridContext';
-
-// Import widget components
-import ServoControl from './ServoControl';
-import TestWidget from './TestWidget';
-import SoundsWidget from './SoundsWidget';
-import JoystickControl from './JoystickControl';
+import { WIDGET_TYPES } from '../constants/widgetTypes';
+import { getWidgetComponent, hasWidgetSettings } from './widgets';
+import { migrateWidgetType } from '../utils/widgetMigration';
 
 // Memoized modal component to prevent re-renders
 const WidgetSettingsModal = memo(({ onClose, componentProps, type, title }) => {
-  // Map of widget types to their settings components
-  const settingsComponentMap = {
-    'joystick-control': JoystickControl,
-  };
+  // Get the component for this widget type
+  const SettingsComponent = getWidgetComponent(type);
   
-  const SettingsComponent = settingsComponentMap[type];
-  
-  if (!SettingsComponent) {
+  if (!SettingsComponent || SettingsComponent === 'div') {
     return null; // No settings component for this widget type
   }
   
@@ -48,25 +41,15 @@ const WidgetContainer = ({ type, widgetProps }) => {
   const { isEditable, removeWidget } = useGridContext();
   const [showSettings, setShowSettings] = useState(false);
   
-  // Map widget types to components - be consistent with the type names
-  const componentMap = {
-    'servo-control': ServoControl,
-    'separator': 'div',
-    'test-widget': TestWidget,
-    'sounds-widget': SoundsWidget,
-    'joystick-control': JoystickControl
-  };
+  // Migrate legacy widget types to new format
+  const migratedType = migrateWidgetType(type);
   
-  // Define which widget types have settings
-  const widgetsWithSettings = ['joystick-control'];
-  
-  
-  // Determine which component to render
-  let Component = componentMap[type];
+  // Get the component from the widget registry
+  let Component = getWidgetComponent(migratedType);
   let isUnknownType = false;
   
   if (!Component) {
-    console.warn(`Unknown widget type: "${type}", falling back to default div`);
+    console.warn(`Unknown widget type: "${migratedType}", falling back to default div`);
     Component = 'div';
     isUnknownType = true;
   }
@@ -98,15 +81,15 @@ const WidgetContainer = ({ type, widgetProps }) => {
   // Get a title for the widget
   const getWidgetTitle = () => {
     
-    switch (type) {
-      case 'servo-control': {
+    switch (migratedType) {
+      case WIDGET_TYPES.SERVO: {
         const servoId = widgetProps.servoId;
         if (servoId === undefined || servoId === null) {
           return 'Servo (unassigned)';
         }
         return `Servo ${servoId}`;
       }
-      case 'joystick-control': {
+      case WIDGET_TYPES.JOYSTICK: {
         const xServoId = widgetProps.xServoId;
         const yServoId = widgetProps.yServoId;
         let title = 'Joystick';
@@ -123,14 +106,14 @@ const WidgetContainer = ({ type, widgetProps }) => {
         
         return title;
       }
-      case 'separator':
+      case WIDGET_TYPES.SEPARATOR:
         return 'Separator';
-      case 'test-widget':
+      case WIDGET_TYPES.TEST:
         return 'Test Widget';
-      case 'sounds-widget':
+      case WIDGET_TYPES.SOUND:
         return 'Available Sounds';
       default:
-        return `Widget (${type})`;
+        return `Widget (${migratedType})`;
     }
   };
   
@@ -156,7 +139,7 @@ const WidgetContainer = ({ type, widgetProps }) => {
           <button className="widget-badge drag-handle">
             <i className="fas fa-grip-horizontal"></i>
           </button>
-          {widgetsWithSettings.includes(type) && (
+          {hasWidgetSettings(migratedType) && (
             <button onClick={openSettings} className="widget-badge settings">
               <i className="fas fa-cog"></i>
             </button>
@@ -179,11 +162,11 @@ const WidgetContainer = ({ type, widgetProps }) => {
       </div>
       
       {/* Global Settings Modal - rendered at body level for positioning */}
-      {showSettings && widgetsWithSettings.includes(type) && (
+      {showSettings && hasWidgetSettings(migratedType) && (
         <WidgetSettingsModal
           onClose={closeSettings}
           componentProps={componentProps}
-          type={type}
+          type={migratedType}
           title={getWidgetTitle() + " Settings"}
         />
       )}

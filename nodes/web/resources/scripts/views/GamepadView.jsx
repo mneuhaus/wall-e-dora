@@ -3,6 +3,14 @@ import { useParams } from 'react-router-dom';
 import node from '../Node';
 import gamepads from '../Gamepads';
 
+/**
+ * GamepadView Component
+ * 
+ * Displays detailed information about a connected gamepad.
+ * Shows all buttons, axes, and control states for the selected gamepad.
+ * 
+ * @component
+ */
 const GamepadView = () => {
   const { index } = useParams();
   const [, forceUpdate] = useState({});

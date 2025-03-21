@@ -1,7 +1,15 @@
+/**
+ * PowerWidget Component
+ * 
+ * Displays power status information and controls for the robot.
+ * Shows battery level, voltage, current, power consumption, and estimated runtime.
+ * 
+ * @component
+ */
 import React, { useState, useEffect, useRef } from 'react';
-import node from '../Node';
+import node from '../../Node';
 
-const Power = () => {
+const PowerWidget = () => {
   const [voltage, setVoltage] = useState('');
   const [current, setCurrent] = useState('');
   const [power, setPower] = useState('');
@@ -109,4 +117,4 @@ const Power = () => {
   );
 };
 
-export default Power;
+export default PowerWidget;

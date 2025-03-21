@@ -1,7 +1,16 @@
+/**
+ * ServoStatus Component
+ * 
+ * Displays a dropdown menu with the current status of all connected servos.
+ * Shows servo ID and current position, with links to the servo debug view.
+ * Can be clicked to refresh the servo status.
+ * 
+ * @component
+ */
 import React, { useState, useRef, useEffect } from 'react';
-import { useAppContext } from '../contexts/AppContext';
+import { useAppContext } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
-import node from '../Node';
+import node from '../../Node';
 
 const ServoStatus = () => {
   const { availableServos } = useAppContext();

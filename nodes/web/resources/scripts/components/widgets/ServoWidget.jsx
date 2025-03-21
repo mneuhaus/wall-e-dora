@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import node from '../Node';
-import { useAppContext } from '../contexts/AppContext';
-import { useGridContext } from '../contexts/GridContext';
+import node from '../../Node';
+import { useAppContext } from '../../contexts/AppContext';
+import { useGridContext } from '../../contexts/GridContext';
 import Slider from 'rc-slider';
 
-const ServoControl = ({ servoId }) => {
+/**
+ * ServoWidget - A grid widget for controlling a single servo motor
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {number} props.servoId - ID of the servo to control
+ */
+const ServoWidget = ({ servoId }) => {
   const { availableServos } = useAppContext();
   const { isEditable } = useGridContext();
   const [position, setPosition] = useState(0);
@@ -99,4 +106,4 @@ const ServoControl = ({ servoId }) => {
   );
 };
 
-export default ServoControl;
+export default ServoWidget;

@@ -1,3 +1,11 @@
+/**
+ * TestWidget Component
+ * 
+ * A simple test widget to demonstrate React components.
+ * Contains a counter and a button to increment it.
+ * 
+ * @component
+ */
 import React, { useState } from 'react';
 
 const TestWidget = () => {

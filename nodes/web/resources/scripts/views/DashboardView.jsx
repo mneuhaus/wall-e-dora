@@ -1,3 +1,11 @@
+/**
+ * DashboardView Component
+ * 
+ * The main dashboard view that displays the grid of widgets.
+ * Provides a responsive grid layout where widgets can be arranged, resized, and configured.
+ * 
+ * @component
+ */
 import React, { useEffect, forwardRef } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { useAppContext } from '../contexts/AppContext';
@@ -7,7 +15,7 @@ import node from '../Node';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
-const Dashboard = forwardRef((props, ref) => {
+const DashboardView = forwardRef((props, ref) => {
   const { availableServos } = useAppContext();
   const { 
     layout, 
@@ -54,6 +62,6 @@ const Dashboard = forwardRef((props, ref) => {
   );
 });
 
-export default Dashboard;
+export default DashboardView;
 
 // CSS is now in the main.css file, converted from the Vue component's scoped CSS

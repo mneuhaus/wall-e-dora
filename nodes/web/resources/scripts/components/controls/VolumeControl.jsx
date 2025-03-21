@@ -1,7 +1,15 @@
+/**
+ * VolumeControl Component
+ * 
+ * A control for adjusting the audio volume.
+ * Provides a dropdown with a slider to adjust the volume level.
+ * 
+ * @component
+ */
 import React, { useState, useRef, useEffect } from 'react';
-import node from '../Node';
+import node from '../../Node';
 
-const Volume = () => {
+const VolumeControl = () => {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [volume, setVolume] = useState(50);
   const volumeRef = useRef(null);
@@ -69,4 +77,4 @@ const Volume = () => {
   );
 };
 
-export default Volume;
+export default VolumeControl;

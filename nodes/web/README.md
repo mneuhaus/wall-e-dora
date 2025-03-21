@@ -126,6 +126,58 @@ The web node connects to the Dora framework with these data flows:
 | set_speed          | waveshare_servo | Servo speed setting              |
 | set_alias          | waveshare_servo | Set friendly name for servo      |
 
+## Frontend Architecture
+
+The web interface follows a consistent component and file naming structure to improve code organization and maintainability.
+
+### Component Types and Naming Conventions
+
+All components use PascalCase with a consistent suffix that indicates their purpose:
+
+- **Widgets** (`*Widget.jsx`): Grid-based draggable components that appear on the dashboard
+- **Status Components** (`*Status.jsx`): Status indicators that appear in menus/headers
+- **Control Components** (`*Control.jsx`): User input components (buttons, sliders, etc.)
+- **Views** (`*View.jsx`): Full page/screen components
+
+### Directory Structure
+
+```
+/scripts
+  /components
+    /widgets      # All grid-based widget components
+    /status       # Status bar components
+    /controls     # User input control components
+    /common       # Shared utility components
+      /inputs     # Reusable input components
+  /contexts       # React context providers
+  /constants      # Shared constants and enums
+  /utils          # Utility functions
+  /views          # Full page views
+  App.jsx         # Root application component
+  Node.js         # WebSocket communication
+```
+
+### Widget System
+
+Widgets use a registry pattern to maintain a centralized mapping of widget types to components:
+
+```javascript
+// /constants/widgetTypes.js
+export const WIDGET_TYPES = {
+  SERVO: 'servo-widget',
+  SOUND: 'sound-widget',
+  JOYSTICK: 'joystick-widget',
+  // etc.
+};
+
+// /components/widgets/index.js
+export const WIDGET_REGISTRY = {
+  [WIDGET_TYPES.SERVO]: ServoWidget,
+  [WIDGET_TYPES.SOUND]: SoundWidget,
+  // etc.
+};
+```
+
 ## Getting Started
 
 - Install dependencies:

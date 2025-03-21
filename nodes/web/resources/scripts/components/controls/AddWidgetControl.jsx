@@ -1,8 +1,17 @@
+/**
+ * AddWidgetControl Component
+ * 
+ * A control for adding widgets to the dashboard grid.
+ * Provides a modal dialog with different widget options.
+ * 
+ * @component
+ */
 import React, { useState } from 'react';
-import { useGridContext } from '../contexts/GridContext';
-import { useAppContext } from '../contexts/AppContext';
+import { useGridContext } from '../../contexts/GridContext';
+import { useAppContext } from '../../contexts/AppContext';
+import { WIDGET_TYPES } from '../../constants/widgetTypes';
 
-const AddWidget = () => {
+const AddWidgetControl = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { addWidget } = useGridContext();
   const { availableServos } = useAppContext();
@@ -22,7 +31,7 @@ const AddWidget = () => {
   };
   
   const handleAddServoWidget = (servoId) => {
-    handleAddWidget('servo-control', { servoId });
+    handleAddWidget(WIDGET_TYPES.SERVO, { servoId });
   };
   
   if (!isEditable) {
@@ -51,15 +60,15 @@ const AddWidget = () => {
                 <div className="widget-category">
                   <h6 className="category-title amber-text">Basic Widgets</h6>
                   <ul className="widget-list">
-                    <li onClick={() => handleAddWidget('test-widget')} className="widget-list-item">
+                    <li onClick={() => handleAddWidget(WIDGET_TYPES.TEST)} className="widget-list-item">
                       <i className="fas fa-cube amber-text"></i>
                       <span>Test Widget</span>
                     </li>
-                    <li onClick={() => handleAddWidget('sounds-widget')} className="widget-list-item">
+                    <li onClick={() => handleAddWidget(WIDGET_TYPES.SOUND)} className="widget-list-item">
                       <i className="fas fa-volume-up amber-text"></i>
                       <span>Sounds Widget</span>
                     </li>
-                    <li onClick={() => handleAddWidget('joystick-control')} className="widget-list-item">
+                    <li onClick={() => handleAddWidget(WIDGET_TYPES.JOYSTICK)} className="widget-list-item">
                       <i className="fas fa-gamepad amber-text"></i>
                       <span>Joystick Control</span>
                     </li>
@@ -95,4 +104,4 @@ const AddWidget = () => {
   );
 };
 
-export default AddWidget;
+export default AddWidgetControl;

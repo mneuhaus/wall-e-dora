@@ -1,7 +1,16 @@
+/**
+ * GridLockControl Component
+ * 
+ * Controls for locking/unlocking the grid layout and resetting it.
+ * When the grid is unlocked, widgets can be moved, resized, and deleted.
+ * Provides a reset option to clear all widgets from the layout.
+ * 
+ * @component
+ */
 import React from 'react';
-import { useGridContext } from '../contexts/GridContext';
+import { useGridContext } from '../../contexts/GridContext';
 
-const GridLock = () => {
+const GridLockControl = () => {
   const { isEditable, toggleGridEditing, resetGridLayout } = useGridContext();
   
   const handleResetGrid = (e) => {
@@ -35,4 +44,4 @@ const GridLock = () => {
   );
 };
 
-export default GridLock;
+export default GridLockControl;

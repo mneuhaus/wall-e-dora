@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Joystick from 'rc-joystick';
-import node from '../Node';
-import { useAppContext } from '../contexts/AppContext';
-import { useGridContext } from '../contexts/GridContext';
-import ServoSelector from './ServoSelector';
+import node from '../../Node';
+import { useAppContext } from '../../contexts/AppContext';
+import { useGridContext } from '../../contexts/GridContext';
+import ServoSelect from '../controls/ServoSelect';
 
-const JoystickControl = ({ 
+/**
+ * JoystickWidget - A grid widget that provides joystick control for two servos
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {number} props.xServoId - ID of the servo to control with X-axis
+ * @param {number} props.yServoId - ID of the servo to control with Y-axis
+ * @param {boolean} props.inSettingsModal - Whether being rendered in settings modal
+ * @param {boolean} props.showSettings - Whether settings should be shown
+ * @param {string} props.i - Widget ID in grid
+ */
+const JoystickWidget = ({ 
   xServoId: initialXServoId, 
   yServoId: initialYServoId,
   inSettingsModal = false,
@@ -27,7 +38,7 @@ const JoystickControl = ({
   
   // Initialize from widget props when component mounts
   useEffect(() => {
-    console.log("JoystickControl initializing with props:", { initialXServoId, initialYServoId, i: i });
+    console.log("JoystickWidget initializing with props:", { initialXServoId, initialYServoId, i: i });
     
     // Set initial values from props
     if (initialXServoId !== undefined) {
@@ -320,12 +331,12 @@ const JoystickControl = ({
   // Settings panel content - memoized to prevent re-renders
   const SettingsPanel = React.memo(() => (
     <div className="joystick-settings">
-      <ServoSelector 
+      <ServoSelect 
         value={xServoId} 
         onChange={handleXServoChange} 
         label="X-Axis Servo"
       />
-      <ServoSelector 
+      <ServoSelect 
         value={yServoId} 
         onChange={handleYServoChange} 
         label="Y-Axis Servo"
@@ -371,4 +382,4 @@ const JoystickControl = ({
   );
 };
 
-export default JoystickControl;
+export default JoystickWidget;

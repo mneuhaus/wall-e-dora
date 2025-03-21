@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import node from '../Node';
+import node from '../../Node';
 
-const SoundsWidget = (props) => {
+/**
+ * SoundWidget - A grid widget for playing sounds
+ * 
+ * @component
+ * @param {Object} props - Component props
+ */
+const SoundWidget = (props) => {
   const [sounds, setSounds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
@@ -85,4 +91,4 @@ const SoundsWidget = (props) => {
   );
 };
 
-export default SoundsWidget;
+export default SoundWidget;

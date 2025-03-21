@@ -1,7 +1,15 @@
+/**
+ * GamepadStatus Component
+ * 
+ * Displays a status indicator showing connected gamepads.
+ * Shows a dropdown with a list of connected gamepads and links to the gamepad debug view.
+ * 
+ * @component
+ */
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-const Gamepad = () => {
+const GamepadStatus = () => {
   const [gamepads, setGamepads] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -116,4 +124,4 @@ const Gamepad = () => {
   );
 };
 
-export default Gamepad;
+export default GamepadStatus;
