@@ -9,6 +9,8 @@ nodes:
       - power
       - soc
       - runtime
+      - capacity
+      - discharge_rate
       - shutdown
 
   - id: web
@@ -20,6 +22,8 @@ nodes:
       power: power/power
       soc: power/soc
       runtime: power/runtime
+      capacity: power/capacity
+      discharge_rate: power/discharge_rate
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
       servo_status: waveshare_servo/servo_status

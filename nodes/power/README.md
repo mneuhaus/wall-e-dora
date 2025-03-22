@@ -58,8 +58,9 @@ graph TD
 
 ### Battery Management
 - Implement accurate SoC calculation through voltage and coulomb counting
-- Apply appropriate smoothing to power readings
-- Track battery discharge patterns
+- Dynamically estimate actual battery capacity based on voltage change vs. current draw
+- Apply multi-level exponential smoothing to power readings and estimations
+- Track battery discharge patterns in real-time
 - Provide alerts at specific battery thresholds (50%, 25%, 10%)
 
 ## Configuration
@@ -75,8 +76,8 @@ graph TD
 | Parameter          | Value | Description              |
 |-------------------|-------|--------------------------|
 | Nominal Voltage   | 11.1V | 3S Li-ion configuration |
-| Maximum Voltage   | 12.6V | 4.2V per cell           |
-| Minimum Voltage   | 9.0V  | 3.0V per cell           |
+| Maximum Voltage   | 12.2V | 100% calibrated threshold |
+| Minimum Voltage   | 8.0V  | 0% calibrated threshold  |
 | Capacity         | 2.5Ah | Per cell capacity        |
 | Shutdown Threshold| 10%   | Auto shutdown trigger    |
 
@@ -89,9 +90,13 @@ graph TD
 - Implement sensor redundancy or error detection
 
 ### Software Implementation
-- Use rolling window averaging for stable readings
-- Implement state of charge estimation algorithm
-- Calculate remaining runtime based on power consumption trends
+- Use exponential moving averages (EMA) for stable readings
+- Implement voltage-based state of charge estimation
+- Calculate remaining runtime based on historical discharge rates with triple EMA smoothing:
+  - Short-term EMA for current and power measurements
+  - Medium-term EMA for discharge rate calculation
+  - Long-term EMA for runtime prediction stability
+- Adaptive runtime estimation that ignores idle periods
 - Properly handle sensor communication errors
 - Send regular updates to the web interface
 
@@ -105,14 +110,16 @@ The power node connects to the Dora framework with these data flows:
 | tick     | dora/timer/secs/10 | Regular update trigger |
 
 #### Outputs
-| Output ID | Destination | Description                    |
-|-----------|------------|--------------------------------|
-| voltage   | web        | Battery voltage measurement     |
-| current   | web        | Battery current measurement     |
-| power     | web        | Power consumption in watts      |
-| soc       | web        | Battery state of charge (%)     |
-| runtime   | web        | Estimated remaining runtime     |
-| shutdown  | web        | Shutdown signal at low battery  |
+| Output ID      | Destination | Description                        |
+|----------------|------------|------------------------------------|
+| voltage        | web        | Battery voltage measurement        |
+| current        | web        | Battery current measurement        |
+| power          | web        | Power consumption in watts         |
+| soc            | web        | Battery state of charge (%)        |
+| runtime        | web        | Estimated remaining runtime        |
+| capacity       | web        | Estimated battery capacity (Ah)    |
+| discharge_rate | web        | Battery discharge rate (%/hr)      |
+| shutdown       | web        | Shutdown signal at low battery     |
 
 ## Example Dataflow Configuration
 
@@ -130,6 +137,8 @@ nodes:
       - power
       - soc
       - runtime
+      - capacity
+      - discharge_rate
       - shutdown
 
   - id: web
@@ -141,6 +150,8 @@ nodes:
       power: power/power
       soc: power/soc
       runtime: power/runtime
+      capacity: power/capacity
+      discharge_rate: power/discharge_rate
       shutdown: power/shutdown
     outputs:
       - slider_input
@@ -169,6 +180,23 @@ ruff check .
 ```bash
 pytest . # Test
 ```
+
+## Log Output Format
+
+The power node produces a single consolidated log line with the following format:
+
+```
+Power: 11.77V (89.7%) 0.50A 5.90W | Avg: 5.14W | Runtime: 03:37 | Est.Cap: 2.50Ah | Discharge: 26.4%/hr | Time to 20%: 3.6h | Avg current: 0.45A
+```
+
+This includes:
+- Current voltage, state of charge percentage, current, and power
+- Average power consumption over time
+- Estimated runtime until reaching 20% battery threshold
+- Estimated battery capacity in amp-hours
+- Battery discharge rate in percentage per hour
+- Time until battery reaches 20% threshold
+- Average current draw
 
 ## Future Enhancements
 1. Battery health monitoring

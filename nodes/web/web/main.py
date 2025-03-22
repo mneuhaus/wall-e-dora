@@ -2,6 +2,7 @@ from dora import Node
 import threading
 import asyncio
 import os
+import math
 import jinja2
 from aiohttp import web
 import aiohttp_debugtoolbar
@@ -342,11 +343,26 @@ def main():
     
     for event in node:
         try:
-            if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick" or event["id"] == "runtime"):
+            if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick"):
                 flush_web_inputs(node)
             elif event["type"] == "INPUT":
                 logging.info(f"Received input event: {event['id']}")
                 event_value = event['value'].to_pylist()
+                
+                # Add special handling for runtime values
+                if event["id"] == "power/runtime":
+                    logging.info(f"Runtime value received: {event_value} (type: {type(event_value)})")
+                    # Ensure runtime value is a valid number
+                    if event_value and isinstance(event_value, list):
+                        try:
+                            runtime_val = float(event_value[0])
+                            if runtime_val <= 0 or math.isinf(runtime_val) or math.isnan(runtime_val):
+                                event_value[0] = 0
+                            logging.info(f"Processed runtime: {event_value[0]}")
+                        except Exception as e:
+                            logging.error(f"Error processing runtime value: {e}")
+                            event_value[0] = 0
+                
                 event_data = {
                     "id": event["id"],
                     "value": event_value,

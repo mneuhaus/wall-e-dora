@@ -13,13 +13,12 @@ import { AppProvider } from './contexts/AppContext';
 import { GridProvider } from './contexts/GridContext';
 
 // Import components
-import { ConnectionStatus, ServoStatus } from './components/status';
+import { ConnectionStatus, ServoStatus, PowerStatus } from './components/status';
 import { GridLockControl as GridLock, AddWidgetControl as AddWidget, VolumeControl as Volume } from './components/controls';
 import { GamepadStatus as Gamepad } from './components/status';
-import PowerWidget from './components/widgets/PowerWidget';
 
-// Alias PowerWidget as Power
-const Power = PowerWidget;
+// Alias PowerStatus as Power
+const Power = PowerStatus;
 
 // Import views
 import { DashboardView as Dashboard, GamepadView, ServoDebugView as ServoDebug } from './views';
