@@ -438,8 +438,7 @@ def main():
                     # Consolidated output in a single line
                     print(f'Power: {voltage:.4f}V ({percentage:.1f}%) {current:.4f}A {power:.4f}W | '
                           f'Avg: {avg_power:.4f}W | Runtime: {time_str} | '
-                          f'Est.Cap: {battery_tracker.capacity_ah:.2f}Ah | Discharge: {discharge_rate:.1f}%/hr | '
-                          f'Time to 20%: {estimated_empty_time} | Avg current: {avg_current:.2f}A {debug_info}')
+                          f'Est.Cap: {battery_tracker.capacity_ah:.2f}Ah | Discharge: {discharge_rate:.1f}%/hr | {debug_info}')
                 except Exception as e:
                     # Fallback to basic info if there's an error
                     print(f'Power: {voltage:.4f}V ({percentage:.1f}%) {current:.4f}A {power:.4f}W | '
