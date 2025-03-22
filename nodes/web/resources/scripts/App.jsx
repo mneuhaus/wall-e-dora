@@ -13,18 +13,16 @@ import { AppProvider } from './contexts/AppContext';
 import { GridProvider } from './contexts/GridContext';
 
 // Import components
-import ConnectionStatus from './components/ConnectionStatus';
-import GridLock from './components/GridLock';
-import AddWidget from './components/AddWidget';
-import Power from './components/Power';
-import Volume from './components/Volume';
-import ServoStatus from './components/ServoStatus';
-import Gamepad from './components/Gamepad';
+import { ConnectionStatus, ServoStatus } from './components/status';
+import { GridLockControl as GridLock, AddWidgetControl as AddWidget, VolumeControl as Volume } from './components/controls';
+import { GamepadStatus as Gamepad } from './components/status';
+import PowerWidget from './components/widgets/PowerWidget';
+
+// Alias PowerWidget as Power
+const Power = PowerWidget;
 
 // Import views
-import Dashboard from './views/Dashboard';
-import GamepadView from './views/Gamepad';
-import ServoDebug from './views/ServoDebug';
+import { DashboardView as Dashboard, GamepadView, ServoDebugView as ServoDebug } from './views';
 
 const App = () => {
   const dashboardRef = useRef(null);

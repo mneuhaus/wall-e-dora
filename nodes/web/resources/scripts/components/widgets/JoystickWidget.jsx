@@ -3,7 +3,7 @@ import Joystick from 'rc-joystick';
 import node from '../../Node';
 import { useAppContext } from '../../contexts/AppContext';
 import { useGridContext } from '../../contexts/GridContext';
-import ServoSelect from '../controls/ServoSelect';
+import { ServoSelector as ServoSelect } from '../common/inputs';
 import { updateWidgetSettings } from '../../utils/settingsManager';
 
 /**
