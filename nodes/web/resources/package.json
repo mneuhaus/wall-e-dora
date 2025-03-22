@@ -17,6 +17,7 @@
     "gamepad.js": "^2.1.0",
     "material-dynamic-colors": "^1.1.2",
     "mitt": "^3.0.1",
+    "rc-joystick": "^1.0.5",
     "rc-slider": "^11.1.8",
     "react": "^18.2.0",
     "react-circular-slider-svg": "^0.3.0",
