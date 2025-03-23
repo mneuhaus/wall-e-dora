@@ -2,7 +2,7 @@
  * VolumeControl Component
  * 
  * A control for adjusting the audio volume.
- * Provides a dropdown with a slider to adjust the volume level.
+ * Provides a dropdown with a vertical slider to adjust the volume level.
  * 
  * @component
  */
@@ -13,7 +13,9 @@ import {
   Slider, 
   Text, 
   Stack, 
-  Box 
+  Box,
+  Group,
+  rem
 } from '@mantine/core';
 import node from '../../Node';
 
@@ -40,7 +42,7 @@ const VolumeControl = () => {
       onChange={setIsOpen}
       position="bottom-end"
       shadow="md"
-      width={200}
+      width={120}
       withArrow
     >
       <Menu.Target>
@@ -59,22 +61,46 @@ const VolumeControl = () => {
       
       <Menu.Dropdown>
         <Box p="md">
-          <Stack spacing="xs">
-            <Slider
-              value={volume}
-              onChange={handleVolumeChange}
-              min={0}
-              max={100}
-              step={1}
-              color="amber"
-              label={(value) => `${value}%`}
-              labelAlwaysOn
-              size="md"
-            />
-            <Text size="sm" ta="center" c="dimmed">
-              Volume: {volume}%
-            </Text>
-          </Stack>
+          <Group align="center" justify="center">
+            <Stack spacing="sm" align="center">
+              <Text size="sm" c="amber" fw={500} mb={5}>
+                Volume
+              </Text>
+              <Box h={200}>
+                <Slider
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  min={0}
+                  max={100}
+                  step={1}
+                  color="amber"
+                  label={(value) => `${value}%`}
+                  labelAlwaysOn
+                  size="lg"
+                  thumbSize={22}
+                  orientation="vertical"
+                  styles={{
+                    track: { height: 180 },
+                    thumb: { 
+                      borderWidth: 2,
+                      borderColor: 'var(--mantine-color-amber-filled)'
+                    },
+                    markLabel: {
+                      fontSize: rem(10)
+                    }
+                  }}
+                  marks={[
+                    { value: 0, label: '0%' },
+                    { value: 50, label: '50%' },
+                    { value: 100, label: '100%' }
+                  ]}
+                />
+              </Box>
+              <Text size="sm" ta="center" c="dimmed" mt={5}>
+                {volume}%
+              </Text>
+            </Stack>
+          </Group>
         </Box>
       </Menu.Dropdown>
     </Menu>
