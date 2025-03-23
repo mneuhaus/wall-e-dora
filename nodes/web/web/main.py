@@ -151,28 +151,6 @@ async def websocket_handler(request):
         await ws.send_str(json.dumps(welcome_msg))
         logging.info("Sent welcome message to client")
         
-        # Send initial servo data if available
-        try:
-            # Send a SCAN request to get current servo status
-            logging.info("Sending SCAN request for new client connection")
-            global_web_inputs.append({"output_id": "SCAN", "data": [], "metadata": {}})
-            
-            # Provide fallback data in case servos are not connected, using calibrated limits
-            servo_data = [
-                {"id": 13, "position": 500, "speed": 100, "min_pos": 100, "max_pos": 4000},
-                {"id": 5, "position": 800, "speed": 100, "min_pos": 100, "max_pos": 4000}
-            ]
-            
-            status_msg = {
-                "id": "servo_status",
-                "value": servo_data,
-                "type": "EVENT"
-            }
-            await ws.send_str(json.dumps(status_msg))
-            logging.info("Sent initial servo fallback data")
-        except Exception as e:
-            logging.error(f"Error sending initial servo data: {e}")
-        
         # Process incoming messages
         async for msg in ws:
             if msg.type == web.WSMsgType.TEXT:
@@ -182,8 +160,8 @@ async def websocket_handler(request):
                     output_id = event.get('output_id')
                     logging.info(f"Processed event with output_id: {output_id}")
                     
-                    # Log additional details for joystick-related events
-                    if output_id in ['save_joystick_servo', 'save_grid_state']:
+                    # Log additional details for joystick-related and config-related events
+                    if output_id in ['save_joystick_servo', 'save_grid_state', 'update_setting']:
                         if output_id == 'save_joystick_servo':
                             logging.info(f"Joystick servo assignment: {event.get('data')}")
                         elif output_id == 'save_grid_state':
@@ -191,25 +169,10 @@ async def websocket_handler(request):
                             for widget_id, widget_data in event.get('data', {}).items():
                                 if widget_data.get('type') == 'joystick-control':
                                     logging.info(f"Grid state update for joystick {widget_id}: x={widget_data.get('xServoId')}, y={widget_data.get('yServoId')}")
+                        elif output_id == 'update_setting':
+                            logging.info(f"Config update: {event.get('data')}")
                     
                     global_web_inputs.append(event)
-                    
-                    # Handle immediate feedback for some messages
-                    if event.get("output_id") == "SCAN":
-                        logging.info("Received SCAN request from client")
-                        # Send servo data immediately
-                        servo_data = [
-                            {"id": 13, "position": 500, "speed": 100, "min_pos": 100, "max_pos": 4000},
-                            {"id": 5, "position": 800, "speed": 100, "min_pos": 100, "max_pos": 4000}
-                        ]
-                                    
-                        status_msg = {
-                            "id": "servo_status",
-                            "value": servo_data, 
-                            "type": "EVENT"
-                        }
-                        await ws.send_str(json.dumps(status_msg))
-                        logging.info("SCAN response sent with fallback servo data")
                 except Exception as e:
                     logging.error(f"Error processing WebSocket text message: {e}")
                     global_web_inputs.append({"raw": msg.data})
@@ -377,6 +340,14 @@ def main():
                         logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
                     else:
                         logging.warning("Received empty servo status update")
+                
+                # Handle config-related events
+                elif event["id"] in ["config/setting_updated", "config/settings"]:
+                    event_name = event["id"].replace("config/", "")
+                    if event_name == "settings":
+                        logging.info(f"Received complete settings")
+                    else:
+                        logging.info(f"Received config event: {event_name} with value: {event_value[:100] if len(str(event_value)) > 100 else event_value}")
                     
                 serialized = json.dumps(event_data, default=str).encode('utf-8')
                 if web_loop is not None:

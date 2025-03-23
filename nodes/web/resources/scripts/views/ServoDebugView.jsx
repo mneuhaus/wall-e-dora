@@ -298,7 +298,19 @@ const ServoDebugView = () => {
   const handleSetAlias = () => {
     if (aliasInput.trim() === '') return;
     
-    node.emit('set_alias', [parseInt(id), aliasInput.trim()]);
+    // Old method: send directly to the servo node
+    // node.emit('set_alias', [parseInt(id), aliasInput.trim()]);
+    
+    // New method: update through config system using dot notation
+    const servoId = parseInt(id);
+    node.emit('update_setting', [{
+      path: `servo.${servoId - 1}.alias`,
+      value: aliasInput.trim()
+    }]);
+    
+    // Also send the direct command for backward compatibility
+    node.emit('set_alias', [servoId, aliasInput.trim()]);
+    
     showToast(`Alias set to "${aliasInput}"`);
   };
   

@@ -3,25 +3,18 @@ import pyarrow as pa
 from scservo_sdk import *
 import time
 import json, os
-SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "servo_settings.json")
 
-def load_settings():
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            settings = json.load(f)
-    except FileNotFoundError:
-        settings = {
-            "unique_id_counter": 10,
-            "id_mapping": {},
-            "servo_limits": {},  # Store min/max positions for each servo
-            "servo_aliases": {},  # Store aliases for servos
-            "servo_speeds": {}   # Store preferred speed for each servo
-        }
-    return settings
+# Global settings dictionary for caching config values
+cached_settings = {
+    "unique_id_counter": 10,
+    "id_mapping": {},
+    "servo_limits": {},  # Store min/max positions for each servo
+    "servo_aliases": {},  # Store aliases for servos
+    "servo_speeds": {}   # Store preferred speed for each servo
+}
 
-def save_settings(settings):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(settings, f)
+# Node reference for sending updates to config
+config_node = None
 
 def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
     """
@@ -68,12 +61,25 @@ def change_servo_id(serial_port, old_id, new_id, baudrate=1000000):
         print(f"Error: {e}")
 
 
+def update_config(path, value):
+    """Update a setting in the config node"""
+    global config_node
+    if config_node:
+        config_node.send_output(
+            output_id="update_setting",
+            data=pa.array([{"path": path, "value": value}]),
+            metadata={}
+        )
+        print(f"Sent config update: {path} = {value}")
+
 def main():
     node = Node()
+    global config_node, cached_settings
+    config_node = node  # Store node reference for config updates
+    
     # SCServo configuration
     DEVICENAME = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'
     BAUDRATE = 1000000
-    settings = load_settings()
     SCS_ID = 1
     ADDR_SCS_GOAL_ACC = 41
     ADDR_SCS_GOAL_SPEED = 46
@@ -126,13 +132,14 @@ def main():
                     if comm_result == COMM_SUCCESS and error == 0:
                         if servo_id == 1:
                             try:
-                                new_id = settings["unique_id_counter"]
+                                new_id = cached_settings["unique_id_counter"]
                                 portHandler.closePort()
                                 change_servo_id(DEVICENAME, 1, new_id, BAUDRATE)
                                 if not portHandler.openPort():
                                     print("Failed to reopen the port after id change")
-                                settings["unique_id_counter"] += 1
-                                save_settings(settings)
+                                cached_settings["unique_id_counter"] += 1
+                                # Update config with new counter value
+                                update_config("servo_settings.unique_id_counter", cached_settings["unique_id_counter"])
                                 print(f"Updated servo id 1 to {new_id}")
                                 servo_id = new_id
                             except Exception as e:
@@ -152,7 +159,7 @@ def main():
                             )
         
                             # Get the saved speed setting (or default to current speed)
-                            saved_speed = settings.get("servo_speeds", {}).get(str(servo_id), 
+                            saved_speed = cached_settings.get("servo_speeds", {}).get(str(servo_id), 
                                 speed_data if speed_result == COMM_SUCCESS and speed_error == 0 else 200)
                             
                             servo_data = {
@@ -160,13 +167,13 @@ def main():
                                 "position": pos_data if pos_result == COMM_SUCCESS and pos_error == 0 else 0,
                                 "speed": saved_speed,  # Use the saved speed from settings
                                 "torque": torque_data if torque_result == COMM_SUCCESS and torque_error == 0 else 0,
-                                "alias": settings.get("servo_aliases", {}).get(str(servo_id), "")
+                                "alias": cached_settings.get("servo_aliases", {}).get(str(servo_id), "")
                             }
                             
                             # Add calibration data if available
-                            if str(servo_id) in settings.get("servo_limits", {}):
-                                servo_data["min_pos"] = settings["servo_limits"][str(servo_id)]["min"]
-                                servo_data["max_pos"] = settings["servo_limits"][str(servo_id)]["max"]
+                            if str(servo_id) in cached_settings.get("servo_limits", {}):
+                                servo_data["min_pos"] = cached_settings["servo_limits"][str(servo_id)]["min"]
+                                servo_data["max_pos"] = cached_settings["servo_limits"][str(servo_id)]["max"]
                             
                             available_servos.append(servo_data)
                         except Exception as e:
@@ -179,13 +186,13 @@ def main():
         print(f"Available servos found: {[s['id'] for s in available_servos]}")
         
         # If no servos found, use fallback data from settings
-        if not available_servos and settings.get("servo_limits"):
+        if not available_servos and cached_settings.get("servo_limits"):
             print("No servos found, using fallback data from settings")
-            for servo_id, limits in settings.get("servo_limits", {}).items():
+            for servo_id, limits in cached_settings.get("servo_limits", {}).items():
                 try:
                     servo_id = int(servo_id)
                     # Get saved speed or use default
-                    saved_speed = settings.get("servo_speeds", {}).get(str(servo_id), 200)
+                    saved_speed = cached_settings.get("servo_speeds", {}).get(str(servo_id), 200)
                     
                     fallback_data = {
                         "id": servo_id,
@@ -194,7 +201,7 @@ def main():
                         "torque": 0,
                         "min_pos": limits["min"],
                         "max_pos": limits["max"],
-                        "alias": settings.get("servo_aliases", {}).get(str(servo_id), ""),
+                        "alias": cached_settings.get("servo_aliases", {}).get(str(servo_id), ""),
                         "is_fallback": True
                     }
                     available_servos.append(fallback_data)
@@ -368,18 +375,22 @@ def main():
         # Step 4: Save the calibration data
         print(f"Saving calibration: min={min_pos_data}, max={max_pos_data}")
         
-        settings.setdefault("servo_limits", {})
-        settings["servo_limits"][str(servo_id)] = {
+        # Update local cache
+        cached_settings.setdefault("servo_limits", {})
+        cached_settings["servo_limits"][str(servo_id)] = {
             "min": min_pos_data,
             "max": max_pos_data
         }
-        save_settings(settings)
+        
+        # Update config (using 0-based index in config)
+        update_config(f"servo.{servo_id - 1}.min", min_pos_data)
+        update_config(f"servo.{servo_id - 1}.max", max_pos_data)
         
         # Set a safe speed for this servo if not already set
-        if str(servo_id) not in settings.get("servo_speeds", {}):
-            settings.setdefault("servo_speeds", {})
-            settings["servo_speeds"][str(servo_id)] = 200
-            save_settings(settings)
+        if str(servo_id) not in cached_settings.get("servo_speeds", {}):
+            cached_settings.setdefault("servo_speeds", {})
+            cached_settings["servo_speeds"][str(servo_id)] = 200
+            update_config(f"servo.{servo_id - 1}.speed", 200)
         
         print(f"Calibration complete for servo {servo_id}.")
         print(f"Measured servo range: {min_pos_data}-{max_pos_data}")
@@ -400,10 +411,12 @@ def main():
         # Ensure speed is within valid range (100-2000)
         target_speed = max(100, min(2000, int(target_speed)))
         
-        # Save the speed setting for this servo
-        settings.setdefault("servo_speeds", {})
-        settings["servo_speeds"][str(servo_id)] = target_speed
-        save_settings(settings)
+        # Update local cache
+        cached_settings.setdefault("servo_speeds", {})
+        cached_settings["servo_speeds"][str(servo_id)] = target_speed
+        
+        # Update config (using 0-based index in config)
+        update_config(f"servo.{servo_id - 1}.speed", target_speed)
         
         # Apply the speed to the current servo state
         comm_result, error = packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, target_speed)
@@ -449,17 +462,26 @@ def main():
         servo_id = event["value"].to_pylist()[0]
         print(f"Resetting servo {servo_id} to default settings")
         
-        # Remove servo limits from settings
-        if str(servo_id) in settings.get("servo_limits", {}):
-            del settings["servo_limits"][str(servo_id)]
-            save_settings(settings)
+        # Remove servo limits from local cache
+        if str(servo_id) in cached_settings.get("servo_limits", {}):
+            del cached_settings["servo_limits"][str(servo_id)]
             print(f"Removed calibration settings for servo {servo_id}")
             
-        # Remove alias if present
-        if str(servo_id) in settings.get("servo_aliases", {}):
-            del settings["servo_aliases"][str(servo_id)]
-            save_settings(settings)
+        # Remove alias if present 
+        if str(servo_id) in cached_settings.get("servo_aliases", {}):
+            del cached_settings["servo_aliases"][str(servo_id)]
             print(f"Removed alias for servo {servo_id}")
+        
+        # Update config to remove settings (0-based index)
+        # Set default values instead of deleting to maintain the structure
+        update_config(f"servo.{servo_id - 1}", {
+            "id": servo_id,
+            "alias": "",
+            "min": 0,
+            "max": 4095,
+            "speed": 0,
+            "reset": True  # Flag to indicate this servo was reset
+        })
         
         # Reset servo to factory defaults
         packetHandler.write2ByteTxRx(portHandler, servo_id, ADDR_SCS_GOAL_SPEED, 0)  # Default speed
@@ -490,11 +512,75 @@ def main():
                 data = event["value"].to_pylist()
                 if len(data) == 2:
                     servo_id, alias = data
-                    settings.setdefault("servo_aliases", {})
-                    settings["servo_aliases"][str(servo_id)] = alias
-                    save_settings(settings)
+                    
+                    # Update local cache for immediate use
+                    cached_settings.setdefault("servo_aliases", {})
+                    cached_settings["servo_aliases"][str(servo_id)] = alias
+                    
+                    # Update config node (using 0-based index in config)
+                    update_config(f"servo.{servo_id - 1}.alias", alias)
+                    
                     print(f"Set alias for servo {servo_id} to {alias}")
                     handle_scan_event()  # Update UI with new alias
+            elif event["id"] == "setting_updated":
+                try:
+                    # Handle config change events
+                    setting_data = event["value"].to_pylist()[0]
+                    path = setting_data.get("path", "")
+                    value = setting_data.get("value", None)
+                    
+                    # Check if it's a servo alias update
+                    if path.startswith("servo.") and path.endswith(".alias") and value is not None:
+                        # Extract servo index from the path (e.g., "servo.0.alias" -> 0)
+                        parts = path.split(".")
+                        if len(parts) == 3 and parts[1].isdigit():
+                            servo_index = int(parts[1])
+                            # Servo IDs are 1-based, but config indices are 0-based
+                            servo_id = servo_index + 1
+                            
+                            # Update the alias in our local cache
+                            cached_settings.setdefault("servo_aliases", {})
+                            cached_settings["servo_aliases"][str(servo_id)] = value
+                            print(f"Updated servo {servo_id} alias to '{value}' from config")
+                            handle_scan_event()  # Update UI with new settings
+                    
+                    # Handle servo speed settings
+                    elif path.startswith("servo.") and path.endswith(".speed") and value is not None:
+                        parts = path.split(".")
+                        if len(parts) == 3 and parts[1].isdigit():
+                            servo_index = int(parts[1])
+                            servo_id = servo_index + 1
+                            
+                            # Update the speed in our local cache
+                            cached_settings.setdefault("servo_speeds", {})
+                            cached_settings["servo_speeds"][str(servo_id)] = value
+                            print(f"Updated servo {servo_id} speed to {value} from config")
+                            handle_scan_event()
+                    
+                    # Handle servo limits settings
+                    elif path.startswith("servo.") and (path.endswith(".min") or path.endswith(".max")) and value is not None:
+                        parts = path.split(".")
+                        if len(parts) == 3 and parts[1].isdigit():
+                            servo_index = int(parts[1])
+                            servo_id = servo_index + 1
+                            limit_type = parts[2]  # "min" or "max"
+                            
+                            # Update the limit in our local cache
+                            cached_settings.setdefault("servo_limits", {})
+                            cached_settings["servo_limits"].setdefault(str(servo_id), {})
+                            cached_settings["servo_limits"][str(servo_id)][limit_type] = value
+                            print(f"Updated servo {servo_id} {limit_type} limit to {value} from config")
+                            handle_scan_event()
+                    
+                    # Handle settings object if received as a whole
+                    elif path == "settings" and isinstance(value, dict):
+                        # Update our entire cached settings
+                        for key, val in value.items():
+                            cached_settings[key] = val
+                        print("Updated all servo settings from config")
+                        handle_scan_event()
+                except Exception as e:
+                    print(f"Error processing config setting_updated: {e}")
 
 if __name__ == "__main__":
     main()
