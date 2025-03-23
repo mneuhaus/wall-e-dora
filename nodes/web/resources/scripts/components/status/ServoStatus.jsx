@@ -92,7 +92,9 @@ const ServoStatus = () => {
               }
             >
               <div>
-                <Text size="sm" style={{ lineHeight: 1.2 }}>Servo #{servo.id}</Text>
+                <Text size="sm" style={{ lineHeight: 1.2 }}>
+                  {servo.alias ? `${servo.alias} (#${servo.id})` : `Servo #${servo.id}`}
+                </Text>
                 <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>Position: {servo.position || 0}</Text>
               </div>
             </Menu.Item>

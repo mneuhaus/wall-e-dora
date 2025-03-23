@@ -55,8 +55,9 @@ def process_event(event, node, scanner, config, servos, next_available_id):
             "calibrate_servo": lambda evt: handle_calibrate_servo(context, evt),
             "update_servo_setting": lambda evt: handle_update_servo_setting(context, evt),
             "tick": lambda evt: handle_tick(context, evt),
-            "settings": lambda evt: handle_settings(context, evt),
-            "setting_updated": lambda evt: handle_setting_updated(context, evt)
+            # We no longer need these handlers as we're handling settings directly
+            # "settings": lambda evt: handle_settings(context, evt),
+            # "setting_updated": lambda evt: handle_setting_updated(context, evt)
         }
         
         # Call the appropriate handler if available

@@ -48,7 +48,7 @@ const ServoDebugView = () => {
   const [servo, setServo] = useState(null);
   const [position, setPosition] = useState(0);
   const [displayPosition, setDisplayPosition] = useState(0); // For UI display (0-300 degrees)
-  const [speed, setSpeed] = useState(100);
+  const [speed, setSpeed] = useState(null); // Start with null so we know when it's initialized from server
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(4095);
   const [newId, setNewId] = useState('');
@@ -138,6 +138,71 @@ const ServoDebugView = () => {
   }, []);
 
   useEffect(() => {
+    console.log(`ServoDebugView initialized for servo ${id}`);
+    
+    // Function to process servo data (reused for both event types)
+    const processServoData = (servoInfo) => {
+      if (!servoInfo) return;
+      
+      console.log(`Processing servo data for ID ${id}:`, servoInfo);
+      setServo(servoInfo);
+      
+      // Get min/max pulse values with validation
+      let servoMinPulse = 500;
+      if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null && !isNaN(servoInfo.min_pulse)) {
+        servoMinPulse = Number(servoInfo.min_pulse);
+      }
+      
+      let servoMaxPulse = 2500;
+      if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null && !isNaN(servoInfo.max_pulse)) {
+        servoMaxPulse = Number(servoInfo.max_pulse);
+      }
+      
+      // Ensure max > min
+      if (servoMaxPulse <= servoMinPulse) {
+        console.warn('Invalid servo range: max <= min, using default values');
+        servoMinPulse = 500;
+        servoMaxPulse = 2500;
+      }
+      
+      setMin(servoMinPulse);
+      setMax(servoMaxPulse);
+      
+      // Get current servo position with validation
+      let servoPosition = 0;
+      if (servoInfo.position !== undefined && servoInfo.position !== null && !isNaN(servoInfo.position)) {
+        servoPosition = Number(servoInfo.position);
+      }
+      
+      // Set raw position value
+      setPosition(servoPosition);
+      
+      // Map servo position to UI range (0-300 degrees)
+      const uiPosition = mapServoToUI(servoPosition, servoMinPulse, servoMaxPulse);
+      
+      // Validate before setting
+      if (typeof uiPosition === 'number' && !isNaN(uiPosition)) {
+        setDisplayPosition(uiPosition);
+      } else {
+        console.warn('Invalid UI position calculated:', uiPosition);
+        setDisplayPosition(0); // Default to 0 if invalid
+      }
+      
+      // Set speed - IMPORTANT: This needs to work on page load
+      if (servoInfo.speed !== undefined && servoInfo.speed !== null) {
+        console.log(`Setting speed to ${servoInfo.speed} from servo data`);
+        setSpeed(Number(servoInfo.speed));
+      } else {
+        console.log("No speed in servo data, using default 1000");
+        setSpeed(1000);
+      }
+      
+      // Update alias input if it's empty and the servo has an alias
+      if (aliasInput === '' && servoInfo.alias) {
+        setAliasInput(servoInfo.alias);
+      }
+    };
+    
     // Listen for servo updates
     const unsubscribe = node.on('servo_status', (event) => {
       const servoData = event.value || [];
@@ -147,65 +212,19 @@ const ServoDebugView = () => {
                         (servoData.id === parseInt(id) ? servoData : null);
       
       if (servoInfo) {
-        setServo(servoInfo);
-        
-        // Get min/max pulse values with validation
-        let servoMinPulse = 500;
-        if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null && !isNaN(servoInfo.min_pulse)) {
-          servoMinPulse = Number(servoInfo.min_pulse);
-        }
-        
-        let servoMaxPulse = 2500;
-        if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null && !isNaN(servoInfo.max_pulse)) {
-          servoMaxPulse = Number(servoInfo.max_pulse);
-        }
-        
-        // Ensure max > min
-        if (servoMaxPulse <= servoMinPulse) {
-          console.warn('Invalid servo range: max <= min, using default values');
-          servoMinPulse = 500;
-          servoMaxPulse = 2500;
-        }
-        
-        setMin(servoMinPulse);
-        setMax(servoMaxPulse);
-        
-        // Get current servo position with validation
-        let servoPosition = 0;
-        if (servoInfo.position !== undefined && servoInfo.position !== null && !isNaN(servoInfo.position)) {
-          servoPosition = Number(servoInfo.position);
-        }
-        
-        // Set raw position value
-        setPosition(servoPosition);
-        
-        // Map servo position to UI range (0-300 degrees)
-        const uiPosition = mapServoToUI(servoPosition, servoMinPulse, servoMaxPulse);
-        
-        // Validate before setting
-        if (typeof uiPosition === 'number' && !isNaN(uiPosition)) {
-          setDisplayPosition(uiPosition);
-        } else {
-          console.warn('Invalid UI position calculated:', uiPosition);
-          setDisplayPosition(0); // Default to 0 if invalid
-        }
-        
-        // Set speed
-        setSpeed(servoInfo.speed || 1000);
-        
-        // Update alias input if it's empty and the servo has an alias
-        if (aliasInput === '' && servoInfo.alias) {
-          setAliasInput(servoInfo.alias);
-        }
+        processServoData(servoInfo);
       }
     });
     
     // Listen for servos_list for full servo info
     const listUnsubscribe = node.on('servos_list', (event) => {
       const servosList = event.value || [];
+      console.log(`Received servos_list, looking for servo ID ${id}`, servosList);
       const currentServo = servosList.find(s => s.id === parseInt(id));
       if (currentServo) {
-        setServo(currentServo);
+        console.log(`Found servo ${id} in servos_list:`, currentServo);
+        // Use the same processor function for consistency
+        processServoData(currentServo);
       }
     });
     
@@ -264,7 +283,11 @@ const ServoDebugView = () => {
   
   const handleSpeedChange = (newSpeed) => {
     setSpeed(newSpeed);
-    // Update servo setting format
+    // Don't update the server on every change, only when done dragging
+  };
+  
+  const handleSpeedChangeComplete = (newSpeed) => {
+    // Update servo setting format only when slider interaction is complete
     node.emit('update_servo_setting', [{
       id: parseInt(id),
       property: "speed",
@@ -467,8 +490,7 @@ const ServoDebugView = () => {
                 <i className="fa-solid fa-arrow-left"></i>
               </ActionIcon>
               <Title order={5}>
-                Servo {id}
-                {servo.alias ? `: ${servo.alias}` : ''}
+                {servo.alias ? `${servo.alias} (#${id})` : `Servo #${id}`}
               </Title>
             </Group>
           </Group>
@@ -552,18 +574,27 @@ const ServoDebugView = () => {
                   <Box w="100%" py="xs">
                     <Group justify="space-between" mb={4}>
                       <Text size="sm" fw={500}>Speed Control</Text>
-                      <Badge color="amber" variant="filled" size="sm">{speed}</Badge>
+                      <Badge color="amber" variant="filled" size="sm">
+                        {speed !== null ? speed : 'Loading...'}
+                      </Badge>
                     </Group>
-                    <Slider
-                      min={50}
-                      max={2000}
-                      step={10}
-                      value={speed}
-                      onChange={handleSpeedChange}
-                      color="amber"
-                      labelAlwaysOn={false}
-                      size="sm"
-                    />
+                    {speed !== null ? (
+                      <Slider
+                        min={50}
+                        max={2000}
+                        step={10}
+                        value={speed}
+                        onChange={handleSpeedChange}
+                        onChangeEnd={handleSpeedChangeComplete}
+                        color="amber"
+                        labelAlwaysOn={false}
+                        size="sm"
+                      />
+                    ) : (
+                      <div style={{ height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--mantine-color-dimmed)' }}>Loading...</span>
+                      </div>
+                    )}
                     <Text size="xs" c="dimmed" mt={2}>Lower values = faster movement</Text>
                   </Box>
                   

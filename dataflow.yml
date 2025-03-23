@@ -104,12 +104,9 @@ nodes:
       wiggle_servo: web/wiggle_servo
       calibrate_servo: web/calibrate_servo
       update_servo_setting: web/update_servo_setting
-      settings: config/settings
-      setting_updated: config/setting_updated
     outputs:
       - servo_status
       - servos_list
-      - update_setting
 
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture

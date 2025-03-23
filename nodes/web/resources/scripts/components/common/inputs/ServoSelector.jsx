@@ -141,8 +141,7 @@ const ServoSelector = ({ value, onChange, label }) => {
           }
           option.innerHTML = `
             <div class="servo-option-text">
-              Servo ${servo.id}
-              ${servo.name ? `<span class="servo-name" style="font-size: 12px; opacity: 0.7; margin-left: 4px;">(${servo.name})</span>` : ''}
+              ${servo.alias ? `${servo.alias} <span style="font-size: 12px; opacity: 0.7;">(#${servo.id})</span>` : `Servo #${servo.id}`}
             </div>
           `;
           option.addEventListener('click', () => handleSelectServo(servo.id));
@@ -235,7 +234,9 @@ const ServoSelector = ({ value, onChange, label }) => {
         ref={buttonRef}
         type="button"
       >
-        {selectedServo ? `Servo ${selectedServo.id}` : 'None Selected'}
+        {selectedServo ? 
+          (selectedServo.alias ? `${selectedServo.alias} (#${selectedServo.id})` : `Servo #${selectedServo.id}`) 
+          : 'None Selected'}
         <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`}></i>
       </button>
     </div>
