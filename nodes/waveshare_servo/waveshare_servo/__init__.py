@@ -1,3 +1,7 @@
+"""
+Waveshare Servo Node for WALL-E-DORA project.
+"""
+
 import os
 
 # Define the path to the README file relative to the package directory
@@ -9,3 +13,20 @@ try:
         __doc__ = f.read()
 except FileNotFoundError:
     __doc__ = "README file not found."
+
+# Use local imports instead of package imports
+from config_handler import ConfigHandler
+from event_processor import extract_event_data
+from manager import ServoManager
+from models import ServoSettings
+from scanner import ServoScanner
+from servo import Servo
+
+__all__ = [
+    'ConfigHandler',
+    'extract_event_data',
+    'ServoManager',
+    'ServoSettings',
+    'ServoScanner',
+    'Servo',
+]

@@ -100,7 +100,55 @@ When making changes to the project, follow this workflow:
 6. Run tests
 7. Commit changes with a descriptive message
 
-## Dora-Specific Patterns
+## Dora Node Architecture
+Follow this architectural pattern for all new nodes and when refactoring existing nodes:
+
+### Directory Structure
+```
+node_name/
+├── __init__.py
+├── __main__.py
+├── main.py           # Entry point and central manager class
+├── config_handler.py # (if needed)
+├── models.py         # Data structures and models
+├── inputs/           # One file per input event type (event preprocessing)
+│   ├── __init__.py
+│   ├── event_type1.py
+│   └── event_type2.py
+├── outputs/          # Functions for sending node outputs
+│   ├── __init__.py
+│   ├── output_type1.py
+│   └── output_type2.py
+├── actions/          # Core business logic for operations
+│   ├── __init__.py
+│   ├── action1.py    # One file per action/operation
+│   └── action2.py
+└── domain/           # Domain-specific functionality
+    ├── __init__.py
+    ├── component1.py
+    ├── component2.py
+    └── subdomain/    # Further organization as needed
+        ├── __init__.py
+        └── ...
+```
+
+### Key Architecture Principles
+1. **Modular Design with Clear Separation of Concerns**:
+   - Each file should have a single responsibility
+   - Prefer small, focused files (max ~100-200 lines) over monolithic ones
+   - Group domain-specific functionality in dedicated subdirectories
+
+2. **Clear Separation of Event Processing, Business Logic, and Data Flow**:
+   - `inputs/` directory: Event handlers that extract and validate data from incoming events
+   - `actions/` directory: Pure business logic independent of event formats
+   - `outputs/` directory: Functions for formatting and sending data to other nodes
+   - The central manager class orchestrates the flow: inputs → actions → outputs
+
+3. **Domain-Driven Structure**:
+   - Place domain-specific code in a dedicated subdirectory (e.g., `servo/` for servo node)
+   - Within domain directories, further organize by subdomain or functionality
+
+### Dora-Specific Implementation
 - For new dataflow events:
   1. Add event to outputs in sending node
   2. Add event to inputs in receiving node as `sender_node/event_name`
@@ -111,7 +159,13 @@ When making changes to the project, follow this workflow:
 ## Python Best Practices
 - Use Python 3.12+ with type annotations
 - Follow imports order: standard library → third-party → local modules
-- Maintain consistent node structure: `__init__.py`, `__main__.py`, and `main.py` per node
+- Maintain consistent node structure using the architecture pattern above
+- Keep files small and focused on a single responsibility
+- Follow Single Responsibility Principle (SRP) for all modules
+- For file size:
+  - Aim for 50-100 lines per file when possible
+  - If a file exceeds 200 lines, consider splitting it into smaller modules
+  - Extract related functionality into dedicated modules with clear names
 - Use try/except with detailed messages and graceful fallbacks
 - Use pa.array() for sending outputs through Dora nodes
 - Use pathlib instead of os.path for file operations
@@ -120,6 +174,7 @@ When making changes to the project, follow this workflow:
 - Apply consistent docstrings (Google style)
 - Use context managers (with) for resource management
 - Follow PEP 8 naming conventions
+- Implement clear interfaces between modules
 
 ## JavaScript/TypeScript Best Practices
 - Prefer const/let over var

@@ -8,13 +8,60 @@ The Waveshare Servo node manages all servo-related operations through a clean, m
 
 ```mermaid
 graph TD
-    A[ServoManager] --> B[ServoScanner]
-    A --> C[ConfigHandler]
-    A --> D[Servo Instances]
-    C -.-> E[Config Node]
-    A <-.-> F[Other Nodes]
-    D --> G[Serial Communication]
+    A[Main/ServoManager] --> B[Servo Package]
+    B --> B1[Controller]
+    B --> B2[Scanner]
+    B --> B3[Protocol]
+    B --> B4[SDK]
+    A --> C[Inputs]
+    C --> C1[move_servo]
+    C --> C2[wiggle_servo]
+    C --> C3[calibrate_servo]
+    C --> C4[update_servo_setting]
+    C --> C5[tick]
+    C --> C6[settings]
+    A --> D[Outputs]
+    D --> D1[servo_status]
+    D --> D2[servos_list]
+    A --> E[Operations]
+    A --> F[ConfigHandler]
 ```
+
+## Code Structure
+The node follows a clean, modular architecture with each component having a single responsibility:
+
+### Root Directory
+- `main.py`: Entry point and ServoManager class
+- `config_handler.py`: Configuration management
+- `event_processor.py`: Utility for extracting event data
+- `operations.py`: Internal operation handlers
+- `models.py`: Re-export for backward compatibility
+
+### servo/ Directory
+All servo-specific functionality:
+- `controller.py`: The main Servo class
+- `models.py`: ServoSettings data class
+- `scanner.py`: Serial connection management
+- `port_finder.py`: Utility for finding serial ports
+- `discovery.py`: Servo discovery functions
+- `wiggle.py`: Servo wiggle operation
+- `calibrate.py`: Servo calibration operation
+
+#### servo/protocol/ Subdirectory
+Low-level servo command implementation:
+- Command implementations (ping, position, ID, text)
+
+#### servo/sdk/ Subdirectory 
+Low-level servo communication SDK:
+- SDK components for SCS protocol
+
+### inputs/ Directory
+All event handlers for incoming events:
+- One file per input event type (move_servo, wiggle_servo, etc.)
+
+### outputs/ Directory
+Functions for sending data to other nodes:
+- broadcast_servo_status, broadcast_servos_list
 
 ## Functional Requirements
 - Scan and discover connected servo motors
@@ -42,9 +89,9 @@ graph TD
 - `wiggle_servo`: Wiggle a servo for identification
 - `calibrate_servo`: Calibrate a servo's position limits
 - `update_servo_setting`: Update a specific servo setting
-- `scan_servos`: Trigger a manual scan for servos
-- `config/settings`: Receive broadcast of all settings
-- `config/setting_updated`: Receive notification of a specific setting change
+- `tick`: Periodic trigger for servo scanning
+- `settings`: Receive broadcast of all settings
+- `setting_updated`: Receive notification of a specific setting change
 
 ### Outputs
 - `servo_status`: Status update for a single servo
@@ -58,18 +105,24 @@ graph TD
 
 ## Architecture Details
 
-### Classes
+### Key Components
 - **ServoManager**: Main orchestrator that manages the servo ecosystem
+- **Servo**: Represents a single servo with all its operations
 - **ServoScanner**: Handles discovery of servos via serial port
 - **ConfigHandler**: Interfaces with the config node for settings management
-- **Servo**: Represents a single servo with all its operations
 - **ServoSettings**: Data class for servo configuration parameters
+- **Protocol Implementations**: Low-level servo command implementation
+- **Input Handlers**: Dedicated handlers for each input event type
+- **Output Broadcasters**: Functions for sending data to other nodes
 
 ### Key Features
+- Clean architecture with separation of concerns
+- Single-responsibility principle applied to all files
+- Input/Output pattern for clear data flow
+- Domain-driven organization with servo-related code in one package
 - Automatic ID reassignment for new servos (avoids ID conflicts)
 - Local caching of settings for performance
 - Event-driven architecture for responsive behavior
-- Clean separation of concerns with modular components
 - Proper error handling and logging
 
 ## Contribution Guide
