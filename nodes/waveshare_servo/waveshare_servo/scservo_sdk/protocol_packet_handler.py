@@ -60,7 +60,7 @@ class protocol_packet_handler(object):
 
         if error & ERRBIT_OVERELE:
             return "[RxPacketError] OverEle error!"
-        
+
         if error & ERRBIT_OVERLOAD:
             return "[RxPacketError] Overload error!"
 
@@ -68,13 +68,17 @@ class protocol_packet_handler(object):
 
     def txPacket(self, port, txpacket):
         checksum = 0
-        
+
         # Validate txpacket
-        if not isinstance(txpacket, list) or PKT_LENGTH >= len(txpacket) or txpacket[PKT_LENGTH] is None:
+        if (
+            not isinstance(txpacket, list)
+            or PKT_LENGTH >= len(txpacket)
+            or txpacket[PKT_LENGTH] is None
+        ):
             print("txPacket error: invalid packet data")
             port.is_using = False
             return COMM_TX_ERROR
-            
+
         total_packet_length = txpacket[PKT_LENGTH] + 4  # 4: HEADER0 HEADER1 ID LENGTH
 
         if port.is_using:
@@ -106,7 +110,7 @@ class protocol_packet_handler(object):
 
         txpacket[total_packet_length - 1] = ~checksum & 0xFF
 
-        #print "[TxPacket] %r" % txpacket
+        # print "[TxPacket] %r" % txpacket
 
         # tx packet
         port.clearPort()
@@ -135,8 +139,11 @@ class protocol_packet_handler(object):
                         break
 
                 if idx == 0:  # found at the beginning of the packet
-                    if (rxpacket[PKT_ID] > 0xFD) or (rxpacket[PKT_LENGTH] > RXPACKET_MAX_LEN) or (
-                            rxpacket[PKT_ERROR] > 0x7F):
+                    if (
+                        (rxpacket[PKT_ID] > 0xFD)
+                        or (rxpacket[PKT_LENGTH] > RXPACKET_MAX_LEN)
+                        or (rxpacket[PKT_ERROR] > 0x7F)
+                    ):
                         # unavailable ID or unavailable Length or unavailable Error
                         # remove the first byte in the packet
                         del rxpacket[0]
@@ -173,7 +180,7 @@ class protocol_packet_handler(object):
 
                 else:
                     # remove unnecessary packets
-                    del rxpacket[0: idx]
+                    del rxpacket[0:idx]
                     rx_length -= idx
 
             else:
@@ -187,7 +194,7 @@ class protocol_packet_handler(object):
 
         port.is_using = False
 
-        #print "[RxPacket] %r" % rxpacket
+        # print "[RxPacket] %r" % rxpacket
 
         return rxpacket, result
 
@@ -201,7 +208,7 @@ class protocol_packet_handler(object):
             return rxpacket, result, error
 
         # (ID == Broadcast ID) == no need to wait for status packet or not available
-        if (txpacket[PKT_ID] == BROADCAST_ID):
+        if txpacket[PKT_ID] == BROADCAST_ID:
             port.is_using = False
             return rxpacket, result, error
 
@@ -236,7 +243,7 @@ class protocol_packet_handler(object):
         txpacket[PKT_ID] = scs_id
         txpacket[PKT_LENGTH] = 2
         txpacket[PKT_INSTRUCTION] = INST_PING
-        
+
         try:
             rxpacket, result, error = self.txRxPacket(port, txpacket)
         except Exception as e:
@@ -244,7 +251,9 @@ class protocol_packet_handler(object):
             return model_number, COMM_RX_FAIL, error
 
         if result == COMM_SUCCESS:
-            data_read, result, error = self.readTxRx(port, scs_id, 3, 2)  # Address 3 : Model Number
+            data_read, result, error = self.readTxRx(
+                port, scs_id, 3, 2
+            )  # Address 3 : Model Number
             if result == COMM_SUCCESS:
                 model_number = SCS_MAKEWORD(data_read[0], data_read[1])
 
@@ -262,7 +271,6 @@ class protocol_packet_handler(object):
         return result
 
     def readTx(self, port, scs_id, address, length):
-
         txpacket = [0] * 8
 
         if scs_id >= BROADCAST_ID:
@@ -298,13 +306,15 @@ class protocol_packet_handler(object):
         if result == COMM_SUCCESS and rxpacket[PKT_ID] == scs_id:
             error = rxpacket[PKT_ERROR]
 
-            data.extend(rxpacket[PKT_PARAMETER0: PKT_PARAMETER0 + length])
+            data.extend(rxpacket[PKT_PARAMETER0 : PKT_PARAMETER0 + length])
 
         return data, result, error
 
     def readTxRx(self, port, scs_id, address, length):
         # Initialize with explicit zeros for all required packet fields
-        txpacket = [0] * 8  # [HEADER0, HEADER1, ID, LENGTH, INSTRUCTION, PARAM0, PARAM1, CHECKSUM]
+        txpacket = [
+            0
+        ] * 8  # [HEADER0, HEADER1, ID, LENGTH, INSTRUCTION, PARAM0, PARAM1, CHECKSUM]
         data = []
 
         if scs_id >= BROADCAST_ID:
@@ -316,7 +326,7 @@ class protocol_packet_handler(object):
         txpacket[PKT_INSTRUCTION] = INST_READ
         txpacket[PKT_PARAMETER0 + 0] = address
         txpacket[PKT_PARAMETER0 + 1] = length
-        
+
         try:
             rxpacket, result, error = self.txRxPacket(port, txpacket)
         except Exception as e:
@@ -325,7 +335,7 @@ class protocol_packet_handler(object):
         if result == COMM_SUCCESS:
             error = rxpacket[PKT_ERROR]
 
-            data.extend(rxpacket[PKT_PARAMETER0: PKT_PARAMETER0 + length])
+            data.extend(rxpacket[PKT_PARAMETER0 : PKT_PARAMETER0 + length])
 
         return data, result, error
 
@@ -360,14 +370,24 @@ class protocol_packet_handler(object):
 
     def read4ByteRx(self, port, scs_id):
         data, result, error = self.readRx(port, scs_id, 4)
-        data_read = SCS_MAKEDWORD(SCS_MAKEWORD(data[0], data[1]),
-                                  SCS_MAKEWORD(data[2], data[3])) if (result == COMM_SUCCESS) else 0
+        data_read = (
+            SCS_MAKEDWORD(
+                SCS_MAKEWORD(data[0], data[1]), SCS_MAKEWORD(data[2], data[3])
+            )
+            if (result == COMM_SUCCESS)
+            else 0
+        )
         return data_read, result, error
 
     def read4ByteTxRx(self, port, scs_id, address):
         data, result, error = self.readTxRx(port, scs_id, address, 4)
-        data_read = SCS_MAKEDWORD(SCS_MAKEWORD(data[0], data[1]),
-                                  SCS_MAKEWORD(data[2], data[3])) if (result == COMM_SUCCESS) else 0
+        data_read = (
+            SCS_MAKEDWORD(
+                SCS_MAKEWORD(data[0], data[1]), SCS_MAKEWORD(data[2], data[3])
+            )
+            if (result == COMM_SUCCESS)
+            else 0
+        )
         return data_read, result, error
 
     def writeTxOnly(self, port, scs_id, address, length, data):
@@ -378,7 +398,7 @@ class protocol_packet_handler(object):
         txpacket[PKT_INSTRUCTION] = INST_WRITE
         txpacket[PKT_PARAMETER0] = address
 
-        txpacket[PKT_PARAMETER0 + 1: PKT_PARAMETER0 + 1 + length] = data[0: length]
+        txpacket[PKT_PARAMETER0 + 1 : PKT_PARAMETER0 + 1 + length] = data[0:length]
 
         result = self.txPacket(port, txpacket)
         port.is_using = False
@@ -393,7 +413,7 @@ class protocol_packet_handler(object):
         txpacket[PKT_INSTRUCTION] = INST_WRITE
         txpacket[PKT_PARAMETER0] = address
 
-        txpacket[PKT_PARAMETER0 + 1: PKT_PARAMETER0 + 1 + length] = data[0: length]
+        txpacket[PKT_PARAMETER0 + 1 : PKT_PARAMETER0 + 1 + length] = data[0:length]
         rxpacket, result, error = self.txRxPacket(port, txpacket)
 
         return result, error
@@ -415,17 +435,21 @@ class protocol_packet_handler(object):
         return self.writeTxRx(port, scs_id, address, 2, data_write)
 
     def write4ByteTxOnly(self, port, scs_id, address, data):
-        data_write = [SCS_LOBYTE(SCS_LOWORD(data)),
-                      SCS_HIBYTE(SCS_LOWORD(data)),
-                      SCS_LOBYTE(SCS_HIWORD(data)),
-                      SCS_HIBYTE(SCS_HIWORD(data))]
+        data_write = [
+            SCS_LOBYTE(SCS_LOWORD(data)),
+            SCS_HIBYTE(SCS_LOWORD(data)),
+            SCS_LOBYTE(SCS_HIWORD(data)),
+            SCS_HIBYTE(SCS_HIWORD(data)),
+        ]
         return self.writeTxOnly(port, scs_id, address, 4, data_write)
 
     def write4ByteTxRx(self, port, scs_id, address, data):
-        data_write = [SCS_LOBYTE(SCS_LOWORD(data)),
-                      SCS_HIBYTE(SCS_LOWORD(data)),
-                      SCS_LOBYTE(SCS_HIWORD(data)),
-                      SCS_HIBYTE(SCS_HIWORD(data))]
+        data_write = [
+            SCS_LOBYTE(SCS_LOWORD(data)),
+            SCS_HIBYTE(SCS_LOWORD(data)),
+            SCS_LOBYTE(SCS_HIWORD(data)),
+            SCS_HIBYTE(SCS_HIWORD(data)),
+        ]
         return self.writeTxRx(port, scs_id, address, 4, data_write)
 
     def regWriteTxOnly(self, port, scs_id, address, length, data):
@@ -436,7 +460,7 @@ class protocol_packet_handler(object):
         txpacket[PKT_INSTRUCTION] = INST_REG_WRITE
         txpacket[PKT_PARAMETER0] = address
 
-        txpacket[PKT_PARAMETER0 + 1: PKT_PARAMETER0 + 1 + length] = data[0: length]
+        txpacket[PKT_PARAMETER0 + 1 : PKT_PARAMETER0 + 1 + length] = data[0:length]
 
         result = self.txPacket(port, txpacket)
         port.is_using = False
@@ -451,7 +475,7 @@ class protocol_packet_handler(object):
         txpacket[PKT_INSTRUCTION] = INST_REG_WRITE
         txpacket[PKT_PARAMETER0] = address
 
-        txpacket[PKT_PARAMETER0 + 1: PKT_PARAMETER0 + 1 + length] = data[0: length]
+        txpacket[PKT_PARAMETER0 + 1 : PKT_PARAMETER0 + 1 + length] = data[0:length]
 
         _, result, error = self.txRxPacket(port, txpacket)
 
@@ -467,7 +491,9 @@ class protocol_packet_handler(object):
         txpacket[PKT_PARAMETER0 + 0] = start_address
         txpacket[PKT_PARAMETER0 + 1] = data_length
 
-        txpacket[PKT_PARAMETER0 + 2: PKT_PARAMETER0 + 2 + param_length] = param[0: param_length]
+        txpacket[PKT_PARAMETER0 + 2 : PKT_PARAMETER0 + 2 + param_length] = param[
+            0:param_length
+        ]
 
         result = self.txPacket(port, txpacket)
         if result == COMM_SUCCESS:
@@ -475,18 +501,21 @@ class protocol_packet_handler(object):
 
         return result
 
-
     def syncWriteTxOnly(self, port, start_address, data_length, param, param_length):
         txpacket = [0] * (param_length + 8)
         # 8: HEADER0 HEADER1 ID LEN INST START_ADDR DATA_LEN ... CHKSUM
 
         txpacket[PKT_ID] = BROADCAST_ID
-        txpacket[PKT_LENGTH] = param_length + 4  # 4: INST START_ADDR DATA_LEN ... CHKSUM
+        txpacket[PKT_LENGTH] = (
+            param_length + 4
+        )  # 4: INST START_ADDR DATA_LEN ... CHKSUM
         txpacket[PKT_INSTRUCTION] = INST_SYNC_WRITE
         txpacket[PKT_PARAMETER0 + 0] = start_address
         txpacket[PKT_PARAMETER0 + 1] = data_length
 
-        txpacket[PKT_PARAMETER0 + 2: PKT_PARAMETER0 + 2 + param_length] = param[0: param_length]
+        txpacket[PKT_PARAMETER0 + 2 : PKT_PARAMETER0 + 2 + param_length] = param[
+            0:param_length
+        ]
 
         _, result, _ = self.txRxPacket(port, txpacket)
 

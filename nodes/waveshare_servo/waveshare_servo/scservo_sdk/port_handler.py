@@ -3,7 +3,6 @@
 import time
 import serial
 import sys
-import platform
 
 LATENCY_TIMER = 16
 DEFAULT_BAUDRATE = 1000000
@@ -55,7 +54,7 @@ class PortHandler(object):
         return self.ser.in_waiting
 
     def readPort(self, length):
-        if (sys.version_info > (3, 0)):
+        if sys.version_info > (3, 0):
             return self.ser.read(length)
         else:
             return [ord(ch) for ch in self.ser.read(length)]
@@ -65,7 +64,9 @@ class PortHandler(object):
 
     def setPacketTimeout(self, packet_length):
         self.packet_start_time = self.getCurrentTime()
-        self.packet_timeout = (self.tx_time_per_byte * packet_length) + (LATENCY_TIMER * 2.0) + 2.0
+        self.packet_timeout = (
+            (self.tx_time_per_byte * packet_length) + (LATENCY_TIMER * 2.0) + 2.0
+        )
 
     def setPacketTimeoutMillis(self, msec):
         self.packet_start_time = self.getCurrentTime()
@@ -98,7 +99,7 @@ class PortHandler(object):
             # parity = serial.PARITY_ODD,
             # stopbits = serial.STOPBITS_TWO,
             bytesize=serial.EIGHTBITS,
-            timeout=0
+            timeout=0,
         )
 
         self.is_open = True
@@ -110,7 +111,19 @@ class PortHandler(object):
         return True
 
     def getCFlagBaud(self, baudrate):
-        if baudrate in [4800, 9600, 14400, 19200, 38400, 57600, 115200, 128000, 250000, 500000, 1000000]:
+        if baudrate in [
+            4800,
+            9600,
+            14400,
+            19200,
+            38400,
+            57600,
+            115200,
+            128000,
+            250000,
+            500000,
+            1000000,
+        ]:
             return baudrate
         else:
-            return -1          
+            return -1

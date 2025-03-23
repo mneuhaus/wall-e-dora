@@ -2,6 +2,7 @@
 
 from .scservo_def import *
 
+
 class GroupSyncRead:
     def __init__(self, port, ph, start_address, data_length):
         self.port = port
@@ -52,8 +53,13 @@ class GroupSyncRead:
         if self.is_param_changed is True or not self.param:
             self.makeParam()
 
-        return self.ph.syncReadTx(self.port, self.start_address, self.data_length, self.param,
-                                  len(self.data_dict.keys()) * 1)
+        return self.ph.syncReadTx(
+            self.port,
+            self.start_address,
+            self.data_length,
+            self.param,
+            len(self.data_dict.keys()) * 1,
+        )
 
     def rxPacket(self):
         self.last_result = False
@@ -64,7 +70,9 @@ class GroupSyncRead:
             return COMM_NOT_AVAILABLE
 
         for scs_id in self.data_dict:
-            self.data_dict[scs_id], result, _ = self.ph.readRx(self.port, scs_id, self.data_length)
+            self.data_dict[scs_id], result, _ = self.ph.readRx(
+                self.port, scs_id, self.data_length
+            )
             if result != COMM_SUCCESS:
                 return result
 
@@ -81,14 +89,16 @@ class GroupSyncRead:
         return self.rxPacket()
 
     def isAvailable(self, scs_id, address, data_length):
-        #if self.last_result is False or scs_id not in self.data_dict:
+        # if self.last_result is False or scs_id not in self.data_dict:
         if scs_id not in self.data_dict:
             return False
 
-        if (address < self.start_address) or (self.start_address + self.data_length - data_length < address):
+        if (address < self.start_address) or (
+            self.start_address + self.data_length - data_length < address
+        ):
             return False
 
-        if len(self.data_dict[scs_id])<data_length:
+        if len(self.data_dict[scs_id]) < data_length:
             return False
         return True
 
@@ -99,12 +109,20 @@ class GroupSyncRead:
         if data_length == 1:
             return self.data_dict[scs_id][address - self.start_address]
         elif data_length == 2:
-            return SCS_MAKEWORD(self.data_dict[scs_id][address - self.start_address],
-                                self.data_dict[scs_id][address - self.start_address + 1])
+            return SCS_MAKEWORD(
+                self.data_dict[scs_id][address - self.start_address],
+                self.data_dict[scs_id][address - self.start_address + 1],
+            )
         elif data_length == 4:
-            return SCS_MAKEDWORD(SCS_MAKEWORD(self.data_dict[scs_id][address - self.start_address + 0],
-                                              self.data_dict[scs_id][address - self.start_address + 1]),
-                                 SCS_MAKEWORD(self.data_dict[scs_id][address - self.start_address + 2],
-                                              self.data_dict[scs_id][address - self.start_address + 3]))
+            return SCS_MAKEDWORD(
+                SCS_MAKEWORD(
+                    self.data_dict[scs_id][address - self.start_address + 0],
+                    self.data_dict[scs_id][address - self.start_address + 1],
+                ),
+                SCS_MAKEWORD(
+                    self.data_dict[scs_id][address - self.start_address + 2],
+                    self.data_dict[scs_id][address - self.start_address + 3],
+                ),
+            )
         else:
             return 0

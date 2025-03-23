@@ -30,27 +30,29 @@ def SCS_GETEND():
     global SCS_END
     return SCS_END
 
+
 def SCS_SETEND(e):
     global SCS_END
     SCS_END = e
 
+
 def SCS_TOHOST(a, b):
-    if (a & (1<<b)):
-        return -(a & ~(1<<b))
+    if a & (1 << b):
+        return -(a & ~(1 << b))
     else:
         return a
 
 
 def SCS_TOSCS(a, b):
-    if (a<0):
-        return (-a | (1<<b))
+    if a < 0:
+        return -a | (1 << b)
     else:
         return a
 
 
 def SCS_MAKEWORD(a, b):
     global SCS_END
-    if SCS_END==0:
+    if SCS_END == 0:
         return (a & 0xFF) | ((b & 0xFF) << 8)
     else:
         return (b & 0xFF) | ((a & 0xFF) << 8)
@@ -70,7 +72,7 @@ def SCS_HIWORD(l):
 
 def SCS_LOBYTE(w):
     global SCS_END
-    if SCS_END==0:
+    if SCS_END == 0:
         return w & 0xFF
     else:
         return (w >> 8) & 0xFF
@@ -78,7 +80,7 @@ def SCS_LOBYTE(w):
 
 def SCS_HIBYTE(w):
     global SCS_END
-    if SCS_END==0:
+    if SCS_END == 0:
         return (w >> 8) & 0xFF
     else:
         return w & 0xFF
