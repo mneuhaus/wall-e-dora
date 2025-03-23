@@ -552,15 +552,15 @@ const ServoDebugView = () => {
                 
                 <Stack p="xs" spacing="md" style={{ flex: 1 }}>
                   {/* Alias Input */}
-                  <TextInput
-                    label="Servo Alias"
-                    placeholder="Friendly name for this servo"
-                    value={aliasInput}
-                    onChange={(e) => setAliasInput(e.target.value)}
-                    maxLength={20}
-                    rightSectionWidth={80}
-                    rightSectionProps={{ className: 'm_82577fc2' }}
-                    rightSection={
+                  <Box>
+                    <TextInput
+                      label="Servo Alias"
+                      placeholder="Friendly name for this servo"
+                      value={aliasInput}
+                      onChange={(e) => setAliasInput(e.target.value)}
+                      maxLength={20}
+                    />
+                    <Group position="right" mt="xs">
                       <Button 
                         variant="outline" 
                         color="amber" 
@@ -568,12 +568,11 @@ const ServoDebugView = () => {
                         disabled={!aliasInput.trim()}
                         leftSection={<i className="fa-solid fa-tag"></i>}
                         size="xs"
-                        w={65}
                       >
-                        Set
+                        Set Alias
                       </Button>
-                    }
-                  />
+                    </Group>
+                  </Box>
                   
                   {/* Gamepad Controls Section */}
                   <Box>
@@ -617,22 +616,20 @@ const ServoDebugView = () => {
                             { value: 'RIGHT_ANALOG_STICK_Y', label: 'RIGHT_ANALOG_STICK_Y' },
                           ]}
                         ]}
-                        rightSectionWidth={90}
-                        rightSectionProps={{ className: 'm_82577fc2' }}
-                        rightSection={
-                          <Button 
-                            variant="outline" 
-                            color="amber" 
-                            onClick={handleAttachServo}
-                            disabled={!attachIndex}
-                            leftSection={<i className="fa-solid fa-gamepad"></i>}
-                            size="xs"
-                            w={75}
-                          >
-                            Attach
-                          </Button>
-                        }
                       />
+                      
+                      <Group position="right" mt="xs">
+                        <Button 
+                          variant="outline" 
+                          color="amber" 
+                          onClick={handleAttachServo}
+                          disabled={!attachIndex}
+                          leftSection={<i className="fa-solid fa-gamepad"></i>}
+                          size="xs"
+                        >
+                          Attach to Gamepad
+                        </Button>
+                      </Group>
                       
                       {/* Status of gamepad control attachment */}
                       {servo.attached_control 
@@ -670,28 +667,27 @@ const ServoDebugView = () => {
                   {/* Advanced Settings */}
                   <Collapse in={showAdvancedControls}>
                     <Stack spacing="md" pt="sm" style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
-                      <NumberInput
-                        label="Change Servo ID"
-                        placeholder="New ID (1-253)"
-                        min={1}
-                        max={253}
-                        value={newId || undefined}
-                        onChange={(val) => setNewId(val?.toString() || '')}
-                        rightSectionWidth={90}
-                        rightSectionProps={{ className: 'm_82577fc2' }}
-                        rightSection={
+                      <Box>
+                        <NumberInput
+                          label="Change Servo ID"
+                          placeholder="New ID (1-253)"
+                          min={1}
+                          max={253}
+                          value={newId || undefined}
+                          onChange={(val) => setNewId(val?.toString() || '')}
+                        />
+                        <Group position="right" mt="xs">
                           <Button 
                             variant="outline" 
                             onClick={handleChangeId}
                             disabled={!newId}
                             leftSection={<i className="fa-solid fa-id-card"></i>}
                             size="xs"
-                            w={75}
                           >
-                            Update
+                            Update ID
                           </Button>
-                        }
-                      />
+                        </Group>
+                      </Box>
                       
                       <Paper p="md" withBorder radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
                         <Stack spacing="xs" align="center">
