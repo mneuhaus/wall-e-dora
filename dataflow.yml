@@ -96,7 +96,7 @@ nodes:
       setting_updated: config/setting_updated
 
   - id: waveshare_servo
-    path: nodes/waveshare_servo/waveshare_servo/main.py
+    path: nodes/waveshare_servo/entrypoint.py
     inputs:
       tick: dora/timer/secs/10
       move_servo: web/move_servo

@@ -4,11 +4,19 @@ Handler for wiggle_servo events.
 
 import traceback
 from typing import Dict, Any
+import sys
+import os
 
-from event_processor import extract_event_data
+# Add the parent directory to the path for imports if needed
+current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+parent_dir = os.path.dirname(os.path.dirname(current_dir))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+from waveshare_servo.event_processor import extract_event_data
 
 
-def handle_wiggle_servo(manager, event: Dict[str, Any]) -> bool:
+def handle_wiggle_servo(context, event: Dict[str, Any]) -> bool:
     """
     Handle incoming wiggle_servo event by extracting data and wiggling the servo.
     """
@@ -17,25 +25,27 @@ def handle_wiggle_servo(manager, event: Dict[str, Any]) -> bool:
         if data:
             servo_id = data.get("id")
             if servo_id is not None:
-                return wiggle_servo(manager, servo_id)
+                return wiggle_servo(context, servo_id)
     except Exception as e:
         print(f"Error processing wiggle_servo event: {e}")
         traceback.print_exc()
     return False
 
 
-def wiggle_servo(manager, servo_id: int) -> bool:
+def wiggle_servo(context, servo_id: int) -> bool:
     """
     Wiggle a servo to help with physical identification.
     
     Args:
-        manager: ServoManager instance
+        context: Node context dictionary
         servo_id: ID of the servo to wiggle
         
     Returns:
         bool: Success or failure
     """
-    if servo_id in manager.servos:
-        servo = manager.servos[servo_id]
+    servos = context["servos"]
+    
+    if servo_id in servos:
+        servo = servos[servo_id]
         return servo.wiggle()
     return False

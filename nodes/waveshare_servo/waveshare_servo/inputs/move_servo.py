@@ -4,12 +4,20 @@ Handler for move_servo events.
 
 import traceback
 from typing import Dict, Any
+import sys
+import os
 
-from event_processor import extract_event_data
-from outputs import broadcast_servo_status
+# Add the parent directory to the path for imports if needed
+current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+parent_dir = os.path.dirname(os.path.dirname(current_dir))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+from waveshare_servo.event_processor import extract_event_data
+from waveshare_servo.outputs.servo_status import broadcast_servo_status
 
 
-def handle_move_servo(manager, event: Dict[str, Any]) -> bool:
+def handle_move_servo(context, event: Dict[str, Any]) -> bool:
     """
     Handle incoming move_servo event by extracting data and moving the servo.
     """
@@ -19,30 +27,34 @@ def handle_move_servo(manager, event: Dict[str, Any]) -> bool:
             servo_id = data.get("id")
             position = data.get("position")
             if servo_id is not None and position is not None:
-                return move_servo(manager, servo_id, position)
+                return move_servo(context, servo_id, position)
     except Exception as e:
         print(f"Error processing move_servo event: {e}")
         traceback.print_exc()
     return False
 
 
-def move_servo(manager, servo_id: int, position: int) -> bool:
+def move_servo(context, servo_id: int, position: int) -> bool:
     """
     Move a servo to a specific position.
     
     Args:
-        manager: ServoManager instance
+        context: Node context dictionary
         servo_id: ID of the servo to move
         position: Target position
         
     Returns:
         bool: Success or failure
     """
-    if servo_id in manager.servos:
-        servo = manager.servos[servo_id]
+    node = context["node"]
+    config = context["config"]
+    servos = context["servos"]
+    
+    if servo_id in servos:
+        servo = servos[servo_id]
         if servo.move(position):
             # Update position in config
-            manager.config.update_servo_setting(servo_id, "position", position)
-            broadcast_servo_status(manager.node, servo_id, manager.servos)
+            config.update_servo_setting(servo_id, "position", position)
+            broadcast_servo_status(node, servo_id, servos)
             return True
     return False

@@ -4,12 +4,20 @@ Configuration handler for the Waveshare Servo Node.
 
 import json
 import traceback
+import sys
+import os
 from typing import Optional
 
 import pyarrow as pa
 
+# Add the parent directory to the path for imports if needed
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(os.path.dirname(current_dir))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 # Import from servo module
-from servo import ServoSettings
+from waveshare_servo.servo.models import ServoSettings
 
 
 class ConfigHandler:
