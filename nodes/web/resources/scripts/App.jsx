@@ -34,7 +34,7 @@ import {
 
 // Import components
 import { ConnectionStatus, ServoStatus, PowerStatus } from './components/status';
-import { GridLockControl as GridLock, AddWidgetControl as AddWidget, VolumeControl as Volume } from './components/controls';
+import { GridLockControl as GridLock, VolumeControl as Volume } from './components/controls';
 import { GamepadStatus as Gamepad } from './components/status';
 
 // Alias PowerStatus as Power for consistency
@@ -80,10 +80,9 @@ const App = () => {
                   <Group gap="xs" wrap="nowrap">
                     <Gamepad />
                     <ServoStatus />
-                    <Power />
-                    <Volume />
-                    <AddWidget />
                     <GridLock />
+                    <Volume />
+                    <Power />
                     <ConnectionStatus />
                   </Group>
                 </Group>

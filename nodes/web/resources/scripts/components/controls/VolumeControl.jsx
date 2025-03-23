@@ -48,7 +48,7 @@ const VolumeControl = () => {
       onChange={setIsOpen}
       position="bottom"
       shadow="md"
-      width={220}
+      width={420}
       withArrow
       trapFocus={false}
     >
@@ -69,12 +69,6 @@ const VolumeControl = () => {
       <Popover.Dropdown>
         <Box p="md">
           <Stack align="center" gap="sm">
-            <Group position="apart" w="100%">
-              <i className="fa-solid fa-volume-mute" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
-              <Text size="sm" c="amber" fw={500}>Volume</Text>
-              <i className="fa-solid fa-volume-up" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
-            </Group>
-            
             <Slider
               value={volume}
               onChange={handleVolumeChange}
@@ -105,18 +99,7 @@ const VolumeControl = () => {
                   borderColor: 'var(--mantine-color-amber-filled)'
                 }
               }}
-              marks={[
-                { value: 0 },
-                { value: 25 },
-                { value: 50 },
-                { value: 75 },
-                { value: 100 }
-              ]}
             />
-            
-            <Text size="sm" ta="center" c="dimmed">
-              Current: {volume}%
-            </Text>
           </Stack>
         </Box>
       </Popover.Dropdown>
