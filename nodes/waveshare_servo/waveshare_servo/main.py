@@ -12,6 +12,7 @@ from dora import Node
 import traceback
 import json
 import time
+import os
 from dataclasses import asdict, dataclass
 from typing import Dict, Optional, Set
 
@@ -46,12 +47,28 @@ class ServoScanner:
 
     def find_servo_port(self) -> Optional[str]:
         """Find the serial port for the servo controller."""
-        ports = list(serial.tools.list_ports.comports())
-        for port in ports:
-            # Check for typical USB-Serial device identifiers
-            if any(id_str in port.description for id_str in 
-                  ["USB-Serial", "CP210", "CH340", "FTDI"]):
-                return port.device
+        # Try by direct name first (this was used in the previous implementation)
+        try:
+            device_path = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'
+            if os.path.exists(device_path):
+                print(f"Found servo controller at {device_path}")
+                return device_path
+        except Exception as e:
+            print(f"Error checking direct device path: {e}")
+        
+        # Fall back to scanning ports
+        try:
+            ports = list(serial.tools.list_ports.comports())
+            for port in ports:
+                # Check for typical USB-Serial device identifiers
+                if any(id_str in port.description for id_str in 
+                      ["USB-Serial", "CP210", "CH340", "FTDI"]):
+                    print(f"Found servo controller at {port.device}")
+                    return port.device
+        except Exception as e:
+            print(f"Error scanning serial ports: {e}")
+            
+        print("No servo controller found by name or USB identifiers")
         return None
 
     def connect(self) -> bool:
@@ -65,7 +82,8 @@ class ServoScanner:
                 print("No servo controller found")
                 return False
 
-            self.serial_conn = serial.Serial(self.port, 115200, timeout=0.5)
+            # Use the same baud rate as the previous implementation (1000000)
+            self.serial_conn = serial.Serial(self.port, 1000000, timeout=0.5)
             time.sleep(0.1)  # Allow time for connection to establish
             return True
         except Exception as e:
@@ -82,16 +100,36 @@ class ServoScanner:
         if not self.connect():
             return set()
 
+        # Checking for connected servos
+        print(f"Scanning for servos...")
         discovered_servos = set()
-        for id in range(1, 32):  # Waveshare servos typically use IDs 1-31
+        
+        # Only try SCS protocol format as it was used in previous implementation
+        for id in range(1, 16):  # Limit to likely servo IDs (1-15)
             try:
-                self.serial_conn.write(f"#{id}PING\r\n".encode())
-                response = self.serial_conn.readline().decode().strip()
-                if response and "OK" in response:
+                # SCS protocol format for ping (based on previous implementation)
+                cmd = bytearray([0xFF, 0xFF, id, 2, 1])
+                checksum = (~sum(cmd[2:]) & 0xFF)
+                cmd.append(checksum)
+                
+                # Send quietly without logging every attempt
+                self.serial_conn.write(cmd)
+                self.serial_conn.flush()
+                time.sleep(0.05)  # Short wait for response
+                response = self.serial_conn.read(self.serial_conn.in_waiting)
+                
+                # Check response
+                if response and len(response) > 0:
                     discovered_servos.add(id)
             except Exception as e:
                 print(f"Error while pinging servo {id}: {e}")
 
+        # Only print results at the end
+        if discovered_servos:
+            print(f"Found servos with IDs: {discovered_servos}")
+        else:
+            print("No servos found")
+            
         return discovered_servos
 
 
@@ -106,10 +144,72 @@ class Servo:
     def send_command(self, command: str) -> Optional[str]:
         """Send a command to the servo and get the response."""
         try:
-            full_command = f"#{self.id}{command}\r\n"
-            self.serial_conn.write(full_command.encode())
-            response = self.serial_conn.readline().decode().strip()
-            return response
+            # Use SCS protocol format for most commands (based on previous implementation)
+            if command == "PING":
+                # Ping command
+                cmd = bytearray([0xFF, 0xFF, self.id, 2, 1])
+                checksum = (~sum(cmd[2:]) & 0xFF)
+                cmd.append(checksum)
+                self.serial_conn.write(cmd)
+                self.serial_conn.flush()
+                time.sleep(0.05)
+                binary_response = self.serial_conn.read(self.serial_conn.in_waiting)
+                if binary_response:
+                    return "OK"
+            elif command.startswith("P") and "T" in command:
+                # Position command with time: P<position>T<time>
+                # Parse position and time values
+                try:
+                    position_str = command[1:command.index("T")]
+                    time_str = command[command.index("T")+1:]
+                    position = int(position_str)
+                    time_value = int(time_str)
+                    
+                    # Send as SCS format
+                    # Write Goal Position (address 42) for SCS servo
+                    addr = 42  # Position address
+                    cmd = bytearray([0xFF, 0xFF, self.id, 5, 3, addr, position & 0xFF, (position >> 8) & 0xFF])
+                    checksum = (~sum(cmd[2:]) & 0xFF)
+                    cmd.append(checksum)
+                    self.serial_conn.write(cmd)
+                    self.serial_conn.flush()
+                    time.sleep(0.05)
+                    # Also set speed if specified
+                    if time_value > 0:
+                        addr = 46  # Speed address
+                        cmd = bytearray([0xFF, 0xFF, self.id, 5, 3, addr, time_value & 0xFF, (time_value >> 8) & 0xFF])
+                        checksum = (~sum(cmd[2:]) & 0xFF)
+                        cmd.append(checksum)
+                        self.serial_conn.write(cmd)
+                        self.serial_conn.flush()
+                    return "OK"
+                except Exception as e:
+                    print(f"Error parsing position command: {e}")
+            elif command.startswith("ID"):
+                # Change ID command
+                try:
+                    new_id = int(command[2:])
+                    if 1 <= new_id <= 31:
+                        addr = 5  # ID address
+                        cmd = bytearray([0xFF, 0xFF, self.id, 4, 3, addr, new_id])
+                        checksum = (~sum(cmd[2:]) & 0xFF)
+                        cmd.append(checksum)
+                        self.serial_conn.write(cmd)
+                        self.serial_conn.flush()
+                        time.sleep(0.1)
+                        return "OK"
+                except Exception as e:
+                    print(f"Error parsing ID command: {e}")
+            else:
+                # Fallback to text format for other commands
+                full_command = f"#{self.id}{command}\r\n"
+                self.serial_conn.write(full_command.encode())
+                self.serial_conn.flush()
+                time.sleep(0.1)
+                response = self.serial_conn.readline().decode().strip()
+                return response
+                
+            return None
         except Exception as e:
             print(f"Error sending command to servo {self.id}: {e}")
             return None
@@ -209,9 +309,14 @@ class ConfigHandler:
 
     def update_setting(self, path: str, value: any):
         """Update a setting in the config node."""
-        self.node.send_output(
-            "update_setting", pa.array([json.dumps({"path": path, "value": value})])
-        )
+        try:
+            data = json.dumps({"path": path, "value": value})
+            self.node.send_output(
+                "update_setting", pa.array([data])
+            )
+        except Exception as e:
+            print(f"Error sending update_setting: {e}")
+            traceback.print_exc()
 
     def update_servo_setting(self, servo_id: int, property_name: str, value: any):
         """Update a specific servo setting."""
@@ -290,7 +395,7 @@ class ServoManager:
         try:
             discovered_ids = self.scanner.discover_servos()
             
-            print(f"Discovered servos with IDs: {discovered_ids}")
+            # No need to log again - scanner already logged the discovered IDs
             
             for servo_id in discovered_ids:
                 if servo_id not in self.servos:
@@ -337,20 +442,28 @@ class ServoManager:
 
     def broadcast_servo_status(self, servo_id: int):
         """Broadcast the status of a single servo."""
-        if servo_id in self.servos:
-            servo = self.servos[servo_id]
-            self.node.send_output(
-                "servo_status",
-                pa.array([json.dumps(servo.settings.to_dict())])
-            )
+        try:
+            if servo_id in self.servos:
+                servo = self.servos[servo_id]
+                self.node.send_output(
+                    "servo_status",
+                    pa.array([json.dumps(servo.settings.to_dict())])
+                )
+        except Exception as e:
+            print(f"Error broadcasting servo status: {e}")
+            traceback.print_exc()
 
     def broadcast_servos_list(self):
         """Broadcast the list of all servos."""
-        servo_list = [servo.settings.to_dict() for servo in self.servos.values()]
-        self.node.send_output(
-            "servos_list", 
-            pa.array([json.dumps(servo_list)])
-        )
+        try:
+            servo_list = [servo.settings.to_dict() for servo in self.servos.values()]
+            self.node.send_output(
+                "servos_list", 
+                pa.array([json.dumps(servo_list)])
+            )
+        except Exception as e:
+            print(f"Error broadcasting servos list: {e}")
+            traceback.print_exc()
 
     def handle_move_servo(self, servo_id: int, position: int):
         """Handle request to move a servo."""
@@ -415,42 +528,86 @@ class ServoManager:
             
             if event_id == "move_servo":
                 try:
-                    data = json.loads(event["data"].as_py()[0])
-                    servo_id = data.get("id")
-                    position = data.get("position")
-                    if servo_id is not None and position is not None:
-                        self.handle_move_servo(servo_id, position)
+                    # Try to get data either from "data" or "value" field
+                    data_field = None
+                    if "data" in event and event["data"] is not None:
+                        data_field = event["data"]
+                    elif "value" in event and event["value"] is not None:
+                        data_field = event["value"]
+                    
+                    if data_field is not None:
+                        data_list = data_field.as_py()
+                        if data_list and len(data_list) > 0:
+                            data = json.loads(data_list[0])
+                            servo_id = data.get("id")
+                            position = data.get("position")
+                            if servo_id is not None and position is not None:
+                                self.handle_move_servo(servo_id, position)
                 except Exception as e:
                     print(f"Error processing move_servo event: {e}")
+                    traceback.print_exc()
             
             elif event_id == "wiggle_servo":
                 try:
-                    data = json.loads(event["data"].as_py()[0])
-                    servo_id = data.get("id")
-                    if servo_id is not None:
-                        self.handle_wiggle_servo(servo_id)
+                    # Try to get data either from "data" or "value" field
+                    data_field = None
+                    if "data" in event and event["data"] is not None:
+                        data_field = event["data"]
+                    elif "value" in event and event["value"] is not None:
+                        data_field = event["value"]
+                    
+                    if data_field is not None:
+                        data_list = data_field.as_py()
+                        if data_list and len(data_list) > 0:
+                            data = json.loads(data_list[0])
+                            servo_id = data.get("id")
+                            if servo_id is not None:
+                                self.handle_wiggle_servo(servo_id)
                 except Exception as e:
                     print(f"Error processing wiggle_servo event: {e}")
+                    traceback.print_exc()
             
             elif event_id == "calibrate_servo":
                 try:
-                    data = json.loads(event["data"].as_py()[0])
-                    servo_id = data.get("id")
-                    if servo_id is not None:
-                        self.handle_calibrate_servo(servo_id)
+                    # Try to get data either from "data" or "value" field
+                    data_field = None
+                    if "data" in event and event["data"] is not None:
+                        data_field = event["data"]
+                    elif "value" in event and event["value"] is not None:
+                        data_field = event["value"]
+                    
+                    if data_field is not None:
+                        data_list = data_field.as_py()
+                        if data_list and len(data_list) > 0:
+                            data = json.loads(data_list[0])
+                            servo_id = data.get("id")
+                            if servo_id is not None:
+                                self.handle_calibrate_servo(servo_id)
                 except Exception as e:
                     print(f"Error processing calibrate_servo event: {e}")
+                    traceback.print_exc()
             
             elif event_id == "update_servo_setting":
                 try:
-                    data = json.loads(event["data"].as_py()[0])
-                    servo_id = data.get("id")
-                    property_name = data.get("property")
-                    value = data.get("value")
-                    if all(x is not None for x in [servo_id, property_name, value]):
-                        self.handle_update_servo_setting(servo_id, property_name, value)
+                    # Try to get data either from "data" or "value" field
+                    data_field = None
+                    if "data" in event and event["data"] is not None:
+                        data_field = event["data"]
+                    elif "value" in event and event["value"] is not None:
+                        data_field = event["value"]
+                    
+                    if data_field is not None:
+                        data_list = data_field.as_py()
+                        if data_list and len(data_list) > 0:
+                            data = json.loads(data_list[0])
+                            servo_id = data.get("id")
+                            property_name = data.get("property")
+                            value = data.get("value")
+                            if all(x is not None for x in [servo_id, property_name, value]):
+                                self.handle_update_servo_setting(servo_id, property_name, value)
                 except Exception as e:
                     print(f"Error processing update_servo_setting event: {e}")
+                    traceback.print_exc()
             
             elif event_id == "tick":
                 try:
@@ -461,36 +618,122 @@ class ServoManager:
             elif event_id == "settings":
                 try:
                     # Periodic settings broadcast from config node
-                    # Update our cache with the latest settings
-                    data = json.loads(event["data"].as_py()[0])
+                    # This is a complex field - we need to try different methods to extract data
                     
-                    # Extract servo settings
-                    for key, value in data.items():
-                        parts = key.split(".")
-                        if len(parts) >= 2 and parts[0] == "servo":
-                            try:
-                                servo_id = int(parts[1])
-                                if len(parts) == 2:
-                                    # Full servo settings
-                                    self.config.cached_settings[servo_id] = value
-                                elif len(parts) >= 3:
-                                    # Individual property
-                                    property_name = parts[2]
-                                    if servo_id not in self.config.cached_settings:
-                                        self.config.cached_settings[servo_id] = {}
-                                    self.config.cached_settings[servo_id][property_name] = value
-                            except (ValueError, IndexError):
-                                continue
+                    # First try: if it's a StructArray or other arrow type
+                    try:
+                        if "data" in event and event["data"] is not None:
+                            # Try to convert the arrow array to a dict directly
+                            if hasattr(event["data"], "to_pylist"):
+                                settings_list = event["data"].to_pylist()
+                                if settings_list and len(settings_list) > 0:
+                                    data = settings_list[0] 
+                                    
+                                    # Process the data if it's a dict
+                                    if isinstance(data, dict):
+                                        for key, value in data.items():
+                                            parts = key.split(".")
+                                            if len(parts) >= 2 and parts[0] == "servo":
+                                                try:
+                                                    servo_id = int(parts[1])
+                                                    if len(parts) == 2:
+                                                        # Full servo settings
+                                                        self.config.cached_settings[servo_id] = value
+                                                    elif len(parts) >= 3:
+                                                        # Individual property
+                                                        property_name = parts[2]
+                                                        if servo_id not in self.config.cached_settings:
+                                                            self.config.cached_settings[servo_id] = {}
+                                                        self.config.cached_settings[servo_id][property_name] = value
+                                                except (ValueError, IndexError):
+                                                    continue
+                    except Exception as e:
+                        print(f"Error parsing primary settings format: {e}")
+                        
+                    # If that didn't work, try alternative methods
+                    # This is a fallback for settings event structures
+                    if "value" in event and event["value"] is not None:
+                        try:
+                            alt_data = None  # Initialize the variable properly
+                            
+                            # Try direct conversion if value is already a dict
+                            if isinstance(event["value"], dict):
+                                alt_data = event["value"]
+                            elif hasattr(event["value"], "to_pylist"):
+                                value_list = event["value"].to_pylist()
+                                if value_list and len(value_list) > 0:
+                                    alt_data = value_list[0]
+                                    if isinstance(alt_data, str):
+                                        # Try to parse as JSON if it's a string
+                                        alt_data = json.loads(alt_data)
+                                    
+                            # Process settings data (if found)
+                            if alt_data and isinstance(alt_data, dict):
+                                for key, value in alt_data.items():
+                                    parts = key.split(".")
+                                    if len(parts) >= 2 and parts[0] == "servo":
+                                        try:
+                                            servo_id = int(parts[1])
+                                            if len(parts) == 2:
+                                                # Full servo settings
+                                                self.config.cached_settings[servo_id] = value
+                                            elif len(parts) >= 3:
+                                                # Individual property
+                                                property_name = parts[2]
+                                                if servo_id not in self.config.cached_settings:
+                                                    self.config.cached_settings[servo_id] = {}
+                                                self.config.cached_settings[servo_id][property_name] = value
+                                        except (ValueError, IndexError):
+                                            continue
+                        except Exception as e:
+                            print(f"Error parsing alternative settings format: {e}")
                 except Exception as e:
                     print(f"Error processing settings event: {e}")
+                    # traceback.print_exc()  # Comment out to reduce log noise
             
             elif event_id == "setting_updated":
                 try:
                     # Individual setting update from config node
-                    data = json.loads(event["data"].as_py()[0])
-                    path = data.get("path", "")
-                    value = data.get("value")
+                    path = None
+                    value = None
                     
+                    # Try various formats to extract data
+                    data = None
+                    
+                    # Try direct data field
+                    if "data" in event and event["data"] is not None:
+                        try:
+                            if hasattr(event["data"], "to_pylist"):
+                                data_list = event["data"].to_pylist()
+                                if data_list and len(data_list) > 0:
+                                    if isinstance(data_list[0], str):
+                                        data = json.loads(data_list[0])
+                                    else:
+                                        data = data_list[0]
+                        except Exception as e:
+                            print(f"Error parsing setting_updated data field: {e}")
+                    
+                    # Try value field as backup
+                    if data is None and "value" in event and event["value"] is not None:
+                        try:
+                            if isinstance(event["value"], dict):
+                                data = event["value"]
+                            elif hasattr(event["value"], "to_pylist"):
+                                value_list = event["value"].to_pylist()
+                                if value_list and len(value_list) > 0:
+                                    if isinstance(value_list[0], str):
+                                        data = json.loads(value_list[0])
+                                    else:
+                                        data = value_list[0]
+                        except Exception as e:
+                            print(f"Error parsing setting_updated value field: {e}")
+                    
+                    # Extract path and value from the data
+                    if isinstance(data, dict):
+                        path = data.get("path", "")
+                        value = data.get("value")
+                    
+                    # Process the setting update if we got valid data
                     if path and value is not None:
                         self.config.handle_settings_updated(path, value)
                         
@@ -516,6 +759,7 @@ class ServoManager:
                                 pass
                 except Exception as e:
                     print(f"Error processing setting_updated event: {e}")
+                    # traceback.print_exc()  # Comment out to reduce log noise
         except Exception as e:
             print(f"Error processing event {event.get('id', 'unknown')}: {e}")
 
