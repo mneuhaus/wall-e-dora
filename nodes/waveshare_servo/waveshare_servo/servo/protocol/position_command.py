@@ -35,8 +35,28 @@ def send_position_command(serial_conn, servo_id: int, position: int, time_value:
 
 def parse_position_command(command: str) -> tuple:
     """Parse a position command in the format P<position>T<time>."""
-    position_str = command[1:command.index("T")]
-    time_str = command[command.index("T")+1:]
-    position = int(position_str)
-    time_value = int(time_str)
-    return position, time_value
+    try:
+        # Validate command format
+        if not command.startswith('P') or 'T' not in command:
+            print(f"Invalid position command format: {command}")
+            return 0, 0
+            
+        # Extract position and time values
+        try:
+            position_str = command[1:command.index("T")]
+            time_str = command[command.index("T")+1:]
+            
+            # Verify that extracted strings contain numeric values
+            if not position_str.isdigit() or not time_str.isdigit():
+                print(f"Non-numeric values in position command: position={position_str}, time={time_str}")
+                return 0, 0
+                
+            position = int(position_str)
+            time_value = int(time_str)
+            return position, time_value
+        except ValueError as e:
+            print(f"Error parsing position command values: {e}")
+            return 0, 0
+    except Exception as e:
+        print(f"Error parsing position command '{command}': {e}")
+        return 0, 0

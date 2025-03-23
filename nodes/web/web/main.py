@@ -217,7 +217,13 @@ async def broadcast_bytes(data_bytes):
     """Broadcast data to all connected WebSocket clients"""
     try:
         data_str = data_bytes.decode("utf-8")
-        logging.debug(f"Broadcasting to {len(ws_clients)} clients: {data_str[:100]}...")
+        
+        # Enhance logging for servo-related events
+        if '"id":"servo_status"' in data_str or '"id":"servos_list"' in data_str:
+            logging.info(f"Broadcasting servo data to {len(ws_clients)} clients: {data_str[:200]}...")
+        else:
+            logging.debug(f"Broadcasting to {len(ws_clients)} clients: {data_str[:100]}...")
+            
         active_clients = 0
         
         for ws in ws_clients.copy():
@@ -231,7 +237,11 @@ async def broadcast_bytes(data_bytes):
                 logging.error(f"Error sending to client: {e}")
                 ws_clients.discard(ws)
                 
-        logging.debug(f"Broadcast complete to {active_clients} active clients")
+        # Enhanced logging for servo data
+        if '"id":"servo_status"' in data_str or '"id":"servos_list"' in data_str:
+            logging.info(f"Servo data broadcast complete to {active_clients} active clients")
+        else:
+            logging.debug(f"Broadcast complete to {active_clients} active clients")
     except Exception as e:
         logging.error(f"Error in broadcast_bytes: {e}")
 
@@ -326,31 +336,107 @@ def main():
                             logging.error(f"Error processing runtime value: {e}")
                             event_value[0] = 0
                 
+                # Create the event data with potentially modified ID
+                event_id = event["id"]
+                
+                # Transform event IDs to match what the frontend expects
+                if event_id.startswith("waveshare_servo/"):
+                    event_id = event_id.replace("waveshare_servo/", "")
+                    logging.info(f"Transformed event ID from {event['id']} to {event_id}")
+                
                 event_data = {
-                    "id": event["id"],
+                    "id": event_id,
                     "value": event_value,
                     "type": "EVENT"
                 }
                 
                 # Handle servo-related events
-                if event["id"] == "waveshare_servo/servo_status":
+                if event["id"] == "waveshare_servo/servo_status" or event["id"] == "servo_status":
+                    # Fix for json-in-string format for servo status updates
+                    if event_value and len(event_value) == 1 and isinstance(event_value[0], str):
+                        try:
+                            # Check if it's a JSON string
+                            if event_value[0].startswith('[{') or event_value[0].startswith('{'):
+                                parsed_value = json.loads(event_value[0])
+                                # Update the event_data with properly parsed value
+                                event_value = parsed_value
+                                event_data["value"] = parsed_value
+                                logging.info(f"Fixed JSON-in-string format for servo_status")
+                        except json.JSONDecodeError as e:
+                            logging.error(f"Failed to parse servo_status JSON string: {e}")
+                    
                     # Log info about single servo update
                     if event_value:
                         if isinstance(event_value, list):
-                            servo_ids = [s.get('id') for s in event_value]
-                            logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
+                            try:
+                                servo_ids = [s.get('id') for s in event_value]
+                                logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
+                            except (TypeError, AttributeError) as e:
+                                logging.error(f"Error processing servo IDs in list: {e}, value: {event_value[:100]}")
                         else:
-                            # Single servo update
-                            servo_id = event_value.get('id')
-                            logging.info(f"Servo status update: servo {servo_id}")
+                            try:
+                                # Single servo update
+                                servo_id = event_value.get('id')
+                                logging.info(f"Servo status update: servo {servo_id}")
+                            except (TypeError, AttributeError) as e:
+                                logging.error(f"Error processing single servo: {e}, value type: {type(event_value)}")
                     else:
                         logging.warning("Received empty servo status update")
                         
-                elif event["id"] == "waveshare_servo/servos_list":
+                elif event["id"] == "waveshare_servo/servos_list" or event["id"] == "servos_list":
                     # Log info about servos list
                     if event_value:
-                        servo_ids = [s.get('id') for s in event_value]
-                        logging.info(f"Servos list update: {len(event_value)} servos {servo_ids}")
+                        # Detailed logging of raw event value for troubleshooting
+                        logging.info(f"Raw servos_list event value type: {type(event_value)}, length: {len(event_value)}")
+                        if len(event_value) > 0:
+                            logging.info(f"First element type: {type(event_value[0])}")
+                            if isinstance(event_value[0], str):
+                                logging.info(f"First element content sample: {event_value[0][:100]}...")
+                        
+                        # Fix for json-in-string format: if the first item is a string containing JSON
+                        if len(event_value) == 1 and isinstance(event_value[0], str):
+                            try:
+                                # Case 1: String starts with an array of objects marker
+                                if event_value[0].startswith('[{') or event_value[0].startswith('[{'):
+                                    # Log the raw string for debugging
+                                    logging.info(f"Raw servos_list JSON array string: {event_value[0][:200]}...")
+                                    
+                                    # Parse the JSON string into a proper list of objects
+                                    parsed_value = json.loads(event_value[0])
+                                    if isinstance(parsed_value, list):
+                                        # Update the event data with properly parsed value
+                                        event_value = parsed_value
+                                        event_data["value"] = parsed_value
+                                        logging.info(f"Successfully parsed servos_list array. Now contains {len(parsed_value)} servos.")
+                                    else:
+                                        logging.error(f"Parsed servos_list JSON is not a list. Got type: {type(parsed_value)}")
+                                
+                                # Case 2: String starts with a single object marker (handle single servo case)
+                                elif event_value[0].startswith('{'):
+                                    logging.info(f"Raw servos_list single JSON object: {event_value[0][:200]}...")
+                                    
+                                    # Parse the JSON string into a single object
+                                    parsed_value = json.loads(event_value[0])
+                                    if isinstance(parsed_value, dict):
+                                        # Create a list with this single servo
+                                        event_value = [parsed_value]
+                                        event_data["value"] = [parsed_value]
+                                        logging.info(f"Successfully parsed single servo JSON into a list. ID: {parsed_value.get('id')}")
+                                    else:
+                                        logging.error(f"Parsed servos_list JSON object is not a dict. Got type: {type(parsed_value)}")
+                            except json.JSONDecodeError as e:
+                                logging.error(f"Failed to parse servos_list JSON string: {e}, string was: {event_value[0][:100]}...")
+                        
+                        # Log the servo IDs
+                        try:
+                            # Check if event_value is a list of dicts or list of something else
+                            if all(isinstance(item, dict) for item in event_value):
+                                servo_ids = [s.get('id') for s in event_value]
+                                logging.info(f"Servos list update: {len(event_value)} servos {servo_ids}")
+                            else:
+                                logging.error(f"event_value contains non-dict items: {event_value[:5]}")
+                        except (TypeError, AttributeError) as e:
+                            logging.error(f"Error processing servo IDs: {e}, value type: {type(event_value)}, value: {event_value}")
                     else:
                         logging.warning("Received empty servos list")
                 

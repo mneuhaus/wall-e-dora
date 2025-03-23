@@ -36,6 +36,7 @@ nodes:
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
       servo_status: waveshare_servo/servo_status
+      servos_list: waveshare_servo/servos_list
       setting_updated: config/setting_updated
       settings: config/settings
       # camera_feed: opencv-video-capture/image
@@ -47,7 +48,7 @@ nodes:
       - GAMEPAD_LEFT_ANALOG_STICK_X
       - GAMEPAD_LEFT_ANALOG_STICK_Y
       - RIGHT_ANALOG_STICK_X
-      - RIGHT_ANALOG_STICK_
+      - RIGHT_ANALOG_STICK_Y
       - FACE_1
       - FACE_2
       - FACE_3
@@ -98,7 +99,7 @@ nodes:
   - id: waveshare_servo
     path: nodes/waveshare_servo/entrypoint.py
     inputs:
-      tick: dora/timer/secs/10
+      tick: dora/timer/secs/3
       move_servo: web/move_servo
       wiggle_servo: web/wiggle_servo
       calibrate_servo: web/calibrate_servo

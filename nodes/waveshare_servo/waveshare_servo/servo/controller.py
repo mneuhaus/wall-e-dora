@@ -28,25 +28,48 @@ class Servo:
     def send_command(self, command: str) -> Optional[str]:
         """Send a command to the servo and get the response."""
         try:
+            if not command or not isinstance(command, str):
+                print(f"Invalid command: {command}")
+                return None
+                
             # Use SCS protocol format for most commands
             if command == "PING":
                 return send_ping_command(self.serial_conn, self.id)
-            elif command.startswith("P") and "T" in command:
+            elif command.startswith("P"):
+                # Simple position request with just "P" (for calibration)
+                if len(command) == 1:
+                    return "OK"  # Just return OK for simple position request
                 # Position command with time: P<position>T<time>
-                try:
-                    position, time_value = parse_position_command(command)
-                    return send_position_command(self.serial_conn, self.id, position, time_value)
-                except Exception as e:
-                    print(f"Error parsing position command: {e}")
+                elif "T" in command:
+                    try:
+                        position, time_value = parse_position_command(command)
+                        return send_position_command(self.serial_conn, self.id, position, time_value)
+                    except Exception as e:
+                        print(f"Error parsing position command '{command}': {e}")
+                        return None
+                else:
+                    print(f"Invalid position command format: {command}")
+                    return None
             elif command.startswith("ID"):
                 # Change ID command
                 try:
-                    new_id = int(command[2:])
+                    if len(command) <= 2:
+                        print(f"Invalid ID command format: {command}")
+                        return None
+                        
+                    id_str = command[2:]
+                    if not id_str.isdigit():
+                        print(f"Non-numeric ID in command: {id_str}")
+                        return None
+                        
+                    new_id = int(id_str)
                     return send_id_command(self.serial_conn, self.id, new_id)
                 except Exception as e:
-                    print(f"Error parsing ID command: {e}")
+                    print(f"Error parsing ID command '{command}': {e}")
+                    return None
             else:
                 # Fallback to text format for other commands
+                print(f"Using text command protocol for: {command}")
                 return send_text_command(self.serial_conn, self.id, command)
                 
             return None
