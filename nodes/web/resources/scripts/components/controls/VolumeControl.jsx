@@ -2,7 +2,7 @@
  * VolumeControl Component
  * 
  * A control for adjusting the audio volume.
- * Provides a popup with a vertical slider to adjust the volume level.
+ * Provides a popup with a horizontal slider to adjust the volume level.
  * 
  * @component
  */
@@ -14,7 +14,7 @@ import {
   Text, 
   Stack, 
   Box,
-  Center,
+  Group,
   rem
 } from '@mantine/core';
 import node from '../../Node';
@@ -48,7 +48,7 @@ const VolumeControl = () => {
       onChange={setIsOpen}
       position="bottom"
       shadow="md"
-      width={90}
+      width={220}
       withArrow
       trapFocus={false}
     >
@@ -67,58 +67,56 @@ const VolumeControl = () => {
       </Popover.Target>
       
       <Popover.Dropdown>
-        <Box py="xs" px="md">
-          <Stack align="center" justify="center" gap="xs">
-            <Text size="sm" c="amber" fw={500}>
-              Volume
+        <Box p="md">
+          <Stack align="center" gap="sm">
+            <Group position="apart" w="100%">
+              <i className="fa-solid fa-volume-mute" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
+              <Text size="sm" c="amber" fw={500}>Volume</Text>
+              <i className="fa-solid fa-volume-up" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
+            </Group>
+            
+            <Slider
+              value={volume}
+              onChange={handleVolumeChange}
+              min={0}
+              max={100}
+              step={5}
+              color="amber"
+              label={(value) => `${value}%`}
+              labelAlwaysOn
+              size="lg"
+              w="100%"
+              thumbSize={22}
+              styles={{
+                track: { height: 8 },
+                thumb: { 
+                  borderWidth: 2,
+                  backgroundColor: 'var(--mantine-color-dark-7)',
+                  borderColor: 'var(--mantine-color-amber-filled)'
+                },
+                markLabel: {
+                  fontSize: rem(10),
+                  color: 'var(--mantine-color-dimmed)'
+                },
+                mark: {
+                  width: 4,
+                  height: 4,
+                  borderRadius: 4,
+                  borderColor: 'var(--mantine-color-amber-filled)'
+                }
+              }}
+              marks={[
+                { value: 0 },
+                { value: 25 },
+                { value: 50 },
+                { value: 75 },
+                { value: 100 }
+              ]}
+            />
+            
+            <Text size="sm" ta="center" c="dimmed">
+              Current: {volume}%
             </Text>
-            
-            <Center h={200}>
-              <Slider
-                value={volume}
-                onChange={handleVolumeChange}
-                min={0}
-                max={100}
-                step={5}
-                color="amber"
-                label={null}
-                size="md"
-                thumbSize={18}
-                orientation="vertical"
-                h={180}
-                styles={{
-                  root: { height: 180 },
-                  track: { width: 8 },
-                  thumb: { 
-                    borderWidth: 2,
-                    backgroundColor: 'var(--mantine-color-dark-7)',
-                    borderColor: 'var(--mantine-color-amber-filled)'
-                  },
-                  markLabel: {
-                    fontSize: rem(10),
-                    color: 'var(--mantine-color-dimmed)'
-                  },
-                  mark: {
-                    width: 4,
-                    height: 4,
-                    borderRadius: 4,
-                    transform: 'translateX(-2px) translateY(-2px)',
-                    borderColor: 'var(--mantine-color-amber-filled)'
-                  }
-                }}
-                marks={[
-                  { value: 0, label: '0%' },
-                  { value: 50, label: '50%' },
-                  { value: 100, label: '100%' }
-                ]}
-              />
-            </Center>
-            
-            <Box mt={4}>
-              <Text size="sm" ta="center" c="dimmed">
-                {volume}%
-              </Text>
-            </Box>
           </Stack>
         </Box>
       </Popover.Dropdown>
