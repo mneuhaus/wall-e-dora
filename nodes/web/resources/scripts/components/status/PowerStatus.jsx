@@ -49,8 +49,6 @@ const PowerStatus = () => {
     });
     
     const runtimeUnsub = node.on('runtime', (event) => {
-      console.log("Raw runtime event:", event);
-      
       // Handle array values (most likely case from pyarrow)
       let runtimeValue;
       if (Array.isArray(event.value)) {
@@ -67,7 +65,6 @@ const PowerStatus = () => {
         runtimeValue = 0;
       }
       
-      console.log("Processed runtime:", runtimeValue);
       setRuntime(runtimeValue);
     });
     
@@ -114,8 +111,6 @@ const PowerStatus = () => {
   
   // Format runtime from seconds to HH:MM format
   const formatRuntime = (seconds) => {
-    console.log("Formatting runtime:", seconds, "Type:", typeof seconds);
-    
     // Handle all possible invalid cases
     if (seconds === Infinity || seconds === "Infinity" || 
         isNaN(seconds) || seconds <= 0 || seconds === undefined) {
@@ -127,7 +122,6 @@ const PowerStatus = () => {
     
     const hours = Math.floor(secondsNum / 3600);
     const minutes = Math.floor((secondsNum % 3600) / 60);
-    console.log("Formatted runtime:", hours, ":", minutes);
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
