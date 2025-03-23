@@ -67,12 +67,10 @@ nodes:
       - HOME
       - MISCBUTTON_1
       - MISCBUTTON_2
-      - change_servo_id
-      - wiggle
-      - calibrate
-      - set_servo
-      - set_speed
-      - set_alias
+      - move_servo
+      - wiggle_servo
+      - calibrate_servo
+      - update_servo_setting
       - update_setting
 
   - id: audio
@@ -100,16 +98,17 @@ nodes:
   - id: waveshare_servo
     path: nodes/waveshare_servo/waveshare_servo/main.py
     inputs:
-      SCAN: dora/timer/millis/300
-      change_servo_id: web/change_servo_id
-      wiggle: web/wiggle
-      calibrate: web/calibrate
-      set_servo: web/set_servo
-      set_speed: web/set_speed
-      set_alias: web/set_alias
+      tick: dora/timer/secs/10
+      move_servo: web/move_servo
+      wiggle_servo: web/wiggle_servo
+      calibrate_servo: web/calibrate_servo
+      update_servo_setting: web/update_servo_setting
+      settings: config/settings
       setting_updated: config/setting_updated
     outputs:
       - servo_status
+      - servos_list
+      - update_setting
 
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture

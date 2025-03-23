@@ -332,14 +332,27 @@ def main():
                     "type": "EVENT"
                 }
                 
-                # Store servo status data when we get it
+                # Handle servo-related events
                 if event["id"] == "waveshare_servo/servo_status":
-                    # Log minimal info about servos
+                    # Log info about single servo update
                     if event_value:
-                        servo_ids = [s.get('id') for s in event_value]
-                        logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
+                        if isinstance(event_value, list):
+                            servo_ids = [s.get('id') for s in event_value]
+                            logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
+                        else:
+                            # Single servo update
+                            servo_id = event_value.get('id')
+                            logging.info(f"Servo status update: servo {servo_id}")
                     else:
                         logging.warning("Received empty servo status update")
+                        
+                elif event["id"] == "waveshare_servo/servos_list":
+                    # Log info about servos list
+                    if event_value:
+                        servo_ids = [s.get('id') for s in event_value]
+                        logging.info(f"Servos list update: {len(event_value)} servos {servo_ids}")
+                    else:
+                        logging.warning("Received empty servos list")
                 
                 # Handle config-related events
                 elif event["id"] in ["config/setting_updated", "config/settings"]:

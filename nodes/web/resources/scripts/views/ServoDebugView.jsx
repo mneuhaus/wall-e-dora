@@ -140,44 +140,47 @@ const ServoDebugView = () => {
   useEffect(() => {
     // Listen for servo updates
     const unsubscribe = node.on('servo_status', (event) => {
-      const servos = event.value || [];
-      const currentServo = servos.find(s => s.id === parseInt(id));
+      const servoData = event.value || [];
+      // Check if we're getting a single servo or an array
+      const servoInfo = Array.isArray(servoData) ? 
+                        servoData.find(s => s.id === parseInt(id)) : 
+                        (servoData.id === parseInt(id) ? servoData : null);
       
-      if (currentServo) {
-        setServo(currentServo);
+      if (servoInfo) {
+        setServo(servoInfo);
         
-        // Get range from servo with more thorough validation
-        let servoMinPos = 0;
-        if (currentServo.min_pos !== undefined && currentServo.min_pos !== null && !isNaN(currentServo.min_pos)) {
-          servoMinPos = Number(currentServo.min_pos);
+        // Get min/max pulse values with validation
+        let servoMinPulse = 500;
+        if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null && !isNaN(servoInfo.min_pulse)) {
+          servoMinPulse = Number(servoInfo.min_pulse);
         }
         
-        let servoMaxPos = 4095;
-        if (currentServo.max_pos !== undefined && currentServo.max_pos !== null && !isNaN(currentServo.max_pos)) {
-          servoMaxPos = Number(currentServo.max_pos);
+        let servoMaxPulse = 2500;
+        if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null && !isNaN(servoInfo.max_pulse)) {
+          servoMaxPulse = Number(servoInfo.max_pulse);
         }
         
         // Ensure max > min
-        if (servoMaxPos <= servoMinPos) {
+        if (servoMaxPulse <= servoMinPulse) {
           console.warn('Invalid servo range: max <= min, using default values');
-          servoMinPos = 0;
-          servoMaxPos = 4095;
+          servoMinPulse = 500;
+          servoMaxPulse = 2500;
         }
         
-        setMin(servoMinPos);
-        setMax(servoMaxPos);
+        setMin(servoMinPulse);
+        setMax(servoMaxPulse);
         
         // Get current servo position with validation
         let servoPosition = 0;
-        if (currentServo.position !== undefined && currentServo.position !== null && !isNaN(currentServo.position)) {
-          servoPosition = Number(currentServo.position);
+        if (servoInfo.position !== undefined && servoInfo.position !== null && !isNaN(servoInfo.position)) {
+          servoPosition = Number(servoInfo.position);
         }
         
         // Set raw position value
         setPosition(servoPosition);
         
         // Map servo position to UI range (0-300 degrees)
-        const uiPosition = mapServoToUI(servoPosition, servoMinPos, servoMaxPos);
+        const uiPosition = mapServoToUI(servoPosition, servoMinPulse, servoMaxPulse);
         
         // Validate before setting
         if (typeof uiPosition === 'number' && !isNaN(uiPosition)) {
@@ -188,19 +191,30 @@ const ServoDebugView = () => {
         }
         
         // Set speed
-        setSpeed(currentServo.speed || 100);
+        setSpeed(servoInfo.speed || 1000);
         
         // Update alias input if it's empty and the servo has an alias
-        if (aliasInput === '' && currentServo.alias) {
-          setAliasInput(currentServo.alias);
+        if (aliasInput === '' && servoInfo.alias) {
+          setAliasInput(servoInfo.alias);
         }
       }
     });
     
-    // Request servo status on mount
-    node.emit('SCAN', []);
+    // Listen for servos_list for full servo info
+    const listUnsubscribe = node.on('servos_list', (event) => {
+      const servosList = event.value || [];
+      const currentServo = servosList.find(s => s.id === parseInt(id));
+      if (currentServo) {
+        setServo(currentServo);
+      }
+    });
     
-    return unsubscribe;
+    // No need to manually request scan, it happens automatically on timer
+    
+    return () => {
+      unsubscribe();
+      listUnsubscribe();
+    };
   }, [id, mapServoToUI, aliasInput]);
   
   const handlePositionChange = (newPosition) => {
@@ -240,19 +254,31 @@ const ServoDebugView = () => {
     // Debounce servo commands
     clearTimeout(positionUpdateTimeout.current);
     positionUpdateTimeout.current = setTimeout(() => {
-      node.emit('set_servo', [parseInt(id), servoPosition, speed]);
+      // New format for move_servo command
+      node.emit('move_servo', [{
+        id: parseInt(id),
+        position: servoPosition
+      }]);
     }, 50);
   };
   
   const handleSpeedChange = (newSpeed) => {
     setSpeed(newSpeed);
-    node.emit('set_speed', [parseInt(id), newSpeed]);
+    // Update servo setting format
+    node.emit('update_servo_setting', [{
+      id: parseInt(id),
+      property: "speed",
+      value: newSpeed
+    }]);
     showToast(`Speed set to ${newSpeed}`);
   };
   
   const handleWiggle = () => {
     setIsTesting(true);
-    node.emit('wiggle', [parseInt(id)]);
+    // Updated wiggle_servo command format
+    node.emit('wiggle_servo', [{
+      id: parseInt(id)
+    }]);
     showToast('Testing servo motion...');
     
     // Auto-disable testing mode after 3 seconds
@@ -263,7 +289,10 @@ const ServoDebugView = () => {
   
   const handleCalibrate = () => {
     setIsCalibrating(true);
-    node.emit('calibrate', [parseInt(id)]);
+    // Updated calibrate_servo command format
+    node.emit('calibrate_servo', [{
+      id: parseInt(id)
+    }]);
     showToast('Calibrating servo range...', 'info');
     
     // Auto-disable calibration mode after 3 seconds
@@ -277,14 +306,19 @@ const ServoDebugView = () => {
     if (newId.trim() === '') return;
     
     const newIdInt = parseInt(newId);
-    if (isNaN(newIdInt) || newIdInt < 1 || newIdInt > 253) {
-      showToast('ID must be between 1 and 253', 'error');
+    if (isNaN(newIdInt) || newIdInt < 1 || newIdInt > 31) {
+      showToast('ID must be between 1 and 31', 'error');
       return;
     }
     
     // Confirm before changing ID
     if (window.confirm(`Are you sure you want to change the servo ID from ${id} to ${newId}? You'll be redirected to the new servo page.`)) {
-      node.emit('change_servo_id', [parseInt(id), newIdInt]);
+      // Using update_servo_setting now
+      node.emit('update_servo_setting', [{
+        id: parseInt(id),
+        property: "id",
+        value: newIdInt
+      }]);
       setNewId('');
       showToast(`Changing servo ID to ${newId}...`);
       
@@ -298,18 +332,14 @@ const ServoDebugView = () => {
   const handleSetAlias = () => {
     if (aliasInput.trim() === '') return;
     
-    // Old method: send directly to the servo node
-    // node.emit('set_alias', [parseInt(id), aliasInput.trim()]);
-    
-    // New method: update through config system using dot notation
     const servoId = parseInt(id);
-    node.emit('update_setting', [{
-      path: `servo.${servoId - 1}.alias`,
+    
+    // Use the new servo-specific setting update endpoint
+    node.emit('update_servo_setting', [{
+      id: servoId,
+      property: "alias",
       value: aliasInput.trim()
     }]);
-    
-    // Also send the direct command for backward compatibility
-    node.emit('set_alias', [servoId, aliasInput.trim()]);
     
     showToast(`Alias set to "${aliasInput}"`);
   };
@@ -317,13 +347,37 @@ const ServoDebugView = () => {
   const handleAttachServo = () => {
     if (!attachIndex) return;
     
-    node.emit('attach_servo', [parseInt(id), attachIndex]);
+    // Update to use update_servo_setting
+    node.emit('update_servo_setting', [{
+      id: parseInt(id),
+      property: "attached_control",
+      value: attachIndex
+    }]);
     showToast(`Attached to gamepad control: ${attachIndex}`);
   };
   
   const handleResetServo = () => {
     if (window.confirm('Are you sure you want to reset this servo to factory defaults? This will remove all calibration settings and aliases.')) {
-      node.emit('reset_servo', [parseInt(id)]);
+      // Reset servo settings to defaults
+      const servoId = parseInt(id);
+      const defaultSettings = {
+        min_pulse: 500,
+        max_pulse: 2500,
+        speed: 1000,
+        calibrated: false,
+        alias: "",
+        invert: false
+      };
+      
+      // Update each setting to default
+      for (const [prop, value] of Object.entries(defaultSettings)) {
+        node.emit('update_servo_setting', [{
+          id: servoId,
+          property: prop,
+          value: value
+        }]);
+      }
+      
       showToast('Servo reset to factory defaults', 'info');
     }
   };
@@ -368,8 +422,10 @@ const ServoDebugView = () => {
     Position: position || 'N/A',
     Speed: speed || 'N/A',
     Alias: servo.alias || 'None',
-    'Min Position': servo.min_pos !== undefined ? servo.min_pos : 'Not calibrated',
-    'Max Position': servo.max_pos !== undefined ? servo.max_pos : 'Not calibrated',
+    'Min Pulse': servo.min_pulse !== undefined ? servo.min_pulse : 'Not calibrated',
+    'Max Pulse': servo.max_pulse !== undefined ? servo.max_pulse : 'Not calibrated',
+    'Calibrated': servo.calibrated ? 'Yes' : 'No',
+    'Inverted': servo.invert ? 'Yes' : 'No',
     'Attached Control': servo.attached_control || 'None'
   };
   

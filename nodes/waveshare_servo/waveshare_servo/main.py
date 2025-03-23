@@ -8,8 +8,9 @@ This node handles all servo-related operations:
 - Servo settings management via the config node
 """
 
+from dora import Node
+import traceback
 import json
-import logging
 import time
 from dataclasses import asdict, dataclass
 from typing import Dict, Optional, Set
@@ -18,17 +19,10 @@ import pyarrow as pa
 import serial
 import serial.tools.list_ports
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
 
 @dataclass
 class ServoSettings:
     """Represents settings for a single servo."""
-
     id: int
     alias: str = ""
     min_pulse: int = 500
@@ -55,10 +49,8 @@ class ServoScanner:
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
             # Check for typical USB-Serial device identifiers
-            if any(
-                id_str in port.description
-                for id_str in ["USB-Serial", "CP210", "CH340", "FTDI"]
-            ):
+            if any(id_str in port.description for id_str in 
+                  ["USB-Serial", "CP210", "CH340", "FTDI"]):
                 return port.device
         return None
 
@@ -70,14 +62,14 @@ class ServoScanner:
 
             self.port = self.find_servo_port()
             if not self.port:
-                logger.warning("No servo controller found")
+                print("No servo controller found")
                 return False
 
             self.serial_conn = serial.Serial(self.port, 115200, timeout=0.5)
             time.sleep(0.1)  # Allow time for connection to establish
             return True
         except Exception as e:
-            logger.error(f"Failed to connect to servo controller: {e}")
+            print(f"Failed to connect to servo controller: {e}")
             return False
 
     def disconnect(self):
@@ -98,7 +90,7 @@ class ServoScanner:
                 if response and "OK" in response:
                     discovered_servos.add(id)
             except Exception as e:
-                logger.error(f"Error while pinging servo {id}: {e}")
+                print(f"Error while pinging servo {id}: {e}")
 
         return discovered_servos
 
@@ -119,7 +111,7 @@ class Servo:
             response = self.serial_conn.readline().decode().strip()
             return response
         except Exception as e:
-            logger.error(f"Error sending command to servo {self.id}: {e}")
+            print(f"Error sending command to servo {self.id}: {e}")
             return None
 
     def set_id(self, new_id: int) -> bool:
@@ -153,7 +145,7 @@ class Servo:
                     time.sleep(0.2)
             return True
         except Exception as e:
-            logger.error(f"Error wiggling servo {self.id}: {e}")
+            print(f"Error wiggling servo {self.id}: {e}")
             return False
 
     def move(self, position: int) -> bool:
@@ -162,22 +154,20 @@ class Servo:
             safe_position = max(
                 self.settings.min_pulse, min(self.settings.max_pulse, position)
             )
-
+            
             # Invert position if needed
             if self.settings.invert:
-                safe_position = self.settings.max_pulse - (
-                    safe_position - self.settings.min_pulse
-                )
-
+                safe_position = self.settings.max_pulse - (safe_position - self.settings.min_pulse)
+            
             command = f"P{safe_position}T{self.settings.speed}"
             response = self.send_command(command)
-
+            
             if response and "OK" in response:
                 self.settings.position = position  # Store the requested position
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error moving servo {self.id}: {e}")
+            print(f"Error moving servo {self.id}: {e}")
             return False
 
     def calibrate(self) -> bool:
@@ -187,18 +177,18 @@ class Servo:
             self.send_command(f"P{self.settings.min_pulse}T{self.settings.speed}")
             time.sleep(1)
             min_result = self.send_command("PULSEGET")
-
+            
             # Test maximum position
             self.send_command(f"P{self.settings.max_pulse}T{self.settings.speed}")
             time.sleep(1)
             max_result = self.send_command("PULSEGET")
-
+            
             if min_result and max_result:
                 self.settings.calibrated = True
                 return True
             return False
         except Exception as e:
-            logger.error(f"Error calibrating servo {self.id}: {e}")
+            print(f"Error calibrating servo {self.id}: {e}")
             return False
 
 
@@ -227,7 +217,7 @@ class ConfigHandler:
         """Update a specific servo setting."""
         path = self.get_servo_path(servo_id, property_name)
         self.update_setting(path, value)
-
+        
         # Also update local cache
         if servo_id not in self.cached_settings:
             self.cached_settings[servo_id] = {}
@@ -237,7 +227,7 @@ class ConfigHandler:
         """Update all settings for a servo."""
         servo_id = settings.id
         servo_dict = settings.to_dict()
-
+        
         # Update each property individually
         for prop, value in servo_dict.items():
             self.update_servo_setting(servo_id, prop, value)
@@ -253,11 +243,11 @@ class ConfigHandler:
         if len(parts) >= 2 and parts[0] == self.config_prefix:
             try:
                 servo_id = int(parts[1])
-
+                
                 # Make sure we have a dict for this servo
                 if servo_id not in self.cached_settings:
                     self.cached_settings[servo_id] = {}
-
+                
                 # Handle full servo settings update vs. single property update
                 if len(parts) == 2:
                     # Full servo settings object
@@ -266,11 +256,11 @@ class ConfigHandler:
                     # Single property update
                     property_name = parts[2]
                     self.cached_settings[servo_id][property_name] = new_value
-
+                
                 return True
             except (ValueError, IndexError):
-                logger.error(f"Invalid servo setting path: {setting_path}")
-
+                print(f"Invalid servo setting path: {setting_path}")
+        
         return False
 
 
@@ -286,69 +276,81 @@ class ServoManager:
 
     def initialize(self):
         """Initialize the servo manager."""
-        if self.scanner.connect():
-            self.scan_for_servos()
-        else:
-            logger.error("Failed to connect to servo controller")
+        try:
+            if self.scanner.connect():
+                self.scan_for_servos()
+            else:
+                print("Failed to connect to servo controller - will retry on next tick")
+        except Exception as e:
+            print(f"Error initializing servo manager: {e}")
+            # Continue running even without a servo controller
 
     def scan_for_servos(self):
         """Scan for servos and initialize them."""
-        discovered_ids = self.scanner.discover_servos()
-
-        logger.info(f"Discovered servos with IDs: {discovered_ids}")
-
-        for servo_id in discovered_ids:
-            if servo_id not in self.servos:
-                # Get settings from config or use defaults
-                settings_dict = self.config.get_servo_settings(servo_id)
-
-                # Create default settings if not found
-                if not settings_dict:
-                    settings = ServoSettings(id=servo_id)
-
-                    # If this is the default ID (1), assign a new unique ID
-                    if servo_id == 1:
-                        new_id = self.next_available_id
-                        self.next_available_id += 1
-
-                        # Create servo temporarily with ID 1
-                        temp_servo = Servo(self.scanner.serial_conn, settings)
-
-                        # Attempt to change the ID
-                        if temp_servo.set_id(new_id):
-                            # Update the settings with the new ID
-                            settings.id = new_id
-                            servo_id = new_id
-                        else:
-                            logger.error(f"Failed to assign new ID to servo {servo_id}")
-
-                    # Save the settings to config
-                    self.config.update_servo_settings(settings)
-                else:
-                    # Convert dict to ServoSettings
-                    settings = ServoSettings(**settings_dict)
-
-                # Create and store the servo
-                self.servos[servo_id] = Servo(self.scanner.serial_conn, settings)
-
-                # Broadcast the servo's addition
-                self.broadcast_servo_status(servo_id)
-
-        # Broadcast a complete list of servos
-        self.broadcast_servos_list()
+        try:
+            discovered_ids = self.scanner.discover_servos()
+            
+            print(f"Discovered servos with IDs: {discovered_ids}")
+            
+            for servo_id in discovered_ids:
+                if servo_id not in self.servos:
+                    # Get settings from config or use defaults
+                    settings_dict = self.config.get_servo_settings(servo_id)
+                    
+                    # Create default settings if not found
+                    if not settings_dict:
+                        settings = ServoSettings(id=servo_id)
+                        
+                        # If this is the default ID (1), assign a new unique ID
+                        if servo_id == 1:
+                            new_id = self.next_available_id
+                            self.next_available_id += 1
+                            
+                            # Create servo temporarily with ID 1
+                            temp_servo = Servo(self.scanner.serial_conn, settings)
+                            
+                            # Attempt to change the ID
+                            if temp_servo.set_id(new_id):
+                                # Update the settings with the new ID
+                                settings.id = new_id
+                                servo_id = new_id
+                            else:
+                                print(f"Failed to assign new ID to servo {servo_id}")
+                        
+                        # Save the settings to config
+                        self.config.update_servo_settings(settings)
+                    else:
+                        # Convert dict to ServoSettings
+                        settings = ServoSettings(**settings_dict)
+                    
+                    # Create and store the servo
+                    self.servos[servo_id] = Servo(self.scanner.serial_conn, settings)
+                    
+                    # Broadcast the servo's addition
+                    self.broadcast_servo_status(servo_id)
+            
+            # Broadcast a complete list of servos
+            self.broadcast_servos_list()
+            
+        except Exception as e:
+            print(f"Error scanning for servos: {e}")
 
     def broadcast_servo_status(self, servo_id: int):
         """Broadcast the status of a single servo."""
         if servo_id in self.servos:
             servo = self.servos[servo_id]
             self.node.send_output(
-                "servo_status", pa.array([json.dumps(servo.settings.to_dict())])
+                "servo_status",
+                pa.array([json.dumps(servo.settings.to_dict())])
             )
 
     def broadcast_servos_list(self):
         """Broadcast the list of all servos."""
         servo_list = [servo.settings.to_dict() for servo in self.servos.values()]
-        self.node.send_output("servos_list", pa.array([json.dumps(servo_list)]))
+        self.node.send_output(
+            "servos_list", 
+            pa.array([json.dumps(servo_list)])
+        )
 
     def handle_move_servo(self, servo_id: int, position: int):
         """Handle request to move a servo."""
@@ -379,29 +381,25 @@ class ServoManager:
                 return True
         return False
 
-    def handle_update_servo_setting(
-        self, servo_id: int, property_name: str, value: any
-    ):
+    def handle_update_servo_setting(self, servo_id: int, property_name: str, value: any):
         """Handle a request to update a servo setting."""
         if servo_id in self.servos:
             servo = self.servos[servo_id]
-
+            
             # Update the setting in the servo object
             if hasattr(servo.settings, property_name):
                 setattr(servo.settings, property_name, value)
-
+                
                 # Special handling for some properties
                 if property_name == "invert" and value:
                     # Recalculate position for inverted servo
                     current_pos = servo.settings.position
-                    inverted_pos = servo.settings.max_pulse - (
-                        current_pos - servo.settings.min_pulse
-                    )
+                    inverted_pos = servo.settings.max_pulse - (current_pos - servo.settings.min_pulse)
                     servo.settings.position = inverted_pos
-
+                
                 # Update config node
                 self.config.update_servo_setting(servo_id, property_name, value)
-
+                
                 # Broadcast updated status
                 self.broadcast_servo_status(servo_id)
                 return True
@@ -409,113 +407,143 @@ class ServoManager:
 
     def process_event(self, event):
         """Process an incoming event."""
-        event_id = event["id"]
-        event_type = event["type"]
+        try:
+            if event["type"] != "INPUT":
+                return
+                
+            event_id = event["id"]
+            
+            if event_id == "move_servo":
+                try:
+                    data = json.loads(event["data"].as_py()[0])
+                    servo_id = data.get("id")
+                    position = data.get("position")
+                    if servo_id is not None and position is not None:
+                        self.handle_move_servo(servo_id, position)
+                except Exception as e:
+                    print(f"Error processing move_servo event: {e}")
+            
+            elif event_id == "wiggle_servo":
+                try:
+                    data = json.loads(event["data"].as_py()[0])
+                    servo_id = data.get("id")
+                    if servo_id is not None:
+                        self.handle_wiggle_servo(servo_id)
+                except Exception as e:
+                    print(f"Error processing wiggle_servo event: {e}")
+            
+            elif event_id == "calibrate_servo":
+                try:
+                    data = json.loads(event["data"].as_py()[0])
+                    servo_id = data.get("id")
+                    if servo_id is not None:
+                        self.handle_calibrate_servo(servo_id)
+                except Exception as e:
+                    print(f"Error processing calibrate_servo event: {e}")
+            
+            elif event_id == "update_servo_setting":
+                try:
+                    data = json.loads(event["data"].as_py()[0])
+                    servo_id = data.get("id")
+                    property_name = data.get("property")
+                    value = data.get("value")
+                    if all(x is not None for x in [servo_id, property_name, value]):
+                        self.handle_update_servo_setting(servo_id, property_name, value)
+                except Exception as e:
+                    print(f"Error processing update_servo_setting event: {e}")
+            
+            elif event_id == "tick":
+                try:
+                    self.scan_for_servos()
+                except Exception as e:
+                    print(f"Error processing tick event: {e}")
+            
+            elif event_id == "settings":
+                try:
+                    # Periodic settings broadcast from config node
+                    # Update our cache with the latest settings
+                    data = json.loads(event["data"].as_py()[0])
+                    
+                    # Extract servo settings
+                    for key, value in data.items():
+                        parts = key.split(".")
+                        if len(parts) >= 2 and parts[0] == "servo":
+                            try:
+                                servo_id = int(parts[1])
+                                if len(parts) == 2:
+                                    # Full servo settings
+                                    self.config.cached_settings[servo_id] = value
+                                elif len(parts) >= 3:
+                                    # Individual property
+                                    property_name = parts[2]
+                                    if servo_id not in self.config.cached_settings:
+                                        self.config.cached_settings[servo_id] = {}
+                                    self.config.cached_settings[servo_id][property_name] = value
+                            except (ValueError, IndexError):
+                                continue
+                except Exception as e:
+                    print(f"Error processing settings event: {e}")
+            
+            elif event_id == "setting_updated":
+                try:
+                    # Individual setting update from config node
+                    data = json.loads(event["data"].as_py()[0])
+                    path = data.get("path", "")
+                    value = data.get("value")
+                    
+                    if path and value is not None:
+                        self.config.handle_settings_updated(path, value)
+                        
+                        # Check if this is a servo setting that needs to be applied
+                        parts = path.split(".")
+                        if len(parts) >= 3 and parts[0] == "servo":
+                            try:
+                                servo_id = int(parts[1])
+                                property_name = parts[2]
+                                
+                                # Apply the setting if the servo exists
+                                if servo_id in self.servos and hasattr(
+                                    self.servos[servo_id].settings, property_name
+                                ):
+                                    setattr(
+                                        self.servos[servo_id].settings, property_name, value
+                                    )
+                                    
+                                    # If this is a position update, actually move the servo
+                                    if property_name == "position":
+                                        self.servos[servo_id].move(value)
+                            except (ValueError, IndexError):
+                                pass
+                except Exception as e:
+                    print(f"Error processing setting_updated event: {e}")
+        except Exception as e:
+            print(f"Error processing event {event.get('id', 'unknown')}: {e}")
 
-        # Only process input events
-        if event_type != "INPUT":
-            return
 
-        if event_id == "move_servo":
-            data = json.loads(event["data"].as_py()[0])
-            servo_id = data.get("id")
-            position = data.get("position")
-            if servo_id is not None and position is not None:
-                self.handle_move_servo(servo_id, position)
-
-        elif event_id == "wiggle_servo":
-            data = json.loads(event["data"].as_py()[0])
-            servo_id = data.get("id")
-            if servo_id is not None:
-                self.handle_wiggle_servo(servo_id)
-
-        elif event_id == "calibrate_servo":
-            data = json.loads(event["data"].as_py()[0])
-            servo_id = data.get("id")
-            if servo_id is not None:
-                self.handle_calibrate_servo(servo_id)
-
-        elif event_id == "update_servo_setting":
-            data = json.loads(event["data"].as_py()[0])
-            servo_id = data.get("id")
-            property_name = data.get("property")
-            value = data.get("value")
-            if all(x is not None for x in [servo_id, property_name, value]):
-                self.handle_update_servo_setting(servo_id, property_name, value)
-
-        elif event_id == "scan_servos":
-            self.scan_for_servos()
-
-        elif event_id == "settings":
-            # Periodic settings broadcast from config node
-            # Update our cache with the latest settings
-            data = json.loads(event["data"].as_py()[0])
-
-            # Extract servo settings
-            for key, value in data.items():
-                parts = key.split(".")
-                if len(parts) >= 2 and parts[0] == "servo":
-                    try:
-                        servo_id = int(parts[1])
-                        if len(parts) == 2:
-                            # Full servo settings
-                            self.config.cached_settings[servo_id] = value
-                        elif len(parts) >= 3:
-                            # Individual property
-                            property_name = parts[2]
-                            if servo_id not in self.config.cached_settings:
-                                self.config.cached_settings[servo_id] = {}
-                            self.config.cached_settings[servo_id][property_name] = value
-                    except (ValueError, IndexError):
-                        continue
-
-        elif event_id == "setting_updated":
-            # Individual setting update from config node
-            data = json.loads(event["data"].as_py()[0])
-            path = data.get("path", "")
-            value = data.get("value")
-
-            if path and value is not None:
-                self.config.handle_settings_updated(path, value)
-
-                # Check if this is a servo setting that needs to be applied
-                parts = path.split(".")
-                if len(parts) >= 3 and parts[0] == "servo":
-                    try:
-                        servo_id = int(parts[1])
-                        property_name = parts[2]
-
-                        # Apply the setting if the servo exists
-                        if servo_id in self.servos and hasattr(
-                            self.servos[servo_id].settings, property_name
-                        ):
-                            setattr(
-                                self.servos[servo_id].settings, property_name, value
-                            )
-
-                            # If this is a position update, actually move the servo
-                            if property_name == "position":
-                                self.servos[servo_id].move(value)
-                    except (ValueError, IndexError):
-                        pass
+def main():
+    """Entry point for the node."""
+    try:
+        node = Node()
+        print("Waveshare Servo Node starting...")
+        
+        # Initialize servo manager
+        manager = ServoManager(node)
+        manager.initialize()
+        
+        print("Starting main event loop...")
+        # Main event loop
+        for event in node:
+            try:
+                # Process incoming events
+                manager.process_event(event)
+            except Exception as e:
+                print(f"Unexpected error in event loop: {e}")
+                traceback.print_exc()
+    except Exception as e:
+        print(f"Error starting waveshare_servo node: {e}")
+        traceback.print_exc()
+        # Don't re-raise exception so the process exits gracefully
 
 
-def run(node):
-    """Main node entry point."""
-    manager = ServoManager(node)
-    manager.initialize()
-
-    # Set up a regular scan timer
-    last_scan_time = time.time()
-    scan_interval = 10  # Scan every 10 seconds
-
-    # Main event loop
-    for event in node:
-        # Process incoming events
-        manager.process_event(event)
-
-        # Periodic scanning for new servos
-        current_time = time.time()
-        if current_time - last_scan_time > scan_interval:
-            manager.scan_for_servos()
-            last_scan_time = current_time
+if __name__ == "__main__":
+    main()
