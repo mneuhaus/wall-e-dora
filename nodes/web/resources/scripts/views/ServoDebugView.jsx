@@ -534,8 +534,8 @@ const ServoDebugView = () => {
                           value: displayPosition,
                           onChange: handlePositionChange
                         }}
-                        arcColor="#222"
-                        arcBackgroundColor="rgba(0, 0, 0, 0.2)"
+                        arcColor="#FFB300"
+                        arcBackgroundColor="rgba(255, 179, 0, 0.15)"
                         coerceToInt={true}
                         handleColor="#FFB300"
                         labelColor="#FFB300"
@@ -551,12 +551,22 @@ const ServoDebugView = () => {
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'center',
-                          border: '2px solid rgba(255, 215, 0, 0.2)',
+                          border: '2px solid rgba(255, 179, 0, 0.3)',
                           borderRadius: '50%',
-                          color: 'var(--mantine-color-dimmed)'
+                          color: 'var(--mantine-color-dimmed)',
+                          background: 'rgba(255, 179, 0, 0.05)'
                         }}
                       >
-                        Loading...
+                        <Box 
+                          sx={{
+                            width: rem(32),
+                            height: rem(32),
+                            border: '3px solid rgba(255, 255, 255, 0.1)',
+                            borderTop: '3px solid var(--mantine-color-amber-5)',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                          }}
+                        ></Box>
                       </Box>
                     )}
                     
@@ -568,13 +578,21 @@ const ServoDebugView = () => {
                         }
                       </Text>
                       <Text size="xs" c="dimmed">Servo Angle</Text>
+                      <Badge color="amber" variant="light" size="sm">
+                        {position || '0'} pulse
+                      </Badge>
                     </Stack>
                   </Box>
                   
                   <Box w="100%" py="xs">
                     <Group justify="space-between" mb={4}>
                       <Text size="sm" fw={500}>Speed Control</Text>
-                      <Badge color="amber" variant="filled" size="sm">
+                      <Badge color="amber" variant="filled" size="sm" 
+                        style={{
+                          boxShadow: "0 0 8px rgba(255, 179, 0, 0.4)",
+                          border: "1px solid rgba(255, 179, 0, 0.6)"
+                        }}
+                      >
                         {speed !== null ? speed : 'Loading...'}
                       </Badge>
                     </Group>

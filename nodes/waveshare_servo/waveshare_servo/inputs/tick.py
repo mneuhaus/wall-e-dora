@@ -38,8 +38,11 @@ def scan_for_servos(context):
         servos = context["servos"]
         next_available_id = context["next_available_id"]
         
+        # Track previously known servos to detect disconnections
+        previously_known_servos = set(servos.keys())
         discovered_ids = scanner.discover_servos()
         
+        # Add newly discovered servos
         for servo_id in discovered_ids:
             if servo_id not in servos:
                 # Get settings from config or use defaults
@@ -78,7 +81,18 @@ def scan_for_servos(context):
                 # Broadcast the servo's addition
                 broadcast_servo_status(node, servo_id, servos)
         
-        # Broadcast a complete list of servos
+        # Check for servos that were previously connected but now disconnected
+        disconnected_ids = previously_known_servos - discovered_ids
+        if disconnected_ids:
+            print(f"Servos disconnected: {disconnected_ids}")
+            
+            # Remove disconnected servos from the active servos dictionary
+            # but keep their settings in the config
+            for servo_id in disconnected_ids:
+                if servo_id in servos:
+                    del servos[servo_id]
+        
+        # Broadcast a complete list of servos (the servos_list function will filter for responsive ones)
         broadcast_servos_list(node, servos)
         
     except Exception as e:
