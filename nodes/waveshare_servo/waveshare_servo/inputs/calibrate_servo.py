@@ -13,7 +13,7 @@ parent_dir = os.path.dirname(os.path.dirname(current_dir))
 if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
-from waveshare_servo.event_processor import extract_event_data
+from waveshare_servo.utils.event_processor import extract_event_data
 from waveshare_servo.outputs.servo_status import broadcast_servo_status
 
 

@@ -8,7 +8,7 @@ The Waveshare Servo node manages all servo-related operations through a clean, m
 
 ```mermaid
 graph TD
-    A[Main/ServoManager] --> B[Servo Package]
+    A[Main Orchestrator] --> B[Servo Package]
     B --> B1[Controller]
     B --> B2[Scanner]
     B --> B3[Protocol]
@@ -23,45 +23,73 @@ graph TD
     A --> D[Outputs]
     D --> D1[servo_status]
     D --> D2[servos_list]
-    A --> E[Operations]
-    A --> F[ConfigHandler]
+    A --> E[Config]
+    A --> F[Utils]
 ```
 
 ## Code Structure
 The node follows a clean, modular architecture with each component having a single responsibility:
 
-### Root Directory
-- `main.py`: Entry point and ServoManager class
-- `config_handler.py`: Configuration management
-- `event_processor.py`: Utility for extracting event data
-- `operations.py`: Internal operation handlers
-- `models.py`: Re-export for backward compatibility
+### Project Structure
 
-### servo/ Directory
-All servo-specific functionality:
-- `controller.py`: The main Servo class
-- `models.py`: ServoSettings data class
-- `scanner.py`: Serial connection management
-- `port_finder.py`: Utility for finding serial ports
-- `discovery.py`: Servo discovery functions
-- `wiggle.py`: Servo wiggle operation
-- `calibrate.py`: Servo calibration operation
+```
+waveshare_servo/
+├── __init__.py           # Package definition
+├── __main__.py           # Entry point for direct execution
+├── entrypoint.py         # Dora entrypoint script
+├── main.py               # Main orchestration module (no domain logic)
+├── config/               # Configuration management
+│   ├── __init__.py
+│   └── handler.py        # ConfigHandler implementation
+├── utils/                # Cross-cutting utilities
+│   ├── __init__.py
+│   └── event_processor.py # Event data extraction utilities
+├── inputs/               # Input event handlers
+│   ├── __init__.py
+│   ├── move_servo.py
+│   ├── wiggle_servo.py
+│   ├── calibrate_servo.py
+│   ├── update_servo_setting.py
+│   ├── tick.py
+│   ├── settings.py
+│   └── setting_updated.py
+├── outputs/              # Output event broadcasters
+│   ├── __init__.py
+│   ├── servo_status.py
+│   └── servos_list.py
+└── servo/                # Servo domain-specific functionality
+    ├── __init__.py
+    ├── controller.py     # The main Servo class
+    ├── models.py         # ServoSettings data class
+    ├── scanner.py        # Serial connection management
+    ├── port_finder.py    # Utility for finding serial ports
+    ├── discovery.py      # Servo discovery functions
+    ├── wiggle.py         # Servo wiggle operation
+    ├── calibrate.py      # Servo calibration operation
+    ├── protocol/         # Low-level servo command implementation
+    │   ├── __init__.py
+    │   ├── ping_command.py
+    │   ├── position_command.py
+    │   ├── id_command.py
+    │   └── text_command.py
+    └── sdk/              # Low-level servo communication SDK
+        ├── __init__.py
+        ├── port_handler.py
+        ├── packet_handler.py
+        ├── protocol_packet_handler.py
+        ├── group_sync_read.py
+        ├── group_sync_write.py
+        └── scservo_def.py
+```
 
-#### servo/protocol/ Subdirectory
-Low-level servo command implementation:
-- Command implementations (ping, position, ID, text)
+### Key Files
 
-#### servo/sdk/ Subdirectory 
-Low-level servo communication SDK:
-- SDK components for SCS protocol
-
-### inputs/ Directory
-All event handlers for incoming events:
-- One file per input event type (move_servo, wiggle_servo, etc.)
-
-### outputs/ Directory
-Functions for sending data to other nodes:
-- broadcast_servo_status, broadcast_servos_list
+- `main.py`: Orchestrates the interaction between inputs, servo domain logic, and outputs
+- `config/handler.py`: Handles communication with the config node and maintains settings
+- `utils/event_processor.py`: Utility for extracting and parsing event data from Dora events
+- `inputs/*.py`: One file per input event type, each with a handle_* function 
+- `outputs/*.py`: Functions for formatting and broadcasting data to other nodes
+- `servo/*.py`: Servo-specific domain implementation files
 
 ## Functional Requirements
 - Scan and discover connected servo motors
@@ -106,7 +134,7 @@ Functions for sending data to other nodes:
 ## Architecture Details
 
 ### Key Components
-- **ServoManager**: Main orchestrator that manages the servo ecosystem
+- **Main Orchestrator**: Coordinates the flow between inputs, actions, and outputs using a context dict pattern
 - **Servo**: Represents a single servo with all its operations
 - **ServoScanner**: Handles discovery of servos via serial port
 - **ConfigHandler**: Interfaces with the config node for settings management
@@ -116,14 +144,15 @@ Functions for sending data to other nodes:
 - **Output Broadcasters**: Functions for sending data to other nodes
 
 ### Key Features
-- Clean architecture with separation of concerns
-- Single-responsibility principle applied to all files
-- Input/Output pattern for clear data flow
-- Domain-driven organization with servo-related code in one package
-- Automatic ID reassignment for new servos (avoids ID conflicts)
-- Local caching of settings for performance
-- Event-driven architecture for responsive behavior
-- Proper error handling and logging
+- **Dependency Injection via Context Dictionary**: Components share state via a context dict rather than class instances
+- **Pure Orchestration in Main**: Main file focuses solely on orchestration with no domain logic
+- **Single-Responsibility Principle**: Each file has exactly one responsibility
+- **Modular Directory Structure**: Code organized into logical directories (inputs/, outputs/, config/, utils/, servo/)
+- **Clear Dependency Hierarchy**: Well-defined dependencies between components
+- **Clean Input/Output Pattern**: Clear data flow from inputs through domain logic to outputs
+- **Domain-Driven Organization**: Servo-specific code isolated in dedicated directory
+- **Event-Based Architecture**: Reactive processing based on Dora events
+- **Proper Error Handling**: Comprehensive error handling and logging
 
 ## Contribution Guide
 - Format with [ruff](https://docs.astral.sh/ruff/):

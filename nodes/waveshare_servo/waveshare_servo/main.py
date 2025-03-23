@@ -18,7 +18,7 @@ from dora import Node
 # Import local modules with direct imports
 from waveshare_servo.servo.controller import Servo
 from waveshare_servo.servo.scanner import ServoScanner
-from waveshare_servo.config_handler import ConfigHandler
+from waveshare_servo.config.handler import ConfigHandler
 from waveshare_servo.inputs import (
     handle_move_servo, 
     handle_wiggle_servo, 

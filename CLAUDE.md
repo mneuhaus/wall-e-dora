@@ -106,47 +106,61 @@ Follow this architectural pattern for all new nodes and when refactoring existin
 ### Directory Structure
 ```
 node_name/
-├── __init__.py
-├── __main__.py
-├── main.py           # Entry point and central manager class
-├── config_handler.py # (if needed)
-├── models.py         # Data structures and models
-├── inputs/           # One file per input event type (event preprocessing)
+├── __init__.py           # Package definition
+├── __main__.py           # Entry point for direct execution
+├── entrypoint.py         # Dora entrypoint script (for dataflow.yml)
+├── main.py               # Main orchestration module (no domain logic)
+├── config/               # Configuration management (if needed)
 │   ├── __init__.py
-│   ├── event_type1.py
+│   └── handler.py        # ConfigHandler implementation
+├── utils/                # Cross-cutting utilities
+│   ├── __init__.py
+│   └── event_processor.py # Event data extraction utilities, etc.
+├── inputs/               # Input event handlers
+│   ├── __init__.py       # Exports all handlers
+│   ├── event_type1.py    # One file per input event type
 │   └── event_type2.py
-├── outputs/          # Functions for sending node outputs
-│   ├── __init__.py
-│   ├── output_type1.py
+├── outputs/              # Output event broadcasters
+│   ├── __init__.py       # Exports all broadcasters
+│   ├── output_type1.py   # One file per output type
 │   └── output_type2.py
-├── actions/          # Core business logic for operations
-│   ├── __init__.py
-│   ├── action1.py    # One file per action/operation
-│   └── action2.py
-└── domain/           # Domain-specific functionality
+└── domain/               # Domain-specific functionality
     ├── __init__.py
+    ├── models.py         # Data structures and models
     ├── component1.py
     ├── component2.py
-    └── subdomain/    # Further organization as needed
+    └── subdomain/        # Further organization as needed
         ├── __init__.py
         └── ...
 ```
 
 ### Key Architecture Principles
-1. **Modular Design with Clear Separation of Concerns**:
+
+1. **Dependency Injection via Context Dictionary**:
+   - Use a context dictionary for sharing state and dependencies rather than class instances
+   - Pass the context to handlers and actions instead of manager instances
+   - This improves testability and reduces coupling between components
+
+2. **Pure Orchestration in Main**:
+   - The main.py file should focus solely on orchestration with no domain logic
+   - Domain logic belongs in appropriate domain modules or input handlers
+   - Main file should be minimal and primarily manage the flow of events
+
+3. **Modular Design with Clear Separation of Concerns**:
    - Each file should have a single responsibility
    - Prefer small, focused files (max ~100-200 lines) over monolithic ones
    - Group domain-specific functionality in dedicated subdirectories
 
-2. **Clear Separation of Event Processing, Business Logic, and Data Flow**:
+4. **Clear Separation of Event Processing, Domain Logic, and Data Flow**:
    - `inputs/` directory: Event handlers that extract and validate data from incoming events
-   - `actions/` directory: Pure business logic independent of event formats
+   - Domain modules: Pure business logic independent of event formats
    - `outputs/` directory: Functions for formatting and sending data to other nodes
-   - The central manager class orchestrates the flow: inputs → actions → outputs
+   - Main orchestrates the flow: inputs → domain logic → outputs
 
-3. **Domain-Driven Structure**:
+5. **Domain-Driven Structure**:
    - Place domain-specific code in a dedicated subdirectory (e.g., `servo/` for servo node)
-   - Within domain directories, further organize by subdomain or functionality
+   - Within domain directories, further organize by subdomain or functionality 
+   - Isolate business logic from Dora framework interactions
 
 ### Dora-Specific Implementation
 - For new dataflow events:
