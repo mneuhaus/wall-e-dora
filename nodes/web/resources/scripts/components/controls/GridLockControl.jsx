@@ -8,6 +8,7 @@
  * @component
  */
 import React from 'react';
+import { Group, ActionIcon, Tooltip } from '@mantine/core';
 import { useGridContext } from '../../contexts/GridContext';
 
 const GridLockControl = () => {
@@ -22,25 +23,40 @@ const GridLockControl = () => {
   };
   
   return (
-    <div className="grid-lock-container" style={{ display: 'flex', gap: '10px' }}>
-      <button 
-        onClick={toggleGridEditing} 
-        className={`transparent circle ${isEditable ? 'green' : 'amber'}`}
-        title={isEditable ? "Lock grid (exit edit mode)" : "Unlock grid (enter edit mode)"}
+    <Group gap="xs">
+      <Tooltip 
+        label={isEditable ? "Lock grid (exit edit mode)" : "Unlock grid (enter edit mode)"} 
+        position="bottom"
+        withArrow
       >
-        <i className={`fa-solid ${isEditable ? 'fa-lock-open' : 'fa-lock'}`}></i>
-      </button>
+        <ActionIcon
+          variant="transparent"
+          radius="xl"
+          onClick={toggleGridEditing}
+          color={isEditable ? "green" : "amber"}
+        >
+          <i className={`fa-solid ${isEditable ? 'fa-lock-open' : 'fa-lock'}`}></i>
+        </ActionIcon>
+      </Tooltip>
       
       {isEditable && (
-        <button 
-          onClick={handleResetGrid} 
-          className="transparent circle red"
-          title="Reset grid layout for all devices"
+        <Tooltip 
+          label="Reset grid layout for all devices" 
+          position="bottom"
+          withArrow
+          color="red"
         >
-          <i className="fa-solid fa-trash"></i>
-        </button>
+          <ActionIcon
+            variant="transparent"
+            radius="xl"
+            onClick={handleResetGrid}
+            color="red"
+          >
+            <i className="fa-solid fa-trash"></i>
+          </ActionIcon>
+        </Tooltip>
       )}
-    </div>
+    </Group>
   );
 };
 

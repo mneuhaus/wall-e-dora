@@ -7,27 +7,37 @@
  * @component
  */
 import React, { useState } from 'react';
+import { 
+  ActionIcon, 
+  Modal, 
+  Group, 
+  Title, 
+  Text, 
+  Stack, 
+  Button, 
+  Paper, 
+  UnstyledButton, 
+  List,
+  Divider,
+  ScrollArea,
+  Box
+} from '@mantine/core';
 import { useGridContext } from '../../contexts/GridContext';
 import { useAppContext } from '../../contexts/AppContext';
 import { WIDGET_TYPES } from '../../constants/widgetTypes';
 
 const AddWidgetControl = () => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { addWidget } = useGridContext();
   const { availableServos } = useAppContext();
   const { isEditable } = useGridContext();
   
-  const openDialog = () => {
-    setIsDialogOpen(true);
-  };
-  
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-  };
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
   
   const handleAddWidget = (type, config = {}) => {
     addWidget(type, config);
-    closeDialog();
+    handleCloseModal();
   };
   
   const handleAddServoWidget = (servoId) => {
@@ -40,66 +50,137 @@ const AddWidgetControl = () => {
   
   return (
     <>
-      <button onClick={openDialog} className="transparent circle">
+      <ActionIcon
+        variant="transparent"
+        radius="xl"
+        onClick={handleOpenModal}
+        aria-label="Add Widget"
+      >
         <i className="fa-solid fa-plus"></i>
-      </button>
+      </ActionIcon>
       
-      {isDialogOpen && (
-        <div className="modal active" style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center' 
-        }}>
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5>Add Widget</h5>
-              <button onClick={closeDialog} className="btn-close">×</button>
-            </div>
-            <div className="modal-body">
-              <div className="widget-options">
-                <div className="widget-category">
-                  <h6 className="category-title amber-text">Basic Widgets</h6>
-                  <ul className="widget-list">
-                    <li onClick={() => handleAddWidget(WIDGET_TYPES.TEST)} className="widget-list-item">
-                      <i className="fas fa-cube amber-text"></i>
-                      <span>Test Widget</span>
-                    </li>
-                    <li onClick={() => handleAddWidget(WIDGET_TYPES.SOUND)} className="widget-list-item">
-                      <i className="fas fa-volume-up amber-text"></i>
-                      <span>Sounds Widget</span>
-                    </li>
-                    <li onClick={() => handleAddWidget(WIDGET_TYPES.JOYSTICK)} className="widget-list-item">
-                      <i className="fas fa-gamepad amber-text"></i>
-                      <span>Joystick Control</span>
-                    </li>
-                  </ul>
-                </div>
+      <Modal
+        opened={isModalOpen}
+        onClose={handleCloseModal}
+        title="Add Widget"
+        centered
+        size="lg"
+        overlayProps={{
+          opacity: 0.7,
+          blur: 3
+        }}
+      >
+        <ScrollArea h={400} offsetScrollbars>
+          <Stack spacing="md">
+            <Box>
+              <Title order={5} c="amber" mb="xs">Basic Widgets</Title>
+              <List spacing="xs">
+                <List.Item
+                  icon={
+                    <i className="fas fa-cube" style={{ color: 'var(--mantine-color-amber-6)' }}></i>
+                  }
+                >
+                  <UnstyledButton 
+                    onClick={() => handleAddWidget(WIDGET_TYPES.TEST)}
+                    w="100%"
+                    style={{
+                      padding: '8px',
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      '&:hover': {
+                        backgroundColor: 'var(--mantine-color-dark-6)'
+                      }
+                    }}
+                  >
+                    <Text>Test Widget</Text>
+                  </UnstyledButton>
+                </List.Item>
                 
-                {availableServos && availableServos.length > 0 && (
-                  <div className="widget-category">
-                    <h6 className="category-title amber-text">Servo Controls</h6>
-                    <ul className="widget-list">
-                      {availableServos.map(servo => (
-                        <li 
-                          key={servo.id} 
-                          onClick={() => handleAddServoWidget(servo.id)} 
-                          className="widget-list-item"
+                <List.Item
+                  icon={
+                    <i className="fas fa-volume-up" style={{ color: 'var(--mantine-color-amber-6)' }}></i>
+                  }
+                >
+                  <UnstyledButton 
+                    onClick={() => handleAddWidget(WIDGET_TYPES.SOUND)}
+                    w="100%"
+                    style={{
+                      padding: '8px',
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      '&:hover': {
+                        backgroundColor: 'var(--mantine-color-dark-6)'
+                      }
+                    }}
+                  >
+                    <Text>Sounds Widget</Text>
+                  </UnstyledButton>
+                </List.Item>
+                
+                <List.Item
+                  icon={
+                    <i className="fas fa-gamepad" style={{ color: 'var(--mantine-color-amber-6)' }}></i>
+                  }
+                >
+                  <UnstyledButton 
+                    onClick={() => handleAddWidget(WIDGET_TYPES.JOYSTICK)}
+                    w="100%"
+                    style={{
+                      padding: '8px',
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      '&:hover': {
+                        backgroundColor: 'var(--mantine-color-dark-6)'
+                      }
+                    }}
+                  >
+                    <Text>Joystick Control</Text>
+                  </UnstyledButton>
+                </List.Item>
+              </List>
+            </Box>
+            
+            {availableServos && availableServos.length > 0 && (
+              <>
+                <Divider />
+                
+                <Box>
+                  <Title order={5} c="amber" mb="xs">Servo Controls</Title>
+                  <List spacing="xs">
+                    {availableServos.map(servo => (
+                      <List.Item
+                        key={servo.id}
+                        icon={
+                          <i className="fas fa-cog" style={{ color: 'var(--mantine-color-amber-6)' }}></i>
+                        }
+                      >
+                        <UnstyledButton 
+                          onClick={() => handleAddServoWidget(servo.id)}
+                          w="100%"
+                          style={{
+                            padding: '8px',
+                            borderRadius: '4px',
+                            transition: 'background-color 0.2s',
+                            '&:hover': {
+                              backgroundColor: 'var(--mantine-color-dark-6)'
+                            }
+                          }}
                         >
-                          <i className="fas fa-cog amber-text"></i>
-                          <span>Servo {servo.id} - {servo.description || 'No Description'}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button onClick={closeDialog} className="btn-flat">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+                          <Text>Servo {servo.id} - {servo.description || 'No Description'}</Text>
+                        </UnstyledButton>
+                      </List.Item>
+                    ))}
+                  </List>
+                </Box>
+              </>
+            )}
+          </Stack>
+        </ScrollArea>
+        
+        <Group justify="flex-end" mt="md">
+          <Button variant="outline" onClick={handleCloseModal}>Close</Button>
+        </Group>
+      </Modal>
     </>
   );
 };

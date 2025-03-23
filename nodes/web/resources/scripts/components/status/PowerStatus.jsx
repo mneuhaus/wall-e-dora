@@ -8,6 +8,15 @@
  * @component
  */
 import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Group, 
+  Menu, 
+  UnstyledButton, 
+  Text, 
+  Stack, 
+  Box, 
+  rem 
+} from '@mantine/core';
 import node from '../../Node';
 
 const PowerStatus = () => {
@@ -19,7 +28,7 @@ const PowerStatus = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [capacity, setCapacity] = useState(2.5); // Default capacity in Ah
   const [dischargeRate, setDischargeRate] = useState(0); // % per hour
-  const dropdownRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     // Subscribe to battery/power events
@@ -83,19 +92,6 @@ const PowerStatus = () => {
     };
   }, []);
   
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
   // Function to determine which battery icon to show based on SOC
   const getBatteryIcon = () => {
     const socNumber = parseInt(soc) || 0;
@@ -111,9 +107,9 @@ const PowerStatus = () => {
   const getBatteryStatusColor = () => {
     const socNumber = parseInt(soc) || 0;
     
-    if (socNumber <= 20) return 'red-text';
-    if (socNumber <= 50) return 'amber-text';
-    return 'green-text';
+    if (socNumber <= 20) return 'red';
+    if (socNumber <= 50) return 'amber';
+    return 'green';
   };
   
   // Format runtime from seconds to HH:MM format
@@ -136,39 +132,62 @@ const PowerStatus = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  const toggleDropdown = () => {
-    setIsOpen(!isOpen);
-  };
-
   return (
-    <div className="dropdown" ref={dropdownRef}>
-      <button 
-        className="transparent"
-        aria-label="Battery Status"
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        onClick={toggleDropdown}
-      >
-        <span>
-          <i className={`fa-solid ${getBatteryIcon()} ${getBatteryStatusColor()}`}></i>
-          <span style={{ marginLeft: '3px', display: 'inline-block' }}>{soc}%</span>
-        </span>
-      </button>
-      {isOpen && (
-        <div className="menu">
-          <div className="item" style={{ flexDirection: 'column', alignItems: 'start' }}>
-            <div className="padded power-info">
-              <div><i className="fa-solid fa-bolt amber-text"></i> Voltage: {voltage} V</div>
-              <div><i className="fa-solid fa-gauge-high amber-text"></i> Current: {current} A</div>
-              <div><i className="fa-solid fa-plug amber-text"></i> Power: {power} W</div>
-              <div><i className="fa-solid fa-clock amber-text"></i> Runtime: {formatRuntime(runtime)}</div>
-              <div><i className="fa-solid fa-battery-full amber-text"></i> Capacity: {capacity} Ah</div>
-              <div><i className="fa-solid fa-arrow-trend-down amber-text"></i> Discharge: {dischargeRate}%/hr</div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <Menu 
+      opened={isOpen} 
+      onChange={setIsOpen}
+      position="bottom-end"
+      shadow="md"
+      width={220}
+      withArrow
+    >
+      <Menu.Target>
+        <UnstyledButton
+          aria-label="Battery Status"
+          onClick={() => setIsOpen(!isOpen)}
+          style={{ padding: '6px 8px' }}
+        >
+          <Group spacing={4}>
+            <i 
+              className={`fa-solid ${getBatteryIcon()}`} 
+              style={{ color: `var(--mantine-color-${getBatteryStatusColor()}-6)` }}
+            ></i>
+            <Text size="sm" fw={500}>{soc}%</Text>
+          </Group>
+        </UnstyledButton>
+      </Menu.Target>
+
+      <Menu.Dropdown>
+        <Box p="xs">
+          <Stack spacing="xs">
+            <Group spacing="xs">
+              <i className="fa-solid fa-bolt" style={{ color: 'var(--mantine-color-amber-6)', width: rem(20) }}></i>
+              <Text size="sm">Voltage: {voltage} V</Text>
+            </Group>
+            <Group spacing="xs">
+              <i className="fa-solid fa-gauge-high" style={{ color: 'var(--mantine-color-amber-6)', width: rem(20) }}></i>
+              <Text size="sm">Current: {current} A</Text>
+            </Group>
+            <Group spacing="xs">
+              <i className="fa-solid fa-plug" style={{ color: 'var(--mantine-color-amber-6)', width: rem(20) }}></i>
+              <Text size="sm">Power: {power} W</Text>
+            </Group>
+            <Group spacing="xs">
+              <i className="fa-solid fa-clock" style={{ color: 'var(--mantine-color-amber-6)', width: rem(20) }}></i>
+              <Text size="sm">Runtime: {formatRuntime(runtime)}</Text>
+            </Group>
+            <Group spacing="xs">
+              <i className="fa-solid fa-battery-full" style={{ color: 'var(--mantine-color-amber-6)', width: rem(20) }}></i>
+              <Text size="sm">Capacity: {capacity} Ah</Text>
+            </Group>
+            <Group spacing="xs">
+              <i className="fa-solid fa-arrow-trend-down" style={{ color: 'var(--mantine-color-amber-6)', width: rem(20) }}></i>
+              <Text size="sm">Discharge: {dischargeRate}%/hr</Text>
+            </Group>
+          </Stack>
+        </Box>
+      </Menu.Dropdown>
+    </Menu>
   );
 };
 

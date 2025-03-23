@@ -16,8 +16,31 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import node from '../Node';
-import Slider from 'rc-slider';
 import CircularSlider from 'react-circular-slider-svg';
+
+// Mantine imports
+import { 
+  Container, 
+  Paper, 
+  Title, 
+  Text, 
+  Group, 
+  Stack, 
+  Button, 
+  TextInput, 
+  NumberInput,
+  Select,
+  Slider, 
+  Badge, 
+  ActionIcon,
+  Divider,
+  Grid,
+  Box,
+  Collapse,
+  Notification,
+  Table,
+  rem
+} from '@mantine/core';
 
 const ServoDebugView = () => {
   const { id } = useParams();
@@ -28,7 +51,6 @@ const ServoDebugView = () => {
   const [speed, setSpeed] = useState(100);
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(4095);
-  const [activeTab, setActiveTab] = useState('control');
   const [newId, setNewId] = useState('');
   const [aliasInput, setAliasInput] = useState('');
   const [attachIndex, setAttachIndex] = useState("");
@@ -39,14 +61,6 @@ const ServoDebugView = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const positionUpdateTimeout = useRef(null);
-  
-  // Tabs configuration for better organization
-  const tabs = [
-    { id: 'control', label: 'Control', icon: 'fa-sliders-h' },
-    { id: 'settings', label: 'Settings', icon: 'fa-cog' },
-    { id: 'gamepad', label: 'Gamepad', icon: 'fa-gamepad' },
-    { id: 'info', label: 'Info', icon: 'fa-info-circle' }
-  ];
 
   // Function to show toast notifications
   const showToast = (message, type = 'success') => {
@@ -59,13 +73,67 @@ const ServoDebugView = () => {
     }, 3000);
   };
   
+  // Map BeerCSS toast types to Mantine colors
+  const getToastColor = (type) => {
+    switch (type) {
+      case 'success': return 'green';
+      case 'error': return 'red';
+      case 'info': return 'blue';
+      default: return 'amber';
+    }
+  };
+  
   // Helper function to map servo position to UI angle (0-300 degrees)
   const mapServoToUI = useCallback((servoPos, servoMin, servoMax) => {
+    // Validate inputs to prevent NaN
+    if (servoPos === null || servoPos === undefined || typeof servoPos !== 'number' || isNaN(servoPos)) {
+      console.warn('Invalid servoPos:', servoPos);
+      return 0;
+    }
+    
+    if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
+      console.warn('Invalid servoMin:', servoMin);
+      return 0;
+    }
+    
+    if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
+      console.warn('Invalid servoMax:', servoMax);
+      return 0;
+    }
+    
+    // Ensure min and max are valid
+    if (servoMax <= servoMin) {
+      console.warn('Invalid range: servoMax must be greater than servoMin', 'servoMin:', servoMin, 'servoMax:', servoMax);
+      return 0;
+    }
+    
     return Math.round(300 * (servoPos - servoMin) / (servoMax - servoMin));
   }, []);
   
   // Helper function to map UI angle to servo position
   const mapUIToServo = useCallback((uiPos, servoMin, servoMax) => {
+    // Validate inputs to prevent NaN
+    if (uiPos === null || uiPos === undefined || typeof uiPos !== 'number' || isNaN(uiPos)) {
+      console.warn('Invalid uiPos:', uiPos);
+      return 0; // Default to 0 if servoMin is invalid
+    }
+    
+    if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
+      console.warn('Invalid servoMin:', servoMin);
+      return 0;
+    }
+    
+    if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
+      console.warn('Invalid servoMax:', servoMax);
+      return servoMin || 0;
+    }
+    
+    // Ensure min and max are valid
+    if (servoMax <= servoMin) {
+      console.warn('Invalid range: servoMax must be greater than servoMin', 'servoMin:', servoMin, 'servoMax:', servoMax);
+      return servoMin;
+    }
+    
     return Math.round(servoMin + (uiPos / 300) * (servoMax - servoMin));
   }, []);
 
@@ -78,21 +146,46 @@ const ServoDebugView = () => {
       if (currentServo) {
         setServo(currentServo);
         
-        // Get range from servo
-        const servoMinPos = currentServo.min_pos !== undefined ? currentServo.min_pos : 0;
-        const servoMaxPos = currentServo.max_pos !== undefined ? currentServo.max_pos : 4095;
+        // Get range from servo with more thorough validation
+        let servoMinPos = 0;
+        if (currentServo.min_pos !== undefined && currentServo.min_pos !== null && !isNaN(currentServo.min_pos)) {
+          servoMinPos = Number(currentServo.min_pos);
+        }
+        
+        let servoMaxPos = 4095;
+        if (currentServo.max_pos !== undefined && currentServo.max_pos !== null && !isNaN(currentServo.max_pos)) {
+          servoMaxPos = Number(currentServo.max_pos);
+        }
+        
+        // Ensure max > min
+        if (servoMaxPos <= servoMinPos) {
+          console.warn('Invalid servo range: max <= min, using default values');
+          servoMinPos = 0;
+          servoMaxPos = 4095;
+        }
+        
         setMin(servoMinPos);
         setMax(servoMaxPos);
         
-        // Get current servo position
-        const servoPosition = currentServo.position || 0;
+        // Get current servo position with validation
+        let servoPosition = 0;
+        if (currentServo.position !== undefined && currentServo.position !== null && !isNaN(currentServo.position)) {
+          servoPosition = Number(currentServo.position);
+        }
         
         // Set raw position value
         setPosition(servoPosition);
         
         // Map servo position to UI range (0-300 degrees)
         const uiPosition = mapServoToUI(servoPosition, servoMinPos, servoMaxPos);
-        setDisplayPosition(uiPosition);
+        
+        // Validate before setting
+        if (typeof uiPosition === 'number' && !isNaN(uiPosition)) {
+          setDisplayPosition(uiPosition);
+        } else {
+          console.warn('Invalid UI position calculated:', uiPosition);
+          setDisplayPosition(0); // Default to 0 if invalid
+        }
         
         // Set speed
         setSpeed(currentServo.speed || 100);
@@ -111,11 +204,37 @@ const ServoDebugView = () => {
   }, [id, mapServoToUI, aliasInput]);
   
   const handlePositionChange = (newPosition) => {
+    // Validate that newPosition is a valid number
+    if (newPosition === null || newPosition === undefined || 
+        typeof newPosition !== 'number' || isNaN(newPosition)) {
+      console.warn('Invalid position received in handlePositionChange:', newPosition);
+      return;
+    }
+    
     // Update display position immediately for responsive UI
     setDisplayPosition(newPosition);
     
+    // Validate min and max before passing to mapUIToServo
+    if (min === null || min === undefined || typeof min !== 'number' || isNaN(min)) {
+      console.warn('Invalid min value in handlePositionChange:', min);
+      return;
+    }
+    
+    if (max === null || max === undefined || typeof max !== 'number' || isNaN(max)) {
+      console.warn('Invalid max value in handlePositionChange:', max);
+      return;
+    }
+    
     // Map UI range (0-300) to servo range (min-max)
     const servoPosition = mapUIToServo(newPosition, min, max);
+    
+    // Validate servoPosition before setting it
+    if (servoPosition === null || servoPosition === undefined || 
+        typeof servoPosition !== 'number' || isNaN(servoPosition)) {
+      console.warn('Invalid servoPosition calculated:', servoPosition);
+      return;
+    }
+    
     setPosition(servoPosition);
     
     // Debounce servo commands
@@ -198,20 +317,35 @@ const ServoDebugView = () => {
   };
   
   const loadingView = (
-    <div className="servo-debug">
-      <article className="responsive">
-        <header>
-          <nav>
-            <Link to="/" className="circle icon"><i className="fa-solid fa-arrow-left"></i></Link>
-            <h5>Loading Servo Data...</h5>
-          </nav>
-        </header>
-        <div className="center-align large-space">
-          <div className="loader medium"></div>
-          <p className="text-secondary">Connecting to Servo {id}</p>
-        </div>
-      </article>
-    </div>
+    <Container size="xl" py="md">
+      <Paper p="md" radius="md" withBorder>
+        <Group justify="space-between" mb="md">
+          <Group>
+            <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
+              <i className="fa-solid fa-arrow-left"></i>
+            </ActionIcon>
+            <Title order={5}>Loading Servo Data...</Title>
+          </Group>
+        </Group>
+        <Stack align="center" p="xl">
+          <Box 
+            sx={{
+              width: rem(48),
+              height: rem(48),
+              border: '4px solid rgba(255, 255, 255, 0.2)',
+              borderTop: '4px solid var(--mantine-color-amber-6)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              '@keyframes spin': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' }
+              }
+            }}
+          ></Box>
+          <Text c="dimmed">Connecting to Servo {id}</Text>
+        </Stack>
+      </Paper>
+    </Container>
   );
   
   if (!servo) {
@@ -228,527 +362,411 @@ const ServoDebugView = () => {
   };
   
   return (
-    <div className="servo-debug">
+    <Container size="xl" py="md">
       {/* Toast notification */}
       {isToastVisible && (
-        <div className={`toast top-right ${toastType}`}>
-          <div>{toastMessage}</div>
-        </div>
+        <Notification
+          color={getToastColor(toastType)}
+          title={toastType.charAt(0).toUpperCase() + toastType.slice(1)}
+          onClose={() => setIsToastVisible(false)}
+          withCloseButton
+          withBorder
+          pos="fixed"
+          style={{ 
+            top: rem(16), 
+            right: rem(16), 
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s'
+          }}
+          sx={{
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 }
+            }
+          }}
+          w={rem(300)}
+        >
+          {toastMessage}
+        </Notification>
       )}
       
-      <article className="responsive">
+      <Paper radius="md" withBorder p={0}>
         {/* Header Section */}
-        <header>
-          <nav>
-            <Link to="/" className="circle icon"><i className="fa-solid fa-arrow-left"></i></Link>
-            <h5>
-              Servo {id}
-              {servo.alias ? `: ${servo.alias}` : ''}
-            </h5>
-          </nav>
-        </header>
+        <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <Group justify="space-between">
+            <Group>
+              <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
+                <i className="fa-solid fa-arrow-left"></i>
+              </ActionIcon>
+              <Title order={5}>
+                Servo {id}
+                {servo.alias ? `: ${servo.alias}` : ''}
+              </Title>
+            </Group>
+          </Group>
+        </Box>
         
-        {/* Tabs navigation */}
-        <div className="tabs">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={`tab-button ${activeTab === tab.id ? 'active amber' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <i className={`fa-solid ${tab.icon}`}></i>
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-        
-        <div className="tab-content">
-          {/* Control Tab */}
-          {activeTab === 'control' && (
-            <div className="tab-panel">
-              <div className="card">
-                <header>
-                  <h5 className="amber-text">Position Control</h5>
-                </header>
+        <Box p="md">
+          <Grid gutter="md">
+            {/* Control Card */}
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+                <Box 
+                  py="xs" 
+                  px="md" 
+                  bg="rgba(255, 215, 0, 0.05)" 
+                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                >
+                  <Group>
+                    <i className="fa-solid fa-sliders-h" style={{ color: '#FFB300' }}></i>
+                    <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
+                  </Group>
+                </Box>
                 
-                <div className="circular-slider-container">
-                  <CircularSlider
-                    size={250}
-                    minValue={0}
-                    maxValue={300}
-                    startAngle={0}
-                    endAngle={300}
-                    handleSize={18}
-                    handle1={{
-                      value: displayPosition,
-                      onChange: handlePositionChange
-                    }}
-                    arcColor="#222"
-                    arcBackgroundColor="rgba(0, 0, 0, 0.2)"
-                    coerceToInt={true}
-                    handleColor="var(--primary)"
-                    labelColor="var(--primary)"
-                    labelFontSize="1.2rem"
-                    data={[]}
-                    label="Position"
-                  />
+                <Stack p="xs" align="center" style={{ flex: 1 }}>
+                  <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative'
+                  }}>
+                    {/* Ensure displayPosition is a valid number */}
+                    {typeof displayPosition === 'number' && !isNaN(displayPosition) ? (
+                      <CircularSlider
+                        size={180}
+                        minValue={0}
+                        maxValue={300}
+                        startAngle={0}
+                        endAngle={300}
+                        handleSize={16}
+                        handle1={{
+                          value: displayPosition,
+                          onChange: handlePositionChange
+                        }}
+                        arcColor="#222"
+                        arcBackgroundColor="rgba(0, 0, 0, 0.2)"
+                        coerceToInt={true}
+                        handleColor="#FFB300"
+                        labelColor="#FFB300"
+                        labelFontSize="1rem"
+                        data={[]}
+                        label="Position"
+                      />
+                    ) : (
+                      <Box 
+                        style={{ 
+                          width: 180, 
+                          height: 180, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          border: '2px solid rgba(255, 215, 0, 0.2)',
+                          borderRadius: '50%',
+                          color: 'var(--mantine-color-dimmed)'
+                        }}
+                      >
+                        Loading...
+                      </Box>
+                    )}
+                    
+                    <Stack align="center" spacing={2} mt="xs">
+                      <Text size="lg" fw={600} c="amber">
+                        {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
+                          `${displayPosition}°` : 
+                          '0°'
+                        }
+                      </Text>
+                      <Text size="xs" c="dimmed">Servo Angle</Text>
+                    </Stack>
+                  </Box>
                   
-                  <div className="position-display center-align">
-                    <div className="large">{displayPosition}°</div>
-                    <div className="small text-secondary">Servo Angle</div>
-                  </div>
-                </div>
-                
-                {/* Fallback linear slider for more precise control */}
-                <div className="field">
-                  <Slider
-                    min={0}
-                    max={300}
-                    value={displayPosition}
-                    onChange={handlePositionChange}
-                    railStyle={{ backgroundColor: "rgba(55, 71, 79, 0.3)" }}
-                    trackStyle={{ backgroundColor: "var(--primary)" }}
-                    handleStyle={{ borderColor: "var(--primary)" }}
-                  />
-                  <span className="helper">Range: 0° - 300°</span>
-                </div>
-                
-                <div className="field">
-                  <label>
-                    Speed Control
-                    <span className="small badge right amber">{speed}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="50"
-                    max="2000"
-                    step="10"
-                    value={speed}
-                    onChange={(e) => handleSpeedChange(parseInt(e.target.value))}
-                    className="amber"
-                  />
-                  <span className="helper">Lower values = faster movement</span>
-                </div>
-                
-                <div className="actions">
-                  <button 
-                    className={`border round ${isTesting ? 'amber' : ''}`}
-                    onClick={handleWiggle}
-                    disabled={isTesting}
-                  >
-                    <i className="fa-solid fa-arrows-left-right left"></i>
-                    Test Motion
-                  </button>
-                  <button 
-                    className={`border round ${isCalibrating ? 'amber' : ''}`}
-                    onClick={handleCalibrate}
-                    disabled={isCalibrating}
-                  >
-                    <i className="fa-solid fa-ruler left"></i>
-                    Calibrate
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                  <Box w="100%" py="xs">
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm" fw={500}>Speed Control</Text>
+                      <Badge color="amber" variant="filled" size="sm">{speed}</Badge>
+                    </Group>
+                    <Slider
+                      min={50}
+                      max={2000}
+                      step={10}
+                      value={speed}
+                      onChange={handleSpeedChange}
+                      color="amber"
+                      labelAlwaysOn={false}
+                      size="sm"
+                    />
+                    <Text size="xs" c="dimmed" mt={2}>Lower values = faster movement</Text>
+                  </Box>
+                  
+                  <Group grow w="100%" mt="xs">
+                    <Button 
+                      variant={isTesting ? "filled" : "outline"}
+                      color="amber"
+                      onClick={handleWiggle}
+                      disabled={isTesting}
+                      leftSection={<i className="fa-solid fa-arrows-left-right"></i>}
+                      size="xs"
+                    >
+                      Test
+                    </Button>
+                    <Button 
+                      variant={isCalibrating ? "filled" : "outline"}
+                      color="amber"
+                      onClick={handleCalibrate}
+                      disabled={isCalibrating}
+                      leftSection={<i className="fa-solid fa-ruler"></i>}
+                      size="xs"
+                    >
+                      Calibrate
+                    </Button>
+                  </Group>
+                </Stack>
+              </Paper>
+            </Grid.Col>
           
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="tab-panel">
-              <div className="card">
-                <header>
-                  <h5 className="amber-text">Servo Configuration</h5>
-                  <button 
-                    className="small border round right"
-                    onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-                  >
-                    {showAdvancedControls ? 'Hide Advanced' : 'Show Advanced'}
-                  </button>
-                </header>
+            {/* Settings Card (includes Gamepad) */}
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+                <Box 
+                  py="xs" 
+                  px="md" 
+                  bg="rgba(255, 215, 0, 0.05)" 
+                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                >
+                  <Group justify="space-between">
+                    <Group>
+                      <i className="fa-solid fa-cog" style={{ color: '#FFB300' }}></i>
+                      <Title order={5} c="amber" style={{ marginTop: 0 }}>Settings</Title>
+                    </Group>
+                    <Button 
+                      variant="subtle" 
+                      color="amber" 
+                      size="xs"
+                      onClick={() => setShowAdvancedControls(!showAdvancedControls)}
+                    >
+                      {showAdvancedControls ? 'Hide Advanced' : 'Show Advanced'}
+                    </Button>
+                  </Group>
+                </Box>
                 
-                <div className="field label border round">
-                  <input
-                    type="text"
+                <Stack p="xs" spacing="md" style={{ flex: 1 }}>
+                  {/* Alias Input */}
+                  <TextInput
+                    label="Servo Alias"
+                    placeholder="Friendly name for this servo"
                     value={aliasInput}
                     onChange={(e) => setAliasInput(e.target.value)}
-                    placeholder="Friendly name for this servo"
                     maxLength={20}
-                  />
-                  <label>Servo Alias</label>
-                  <button 
-                    className="round border amber"
-                    onClick={handleSetAlias}
-                    disabled={!aliasInput.trim()}
-                  >
-                    <i className="fa-solid fa-tag left"></i>
-                    Set
-                  </button>
-                </div>
-                
-                {showAdvancedControls && (
-                  <div className="advanced-settings">
-                    <div className="field label border round">
-                      <input
-                        type="number"
-                        value={newId}
-                        onChange={(e) => setNewId(e.target.value)}
-                        min="1"
-                        max="253"
-                        placeholder="New ID (1-253)"
-                      />
-                      <label>Change Servo ID</label>
-                      <button 
-                        className="round border"
-                        onClick={handleChangeId}
-                        disabled={!newId}
+                    rightSectionWidth={80}
+                    rightSectionProps={{ className: 'm_82577fc2' }}
+                    rightSection={
+                      <Button 
+                        variant="outline" 
+                        color="amber" 
+                        onClick={handleSetAlias}
+                        disabled={!aliasInput.trim()}
+                        leftSection={<i className="fa-solid fa-tag"></i>}
+                        size="xs"
+                        w={65}
                       >
-                        <i className="fa-solid fa-id-card left"></i>
-                        Update
-                      </button>
-                    </div>
-                    
-                    <div className="danger-zone">
-                      <div className="text-error center-align small mb-2">
-                        <i className="fa-solid fa-exclamation-triangle"></i> 
-                        Danger Zone
-                      </div>
-                      <button 
-                        className="border round error full-width"
-                        onClick={handleResetServo}
-                      >
-                        <i className="fa-solid fa-rotate-left left"></i>
-                        Reset to Factory Defaults
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Gamepad Tab */}
-          {activeTab === 'gamepad' && (
-            <div className="tab-panel">
-              <div className="card">
-                <header>
-                  <h5 className="amber-text">Gamepad Mapping</h5>
-                </header>
-                
-                <div className="field">
-                  <p className="small mb-2">Map this servo to a gamepad control for remote operation</p>
-                  
-                  <div className="field label border">
-                    <select 
-                      value={attachIndex} 
-                      onChange={(e) => setAttachIndex(e.target.value)}
-                    >
-                      <option value="" disabled>Choose a control</option>
-                      <optgroup label="Buttons">
-                        <option value="FACE_1">FACE_1 (A/Cross)</option>
-                        <option value="FACE_2">FACE_2 (B/Circle)</option>
-                        <option value="FACE_3">FACE_3 (X/Square)</option>
-                        <option value="FACE_4">FACE_4 (Y/Triangle)</option>
-                        <option value="LEFT_SHOULDER">LEFT_SHOULDER (LB)</option>
-                        <option value="RIGHT_SHOULDER">RIGHT_SHOULDER (RB)</option>
-                        <option value="LEFT_SHOULDER_BOTTOM">LEFT_SHOULDER_BOTTOM (LT)</option>
-                        <option value="RIGHT_SHOULDER_BOTTOM">RIGHT_SHOULDER_BOTTOM (RT)</option>
-                        <option value="SELECT">SELECT (Back/Share)</option>
-                        <option value="START">START (Start/Options)</option>
-                        <option value="LEFT_ANALOG_BUTTON">LEFT_ANALOG_BUTTON (L3)</option>
-                        <option value="RIGHT_ANALOG_BUTTON">RIGHT_ANALOG_BUTTON (R3)</option>
-                        <option value="DPAD_UP">DPAD_UP</option>
-                        <option value="DPAD_DOWN">DPAD_DOWN</option>
-                        <option value="DPAD_LEFT">DPAD_LEFT</option>
-                        <option value="DPAD_RIGHT">DPAD_RIGHT</option>
-                        <option value="HOME">HOME (Guide/PS)</option>
-                      </optgroup>
-                      <optgroup label="Axes">
-                        <option value="LEFT_ANALOG_STICK_X">LEFT_ANALOG_STICK_X</option>
-                        <option value="LEFT_ANALOG_STICK_Y">LEFT_ANALOG_STICK_Y</option>
-                        <option value="RIGHT_ANALOG_STICK_X">RIGHT_ANALOG_STICK_X</option>
-                        <option value="RIGHT_ANALOG_STICK_Y">RIGHT_ANALOG_STICK_Y</option>
-                      </optgroup>
-                    </select>
-                    <label>Gamepad Control</label>
-                    <button 
-                      className="round border amber"
-                      onClick={handleAttachServo}
-                      disabled={!attachIndex}
-                    >
-                      <i className="fa-solid fa-gamepad left"></i>
-                      Attach
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="field small">
-                  <p className="helper text-secondary">
-                    {servo.attached_control 
-                      ? <><i className="fa-solid fa-check-circle text-success"></i> Currently attached to: <span className="amber-text">{servo.attached_control}</span></>
-                      : <><i className="fa-solid fa-info-circle"></i> No gamepad control attached</>
+                        Set
+                      </Button>
                     }
-                  </p>
-                </div>
-                
-                {servo.attached_control && (
-                  <div className="field">
-                    <button 
-                      className="border round"
-                      onClick={() => {
-                        node.emit('detach_servo', [parseInt(id)]);
-                        showToast('Servo detached from gamepad control');
-                      }}
-                    >
-                      <i className="fa-solid fa-unlink left"></i>
-                      Detach Control
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+                  />
+                  
+                  {/* Gamepad Controls Section */}
+                  <Box>
+                    <Stack spacing="xs">
+                      <Group>
+                        <i className="fa-solid fa-gamepad" style={{ color: '#FFB300' }}></i>
+                        <Text fw={500} c="amber" style={{ marginTop: 0 }}>Gamepad Mapping</Text>
+                      </Group>
+                      
+                      <Text size="sm" c="dimmed">Map this servo to a gamepad control for remote operation</Text>
+                      
+                      <Select
+                        label="Gamepad Control"
+                        placeholder="Choose a control"
+                        value={attachIndex}
+                        onChange={setAttachIndex}
+                        data={[
+                          { group: 'Buttons', items: [
+                            { value: 'FACE_1', label: 'FACE_1 (A/Cross)' },
+                            { value: 'FACE_2', label: 'FACE_2 (B/Circle)' },
+                            { value: 'FACE_3', label: 'FACE_3 (X/Square)' },
+                            { value: 'FACE_4', label: 'FACE_4 (Y/Triangle)' },
+                            { value: 'LEFT_SHOULDER', label: 'LEFT_SHOULDER (LB)' },
+                            { value: 'RIGHT_SHOULDER', label: 'RIGHT_SHOULDER (RB)' },
+                            { value: 'LEFT_SHOULDER_BOTTOM', label: 'LEFT_SHOULDER_BOTTOM (LT)' },
+                            { value: 'RIGHT_SHOULDER_BOTTOM', label: 'RIGHT_SHOULDER_BOTTOM (RT)' },
+                            { value: 'SELECT', label: 'SELECT (Back/Share)' },
+                            { value: 'START', label: 'START (Start/Options)' },
+                            { value: 'LEFT_ANALOG_BUTTON', label: 'LEFT_ANALOG_BUTTON (L3)' },
+                            { value: 'RIGHT_ANALOG_BUTTON', label: 'RIGHT_ANALOG_BUTTON (R3)' },
+                            { value: 'DPAD_UP', label: 'DPAD_UP' },
+                            { value: 'DPAD_DOWN', label: 'DPAD_DOWN' },
+                            { value: 'DPAD_LEFT', label: 'DPAD_LEFT' },
+                            { value: 'DPAD_RIGHT', label: 'DPAD_RIGHT' },
+                            { value: 'HOME', label: 'HOME (Guide/PS)' },
+                          ]},
+                          { group: 'Axes', items: [
+                            { value: 'LEFT_ANALOG_STICK_X', label: 'LEFT_ANALOG_STICK_X' },
+                            { value: 'LEFT_ANALOG_STICK_Y', label: 'LEFT_ANALOG_STICK_Y' },
+                            { value: 'RIGHT_ANALOG_STICK_X', label: 'RIGHT_ANALOG_STICK_X' },
+                            { value: 'RIGHT_ANALOG_STICK_Y', label: 'RIGHT_ANALOG_STICK_Y' },
+                          ]}
+                        ]}
+                        rightSectionWidth={90}
+                        rightSectionProps={{ className: 'm_82577fc2' }}
+                        rightSection={
+                          <Button 
+                            variant="outline" 
+                            color="amber" 
+                            onClick={handleAttachServo}
+                            disabled={!attachIndex}
+                            leftSection={<i className="fa-solid fa-gamepad"></i>}
+                            size="xs"
+                            w={75}
+                          >
+                            Attach
+                          </Button>
+                        }
+                      />
+                      
+                      {/* Status of gamepad control attachment */}
+                      {servo.attached_control 
+                        ? (
+                          <Group spacing={6}>
+                            <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
+                            <Text component="span" size="sm" c="dimmed" style={{ marginTop: 0 }}>Currently attached to:</Text>
+                            <Text component="span" size="sm" c="amber" fw={500} style={{ marginTop: 0 }}>{servo.attached_control}</Text>
+                          </Group>
+                        )
+                        : (
+                          <Group spacing={6}>
+                            <i className="fa-solid fa-info-circle"></i>
+                            <Text component="span" size="sm" c="dimmed" style={{ marginTop: 0 }}>No gamepad control attached</Text>
+                          </Group>
+                        )
+                      }
+                      
+                      {servo.attached_control && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => {
+                            node.emit('detach_servo', [parseInt(id)]);
+                            showToast('Servo detached from gamepad control');
+                          }}
+                          leftSection={<i className="fa-solid fa-unlink"></i>}
+                          mt="xs"
+                        >
+                          Detach Control
+                        </Button>
+                      )}
+                    </Stack>
+                  </Box>
+                  
+                  {/* Advanced Settings */}
+                  <Collapse in={showAdvancedControls}>
+                    <Stack spacing="md" pt="sm" style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                      <NumberInput
+                        label="Change Servo ID"
+                        placeholder="New ID (1-253)"
+                        min={1}
+                        max={253}
+                        value={newId || undefined}
+                        onChange={(val) => setNewId(val?.toString() || '')}
+                        rightSectionWidth={90}
+                        rightSectionProps={{ className: 'm_82577fc2' }}
+                        rightSection={
+                          <Button 
+                            variant="outline" 
+                            onClick={handleChangeId}
+                            disabled={!newId}
+                            leftSection={<i className="fa-solid fa-id-card"></i>}
+                            size="xs"
+                            w={75}
+                          >
+                            Update
+                          </Button>
+                        }
+                      />
+                      
+                      <Paper p="md" withBorder radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
+                        <Stack spacing="xs" align="center">
+                          <Group spacing={4}>
+                            <i className="fa-solid fa-exclamation-triangle" style={{ color: 'var(--mantine-color-red-6)' }}></i>
+                            <Text size="sm" c="red" fw={500} style={{ marginTop: 0 }}>Danger Zone</Text>
+                          </Group>
+                          <Button 
+                            variant="outline"
+                            color="red"
+                            onClick={handleResetServo}
+                            fullWidth
+                            leftSection={<i className="fa-solid fa-rotate-left"></i>}
+                          >
+                            Reset to Factory Defaults
+                          </Button>
+                        </Stack>
+                      </Paper>
+                    </Stack>
+                  </Collapse>
+                </Stack>
+              </Paper>
+            </Grid.Col>
           
-          {/* Info Tab */}
-          {activeTab === 'info' && (
-            <div className="tab-panel">
-              <div className="card">
-                <header>
-                  <h5 className="amber-text">Servo Information</h5>
-                </header>
+            {/* Info Card */}
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+                <Box 
+                  py="xs" 
+                  px="md" 
+                  bg="rgba(255, 215, 0, 0.05)" 
+                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
+                >
+                  <Group>
+                    <i className="fa-solid fa-info-circle" style={{ color: '#FFB300' }}></i>
+                    <Title order={5} c="amber" style={{ marginTop: 0 }}>Information</Title>
+                  </Group>
+                </Box>
                 
-                <ul className="list">
-                  {Object.entries(servoStatus).map(([key, value]) => (
-                    <li key={key} className="border-bottom">
-                      <div className="grid">
-                        <div className="s6 text-secondary">{key}</div>
-                        <div className="s6 text-right amber-text">{value}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                
-                {servo.properties && Object.keys(servo.properties).length > 0 && (
-                  <>
-                    <div className="divider"></div>
-                    <h6 className="amber-text">Advanced Properties</h6>
-                    <ul className="list small">
-                      {Object.entries(servo.properties).map(([key, value]) => (
-                        <li key={key} className="border-bottom">
-                          <div className="grid">
-                            <div className="s6 text-secondary">{key}</div>
-                            <div className="s6 text-right">{value}</div>
-                          </div>
-                        </li>
+                <Box p="xs" style={{ flex: 1 }}>
+                  <Table striped highlightOnHover withTableBorder withColumnBorders>
+                    <Table.Tbody>
+                      {Object.entries(servoStatus).map(([key, value]) => (
+                        <Table.Tr key={key}>
+                          <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)' }}>{key}</Table.Td>
+                          <Table.Td style={{ color: 'var(--mantine-color-amber-filled)', textAlign: 'right' }}>{value}</Table.Td>
+                        </Table.Tr>
                       ))}
-                    </ul>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </article>
+                    </Table.Tbody>
+                  </Table>
+                  
+                  {servo.properties && Object.keys(servo.properties).length > 0 && (
+                    <>
+                      <Title order={6} c="amber" mt="md" mb="xs">Advanced Properties</Title>
+                      <Table size="xs" striped highlightOnHover withTableBorder withColumnBorders>
+                        <Table.Tbody>
+                          {Object.entries(servo.properties).map(([key, value]) => (
+                            <Table.Tr key={key}>
+                              <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)' }}>{key}</Table.Td>
+                              <Table.Td style={{ textAlign: 'right' }}>{value}</Table.Td>
+                            </Table.Tr>
+                          ))}
+                        </Table.Tbody>
+                      </Table>
+                    </>
+                  )}
+                </Box>
+              </Paper>
+            </Grid.Col>
+          </Grid>
+        </Box>
+      </Paper>
       
-      <style jsx>{`
-        .toast {
-          position: fixed;
-          right: 1rem;
-          top: 1rem;
-          max-width: 300px;
-          padding: 0.75rem 1rem;
-          border-radius: 4px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-          z-index: 9999;
-          animation: fadeInRight 0.3s, fadeOut 0.3s 2.7s;
-        }
-        
-        .toast.success {
-          background-color: #4caf50;
-          color: white;
-        }
-        
-        .toast.error {
-          background-color: #f44336;
-          color: white;
-        }
-        
-        .toast.info {
-          background-color: #2196f3;
-          color: white;
-        }
-        
-        .tabs {
-          display: flex;
-          overflow-x: auto;
-          margin-bottom: 1rem;
-          background-color: rgba(0, 0, 0, 0.15);
-          border-radius: 8px;
-        }
-        
-        .tab-button {
-          flex: 1;
-          padding: 0.75rem 0.5rem;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 0.5rem;
-          background: transparent;
-          color: var(--text);
-          border: none;
-          border-bottom: 2px solid transparent;
-          cursor: pointer;
-          min-width: 80px;
-        }
-        
-        .tab-button.active {
-          border-bottom: 2px solid var(--primary);
-          background-color: rgba(255, 215, 0, 0.1);
-        }
-        
-        .tab-button i {
-          font-size: 1.2rem;
-        }
-        
-        .tab-content {
-          margin-bottom: 2rem;
-        }
-        
-        .tab-panel {
-          animation: fadeIn 0.3s;
-        }
-        
-        .card {
-          margin-bottom: 1rem;
-          background-color: var(--surface);
-          border: 1px solid rgba(255, 215, 0, 0.15);
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-          overflow: hidden;
-        }
-        
-        .card header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0.75rem 1rem;
-          background-color: rgba(255, 215, 0, 0.1);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        
-        .card header h5 {
-          margin: 0;
-        }
-        
-        .circular-slider-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 1rem;
-          position: relative;
-        }
-        
-        .position-display {
-          margin-top: 0.5rem;
-        }
-        
-        .position-display .large {
-          font-size: 2rem;
-          font-weight: 600;
-          color: var(--primary);
-        }
-        
-        .position-display .small {
-          font-size: 0.9rem;
-          opacity: 0.7;
-        }
-        
-        .actions {
-          display: flex;
-          gap: 0.5rem;
-          padding: 0 1rem 1rem;
-        }
-        
-        .actions button {
-          flex: 1;
-          padding: 0.75rem;
-        }
-        
-        .field {
-          padding: 0.75rem 1rem;
-        }
-        
-        .advanced-settings {
-          margin-top: 1rem;
-          padding-top: 1rem;
-          border-top: 1px dashed rgba(255, 255, 255, 0.1);
-        }
-        
-        .danger-zone {
-          margin: 1rem;
-          padding: 1rem;
-          border: 1px dashed rgba(244, 67, 54, 0.3);
-          border-radius: 8px;
-          background-color: rgba(244, 67, 54, 0.05);
-        }
-        
-        .mb-2 {
-          margin-bottom: 0.5rem;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        @keyframes fadeInRight {
-          from {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-        
-        @media (max-width: 768px) {
-          .tab-button {
-            padding: 0.5rem 0.3rem;
-            min-width: 70px;
-          }
-          
-          .tab-button i {
-            font-size: 1rem;
-          }
-          
-          .tab-button span {
-            font-size: 0.8rem;
-          }
-          
-          .circular-slider-container {
-            padding: 0.5rem;
-          }
-          
-          .position-display .large {
-            font-size: 1.5rem;
-          }
-          
-          .actions {
-            flex-direction: column;
-          }
-          
-          .field {
-            padding: 0.5rem 0.75rem;
-          }
-        }
-      `}</style>
-    </div>
+      {/* CSS is now handled through Mantine's styling system */}
+    </Container>
   );
 };
 

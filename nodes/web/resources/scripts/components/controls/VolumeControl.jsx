@@ -6,33 +6,22 @@
  * 
  * @component
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
+import { 
+  Menu, 
+  ActionIcon, 
+  Slider, 
+  Text, 
+  Stack, 
+  Box 
+} from '@mantine/core';
 import node from '../../Node';
 
 const VolumeControl = () => {
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [volume, setVolume] = useState(50);
-  const volumeRef = useRef(null);
   
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (volumeRef.current && !volumeRef.current.contains(event.target)) {
-        setShowVolumeSlider(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const toggleVolumeSlider = () => {
-    setShowVolumeSlider(!showVolumeSlider);
-  };
-
-  const handleVolumeChange = (e) => {
-    const newVolume = parseInt(e.target.value);
+  const handleVolumeChange = (newVolume) => {
     setVolume(newVolume);
     node.emit('set_volume', [newVolume]);
   };
@@ -46,34 +35,49 @@ const VolumeControl = () => {
   };
 
   return (
-    <div className="dropdown" ref={volumeRef}>
-      <button 
-        onClick={toggleVolumeSlider} 
-        className="transparent circle"
-        aria-label="Volume Control"
-        aria-haspopup="true"
-        aria-expanded={showVolumeSlider}
-      >
-        <i className={`fa-solid ${getVolumeIcon()} amber-text`}></i>
-      </button>
+    <Menu
+      opened={isOpen}
+      onChange={setIsOpen}
+      position="bottom-end"
+      shadow="md"
+      width={200}
+      withArrow
+    >
+      <Menu.Target>
+        <ActionIcon
+          variant="transparent"
+          radius="xl"
+          aria-label="Volume Control"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <i 
+            className={`fa-solid ${getVolumeIcon()}`}
+            style={{ color: 'var(--mantine-color-amber-6)' }}
+          ></i>
+        </ActionIcon>
+      </Menu.Target>
       
-      {showVolumeSlider && (
-        <div className="menu volume-menu">
-          <div className="item">
-            <input 
-              type="range" 
-              min="0" 
-              max="100" 
-              value={volume} 
-              onChange={handleVolumeChange} 
-              className="volume-slider" 
-              style={{ width: '100%', margin: '8px 0' }}
+      <Menu.Dropdown>
+        <Box p="md">
+          <Stack spacing="xs">
+            <Slider
+              value={volume}
+              onChange={handleVolumeChange}
+              min={0}
+              max={100}
+              step={1}
+              color="amber"
+              label={(value) => `${value}%`}
+              labelAlwaysOn
+              size="md"
             />
-            <div className="text-center">{volume}%</div>
-          </div>
-        </div>
-      )}
-    </div>
+            <Text size="sm" ta="center" c="dimmed">
+              Volume: {volume}%
+            </Text>
+          </Stack>
+        </Box>
+      </Menu.Dropdown>
+    </Menu>
   );
 };
 
