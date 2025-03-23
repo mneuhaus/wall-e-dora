@@ -623,8 +623,8 @@ const ServoDebugView = () => {
                     )}
                   </Box>
                   
-                  <Box w="100%" py="xs">
-                    <Group justify="space-between" mb={4}>
+                  <Box w="100%" mt={10}>
+                    <Group justify="space-between" mb={2}>
                       <Text size="sm" fw={500}>Speed Control</Text>
                       <Badge color="amber" variant="filled" size="sm" 
                         style={{
@@ -652,10 +652,10 @@ const ServoDebugView = () => {
                         <span style={{ fontSize: '0.8rem', color: 'var(--mantine-color-dimmed)' }}>Loading...</span>
                       </div>
                     )}
-                    <Text size="xs" c="dimmed" mt={2}>Lower values = faster movement</Text>
+                    <Text size="xs" c="dimmed" mt={1} mb={0}>Lower values = faster movement</Text>
                   </Box>
                   
-                  <Group grow w="100%" mt="xs">
+                  <Group grow w="100%" mt={10}>
                     <Button 
                       variant={isTesting ? "filled" : "outline"}
                       color="amber"
