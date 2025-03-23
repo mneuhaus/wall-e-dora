@@ -16,7 +16,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import node from '../Node';
-import CircularSlider from 'react-circular-slider-svg';
+import { CircularSliderWithChildren } from 'react-circular-slider-svg';
 
 // Mantine imports
 import { 
@@ -544,7 +544,7 @@ const ServoDebugView = () => {
                   }}>
                     {/* Render slider when it's ready */}
                     {sliderReady ? (
-                      <CircularSlider
+                      <CircularSliderWithChildren
                         size={180}
                         minValue={0}
                         maxValue={300}
@@ -559,17 +559,46 @@ const ServoDebugView = () => {
                         arcBackgroundColor="rgba(255, 179, 0, 0.15)"
                         coerceToInt={true}
                         handleColor="#FFB300"
-                        labelColor="#FFB300"
-                        labelFontSize="1rem"
-                        data={[]}
-                        label="Position"
-                      />
+                        trackColor="rgba(255, 179, 0, 0.05)"
+                      >
+                        <div 
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textAlign: 'center',
+                            width: '100%',
+                            height: '100%',
+                            marginTop: '10px'
+                          }}
+                        >
+                          <Text size="xl" fw={700} c="amber" lh={1}>
+                            {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
+                              `${displayPosition}°` : 
+                              '0°'
+                            }
+                          </Text>
+                          <Text size="xs" c="dimmed" lh={1} mb={6}>angle</Text>
+                          <Badge color="amber" variant="light" size="xs" radius="sm" px={6} py={3} 
+                            sx={{ 
+                              boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
+                              background: "rgba(255, 179, 0, 0.1)",
+                              border: "1px solid rgba(255, 179, 0, 0.3)"
+                            }}
+                          >
+                            {position || '0'}
+                          </Badge>
+                          <Text size="xs" c="dimmed" lh={1} mt={3}>pulse</Text>
+                        </div>
+                      </CircularSliderWithChildren>
                     ) : (
                       <Box 
                         style={{ 
                           width: 180, 
                           height: 180, 
                           display: 'flex', 
+                          flexDirection: 'column',
                           alignItems: 'center', 
                           justifyContent: 'center',
                           border: '2px solid rgba(255, 179, 0, 0.3)',
@@ -586,23 +615,12 @@ const ServoDebugView = () => {
                             borderTop: '3px solid var(--mantine-color-amber-5)',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
+                            marginBottom: rem(8)
                           }}
                         ></Box>
+                        <Text size="xs" c="dimmed" lh={1}>Loading...</Text>
                       </Box>
                     )}
-                    
-                    <Stack align="center" spacing={2} mt="xs">
-                      <Text size="lg" fw={600} c="amber">
-                        {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
-                          `${displayPosition}°` : 
-                          '0°'
-                        }
-                      </Text>
-                      <Text size="xs" c="dimmed">Servo Angle</Text>
-                      <Badge color="amber" variant="light" size="sm">
-                        {position || '0'} pulse
-                      </Badge>
-                    </Stack>
                   </Box>
                   
                   <Box w="100%" py="xs">
