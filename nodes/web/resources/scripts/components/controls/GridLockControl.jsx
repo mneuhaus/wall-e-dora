@@ -1,21 +1,20 @@
 /**
  * GridLockControl Component
  * 
- * Controls for locking/unlocking the grid layout and resetting it.
+ * Controls for managing the grid layout through a dropdown menu.
+ * Provides options for locking/unlocking the grid and resetting the layout.
  * When the grid is unlocked, widgets can be moved, resized, and deleted.
- * Provides a reset option to clear all widgets from the layout.
  * 
  * @component
  */
 import React from 'react';
-import { Group, ActionIcon, Tooltip } from '@mantine/core';
+import { ActionIcon, Menu, Tooltip, Text } from '@mantine/core';
 import { useGridContext } from '../../contexts/GridContext';
 
 const GridLockControl = () => {
   const { isEditable, toggleGridEditing, resetGridLayout } = useGridContext();
   
-  const handleResetGrid = (e) => {
-    e.stopPropagation();
+  const handleResetGrid = () => {
     if (window.confirm('Are you sure you want to reset the grid layout? This will clear all widgets for all devices.')) {
       resetGridLayout();
       console.log('Grid layout reset globally. All devices will be affected.');
@@ -23,40 +22,54 @@ const GridLockControl = () => {
   };
   
   return (
-    <Group gap="xs">
-      <Tooltip 
-        label={isEditable ? "Lock grid (exit edit mode)" : "Unlock grid (enter edit mode)"} 
-        position="bottom"
-        withArrow
-      >
-        <ActionIcon
-          variant="transparent"
-          radius="xl"
-          onClick={toggleGridEditing}
-          color={isEditable ? "green" : "amber"}
-        >
-          <i className={`fa-solid ${isEditable ? 'fa-lock-open' : 'fa-lock'}`}></i>
-        </ActionIcon>
-      </Tooltip>
-      
-      {isEditable && (
+    <Menu
+      position="bottom-end"
+      withArrow
+      shadow="md"
+      width={200}
+    >
+      <Menu.Target>
         <Tooltip 
-          label="Reset grid layout for all devices" 
+          label="Grid controls" 
           position="bottom"
           withArrow
-          color="red"
         >
           <ActionIcon
             variant="transparent"
             radius="xl"
-            onClick={handleResetGrid}
-            color="red"
+            color={isEditable ? "green" : "amber"}
           >
-            <i className="fa-solid fa-trash"></i>
+            <i className="fa-solid fa-table-cells"></i>
           </ActionIcon>
         </Tooltip>
-      )}
-    </Group>
+      </Menu.Target>
+      
+      <Menu.Dropdown>
+        <Menu.Label>Grid Layout</Menu.Label>
+        
+        <Menu.Item
+          leftSection={<i className={`fa-solid ${isEditable ? 'fa-lock' : 'fa-lock-open'}`} style={{ width: 14 }}></i>}
+          onClick={toggleGridEditing}
+          color={isEditable ? "amber" : "green"}
+        >
+          {isEditable ? "Lock Grid" : "Unlock Grid"}
+        </Menu.Item>
+        
+        {isEditable && (
+          <>
+            <Menu.Divider />
+            <Menu.Label>Danger Zone</Menu.Label>
+            <Menu.Item
+              leftSection={<i className="fa-solid fa-trash" style={{ width: 14 }}></i>}
+              onClick={handleResetGrid}
+              color="red"
+            >
+              Reset Layout
+            </Menu.Item>
+          </>
+        )}
+      </Menu.Dropdown>
+    </Menu>
   );
 };
 
