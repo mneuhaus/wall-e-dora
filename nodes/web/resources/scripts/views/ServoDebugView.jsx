@@ -49,6 +49,7 @@ const ServoDebugView = () => {
   const [position, setPosition] = useState(0);
   const [displayPosition, setDisplayPosition] = useState(0); // For UI display (0-300 degrees)
   const [speed, setSpeed] = useState(null); // Start with null so we know when it's initialized from server
+  const [sliderReady, setSliderReady] = useState(false); // Track if slider should be rendered
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(4095);
   const [newId, setNewId] = useState('');
@@ -137,6 +138,13 @@ const ServoDebugView = () => {
     return Math.round(servoMin + (uiPos / 300) * (servoMax - servoMin));
   }, []);
 
+  // Force slider to re-render when displayPosition changes
+  useEffect(() => {
+    if (displayPosition !== 0 && !sliderReady) {
+      setTimeout(() => setSliderReady(true), 50);
+    }
+  }, [displayPosition, sliderReady]);
+
   useEffect(() => {
     console.log(`ServoDebugView initialized for servo ${id}`);
     
@@ -183,9 +191,17 @@ const ServoDebugView = () => {
       // Validate before setting
       if (typeof uiPosition === 'number' && !isNaN(uiPosition)) {
         setDisplayPosition(uiPosition);
+        // Ensure slider becomes ready after position is set
+        if (!sliderReady) {
+          setTimeout(() => setSliderReady(true), 50);
+        }
       } else {
         console.warn('Invalid UI position calculated:', uiPosition);
         setDisplayPosition(0); // Default to 0 if invalid
+        // Even with invalid position, we should still render the slider
+        if (!sliderReady) {
+          setTimeout(() => setSliderReady(true), 50);
+        }
       }
       
       // Set speed - IMPORTANT: This needs to work on page load
@@ -242,6 +258,11 @@ const ServoDebugView = () => {
         typeof newPosition !== 'number' || isNaN(newPosition)) {
       console.warn('Invalid position received in handlePositionChange:', newPosition);
       return;
+    }
+    
+    // Ensure slider is marked as ready
+    if (!sliderReady) {
+      setSliderReady(true);
     }
     
     // Update display position immediately for responsive UI
@@ -521,8 +542,8 @@ const ServoDebugView = () => {
                     justifyContent: 'center',
                     position: 'relative'
                   }}>
-                    {/* Ensure displayPosition is a valid number */}
-                    {typeof displayPosition === 'number' && !isNaN(displayPosition) ? (
+                    {/* Render slider when it's ready */}
+                    {sliderReady ? (
                       <CircularSlider
                         size={180}
                         minValue={0}
