@@ -103,15 +103,23 @@ const ServoDebugView = () => {
     }
     
     // Ensure min and max are valid
+    if (servoMin < 0) servoMin = 0;
+    if (servoMax > 1023) servoMax = 1023;
     if (servoMax <= servoMin) {
       console.warn('Invalid range: servoMax must be greater than servoMin', 'servoMin:', servoMin, 'servoMax:', servoMax);
       servoMin = 0;
       servoMax = 1023;
     }
     
-    // Directly map servo position (0-1023) to UI angle (0-300 degrees)
-    // 1023 steps = 300 degrees, so ~0.293 degrees per step
-    return Math.round(300 * (servoPos / 1023));
+    // Make sure servo position is within bounds
+    if (servoPos < servoMin) servoPos = servoMin;
+    if (servoPos > servoMax) servoPos = servoMax;
+    
+    // Map servo position (min-max) to UI angle (0-300 degrees)
+    const range = servoMax - servoMin;
+    if (range === 0) return 0; // Avoid division by zero
+    
+    return Math.round(300 * ((servoPos - servoMin) / range));
   }, []);
   
   // Helper function to map UI angle to servo position
@@ -122,13 +130,27 @@ const ServoDebugView = () => {
       return 0;
     }
     
-    // Force servo range to valid values (0-1023)
-    servoMin = 0;
-    servoMax = 1023;
+    // Get current servo range, default to 0-1023 if invalid
+    if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
+      servoMin = 0;
+    }
     
-    // Directly map UI angle (0-300 degrees) to servo position (0-1023)
-    // 300 degrees = 1023 steps
-    return Math.round((uiPos / 300) * 1023);
+    if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
+      servoMax = 1023;
+    }
+    
+    // Ensure min and max are valid and min < max
+    if (servoMin < 0) servoMin = 0;
+    if (servoMax > 1023) servoMax = 1023;
+    if (servoMax <= servoMin) {
+      servoMin = 0;
+      servoMax = 1023;
+    }
+    
+    // Map UI angle (0-300 degrees) to servo position (min-max)
+    // 300 degrees = full range from min to max
+    const range = servoMax - servoMin;
+    return Math.round(servoMin + (uiPos / 300) * range);
   }, []);
 
   // Force slider to re-render when displayPosition changes
@@ -148,11 +170,27 @@ const ServoDebugView = () => {
       console.log(`Processing servo data for ID ${id}:`, servoInfo);
       setServo(servoInfo);
       
-      // Force min/max pulse values to known valid range
+      // Get min/max pulse values from servo data or use defaults
       let servoMinPulse = 0;
       let servoMaxPulse = 1023;
       
-      // Set the standard range regardless of what comes from the server
+      if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null && 
+          !isNaN(servoInfo.min_pulse) && servoInfo.min_pulse >= 0) {
+        servoMinPulse = Number(servoInfo.min_pulse);
+      }
+      
+      if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null && 
+          !isNaN(servoInfo.max_pulse) && servoInfo.max_pulse <= 1023) {
+        servoMaxPulse = Number(servoInfo.max_pulse);
+      }
+      
+      // Ensure min < max
+      if (servoMaxPulse <= servoMinPulse) {
+        servoMinPulse = 0;
+        servoMaxPulse = 1023;
+      }
+      
+      // Update state with the min/max values
       setMin(servoMinPulse);
       setMax(servoMaxPulse);
       
@@ -165,7 +203,7 @@ const ServoDebugView = () => {
       // Set raw position value
       setPosition(servoPosition);
       
-      // Map servo position to UI range (0-300 degrees)
+      // Map servo position to UI range (0-300 degrees) using actual min/max
       const uiPosition = mapServoToUI(servoPosition, servoMinPulse, servoMaxPulse);
       
       // Validate before setting
@@ -249,18 +287,30 @@ const ServoDebugView = () => {
     setDisplayPosition(newPosition);
     
     // Validate min and max before passing to mapUIToServo
-    if (min === null || min === undefined || typeof min !== 'number' || isNaN(min)) {
-      console.warn('Invalid min value in handlePositionChange:', min);
-      return;
+    let servoMin = min;
+    let servoMax = max;
+    
+    if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
+      console.warn('Invalid min value in handlePositionChange, using default 0:', servoMin);
+      servoMin = 0;
     }
     
-    if (max === null || max === undefined || typeof max !== 'number' || isNaN(max)) {
-      console.warn('Invalid max value in handlePositionChange:', max);
-      return;
+    if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
+      console.warn('Invalid max value in handlePositionChange, using default 1023:', servoMax);
+      servoMax = 1023;
+    }
+    
+    // Ensure min/max are valid
+    if (servoMin < 0) servoMin = 0;
+    if (servoMax > 1023) servoMax = 1023;
+    if (servoMax <= servoMin) {
+      console.warn('Invalid range in handlePositionChange: max <= min. Using defaults.', servoMin, servoMax);
+      servoMin = 0;
+      servoMax = 1023;
     }
     
     // Map UI range (0-300) to servo range (min-max)
-    const servoPosition = mapUIToServo(newPosition, min, max);
+    const servoPosition = mapUIToServo(newPosition, servoMin, servoMax);
     
     // Validate servoPosition before setting it
     if (servoPosition === null || servoPosition === undefined || 
@@ -385,8 +435,8 @@ const ServoDebugView = () => {
       // Reset servo settings to defaults
       const servoId = parseInt(id);
       const defaultSettings = {
-        min_pulse: 500,
-        max_pulse: 2500,
+        min_pulse: 0,
+        max_pulse: 1023,
         speed: 1000,
         calibrated: false,
         alias: "",
@@ -824,6 +874,55 @@ const ServoDebugView = () => {
                             Update ID
                           </Button>
                         </Group>
+                      </Box>
+
+                      {/* Min/Max Pulse Settings */}
+                      <Box>
+                        <Text fw={500} mb="xs">Servo Pulse Range</Text>
+                        <Grid>
+                          <Grid.Col span={6}>
+                            <NumberInput
+                              label="Min Pulse"
+                              description="Minimum position (0-1023)"
+                              min={0}
+                              max={1023}
+                              value={servo.min_pulse !== undefined ? servo.min_pulse : 0}
+                              onChange={(val) => {
+                                if (val !== null) {
+                                  node.emit('update_servo_setting', [{
+                                    id: parseInt(id),
+                                    property: "min_pulse",
+                                    value: parseInt(val)
+                                  }]);
+                                  showToast(`Min pulse set to ${val}`);
+                                }
+                              }}
+                            />
+                          </Grid.Col>
+                          <Grid.Col span={6}>
+                            <NumberInput
+                              label="Max Pulse"
+                              description="Maximum position (0-1023)"
+                              min={0}
+                              max={1023}
+                              value={servo.max_pulse !== undefined ? servo.max_pulse : 1023}
+                              onChange={(val) => {
+                                if (val !== null) {
+                                  node.emit('update_servo_setting', [{
+                                    id: parseInt(id),
+                                    property: "max_pulse",
+                                    value: parseInt(val)
+                                  }]);
+                                  showToast(`Max pulse set to ${val}`);
+                                }
+                              }}
+                            />
+                          </Grid.Col>
+                        </Grid>
+                        <Text size="xs" c="dimmed" mt={5}>
+                          These values represent the absolute minimum and maximum positions 
+                          that the servo can move to. Valid range is 0-1023.
+                        </Text>
                       </Box>
                       
                       <Paper p="md" withBorder radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
