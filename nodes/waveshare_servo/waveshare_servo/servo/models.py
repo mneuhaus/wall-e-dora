@@ -2,8 +2,8 @@
 Data models for the Waveshare Servo Node.
 """
 
-from dataclasses import asdict, dataclass
-from typing import Dict
+from dataclasses import asdict, dataclass, field
+from typing import Dict, Optional, Any
 
 @dataclass
 class ServoSettings:
@@ -16,6 +16,13 @@ class ServoSettings:
     calibrated: bool = False
     position: int = 0
     invert: bool = False
+    attached_control: str = ""
+    gamepad_config: Optional[Dict[str, Any]] = None
+
+    def __post_init__(self):
+        """Initialize empty dict for gamepad_config if None."""
+        if self.gamepad_config is None:
+            self.gamepad_config = {}
 
     def to_dict(self) -> dict:
         """Convert settings to dictionary for config/json."""

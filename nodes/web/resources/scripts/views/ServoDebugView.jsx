@@ -433,7 +433,7 @@ const ServoDebugView = () => {
       multiplier: multiplier
     };
     
-    // Update to use update_servo_setting with the full gamepad configuration
+    // Update the gamepad config (this will be merged with any existing data)
     node.emit('update_servo_setting', [{
       id: parseInt(id),
       property: "gamepad_config",
@@ -447,6 +447,7 @@ const ServoDebugView = () => {
       value: attachIndex
     }]);
     
+    console.log("Updating gamepad configuration:", gamepadConfig);
     showToast(`Attached to gamepad control: ${attachIndex} (${controlMode} mode)`);
   };
   
@@ -460,7 +461,9 @@ const ServoDebugView = () => {
         speed: 1000,
         calibrated: false,
         alias: "",
-        invert: false
+        invert: false,
+        attached_control: "",
+        gamepad_config: {}
       };
       
       // Update each setting to default
