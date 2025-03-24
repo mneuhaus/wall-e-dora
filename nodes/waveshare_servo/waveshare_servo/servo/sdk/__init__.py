@@ -1,15 +1,6 @@
-"""
-SCS Servo SDK for low-level servo communication.
-"""
+#!/usr/bin/env python
 
-from .port_handler import PortHandler
-from .packet_handler import PacketHandler
-from .group_sync_write import GroupSyncWrite
-from .group_sync_read import GroupSyncRead
-
-__all__ = [
-    'PortHandler',
-    'PacketHandler',
-    'GroupSyncWrite',
-    'GroupSyncRead',
-]
+from .port_handler import *
+from .packet_handler import *
+from .group_sync_read import *
+from .group_sync_write import *
