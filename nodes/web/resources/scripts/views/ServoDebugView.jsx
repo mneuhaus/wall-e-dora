@@ -545,12 +545,12 @@ const ServoDebugView = () => {
                     {/* Render slider when it's ready */}
                     {sliderReady ? (
                       <CircularSliderWithChildren
-                        size={180}
+                        size={220}
                         minValue={0}
                         maxValue={300}
                         startAngle={0}
                         endAngle={300}
-                        handleSize={16}
+                        handleSize={18}
                         handle1={{
                           value: displayPosition,
                           onChange: handlePositionChange
@@ -573,14 +573,14 @@ const ServoDebugView = () => {
                             marginTop: '10px'
                           }}
                         >
-                          <Text size="xl" fw={700} c="amber" lh={1}>
+                          <Text size="28px" fw={700} c="amber" lh={1}>
                             {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
                               `${displayPosition}°` : 
                               '0°'
                             }
                           </Text>
-                          <Text size="xs" c="dimmed" lh={1} mb={6}>angle</Text>
-                          <Badge color="amber" variant="light" size="xs" radius="sm" px={6} py={3} 
+                          <Text size="sm" c="dimmed" lh={1} mb={8}>angle</Text>
+                          <Badge color="amber" variant="light" size="sm" radius="sm" px={8} py={4} 
                             sx={{ 
                               boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
                               background: "rgba(255, 179, 0, 0.1)",
@@ -589,36 +589,37 @@ const ServoDebugView = () => {
                           >
                             {position || '0'}
                           </Badge>
-                          <Text size="xs" c="dimmed" lh={1} mt={3}>pulse</Text>
+                          <Text size="sm" c="dimmed" lh={1} mt={4}>pulse</Text>
                         </div>
                       </CircularSliderWithChildren>
                     ) : (
                       <Box 
                         style={{ 
-                          width: 180, 
-                          height: 180, 
+                          width: 220, 
+                          height: 220, 
                           display: 'flex', 
                           flexDirection: 'column',
                           alignItems: 'center', 
                           justifyContent: 'center',
-                          border: '2px solid rgba(255, 179, 0, 0.3)',
+                          border: '3px solid rgba(255, 179, 0, 0.3)',
                           borderRadius: '50%',
                           color: 'var(--mantine-color-dimmed)',
-                          background: 'rgba(255, 179, 0, 0.05)'
+                          background: 'rgba(255, 179, 0, 0.05)',
+                          boxShadow: '0 0 15px rgba(255, 179, 0, 0.2)'
                         }}
                       >
                         <Box 
                           sx={{
-                            width: rem(32),
-                            height: rem(32),
-                            border: '3px solid rgba(255, 255, 255, 0.1)',
-                            borderTop: '3px solid var(--mantine-color-amber-5)',
+                            width: rem(48),
+                            height: rem(48),
+                            border: '4px solid rgba(255, 255, 255, 0.1)',
+                            borderTop: '4px solid var(--mantine-color-amber-5)',
                             borderRadius: '50%',
                             animation: 'spin 1s linear infinite',
-                            marginBottom: rem(8)
+                            marginBottom: rem(10)
                           }}
                         ></Box>
-                        <Text size="xs" c="dimmed" lh={1}>Loading...</Text>
+                        <Text size="sm" c="dimmed" lh={1}>Loading...</Text>
                       </Box>
                     )}
                   </Box>
