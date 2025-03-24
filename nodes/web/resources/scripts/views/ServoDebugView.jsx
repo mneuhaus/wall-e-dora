@@ -367,6 +367,11 @@ const ServoDebugView = () => {
   };
   
   const handleCalibrate = () => {
+    // Ask for confirmation before calibrating
+    if (!window.confirm('Are you sure you want to calibrate this servo? This will find the physical limits of the servo\'s range of motion.')) {
+      return; // User canceled
+    }
+    
     setIsCalibrating(true);
     // Updated calibrate_servo command format
     node.emit('calibrate_servo', [{
