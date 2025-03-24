@@ -18,6 +18,7 @@ class ServoSettings:
     invert: bool = False
     attached_control: str = ""
     gamepad_config: Optional[Dict[str, Any]] = None
+    voltage: float = 0.0  # Add voltage field for displaying power status
 
     def __post_init__(self):
         """Initialize empty dict for gamepad_config if None."""

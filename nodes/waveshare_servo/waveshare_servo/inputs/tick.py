@@ -78,6 +78,9 @@ def scan_for_servos(context):
                 # Create and store the servo
                 servos[servo_id] = Servo(scanner.serial_conn, settings)
                 
+                # Read voltage for the new servo
+                servos[servo_id].read_voltage()
+                
                 # Broadcast the servo's addition
                 broadcast_servo_status(node, servo_id, servos)
         
@@ -91,6 +94,10 @@ def scan_for_servos(context):
             for servo_id in disconnected_ids:
                 if servo_id in servos:
                     del servos[servo_id]
+        
+        # Update voltage readings for all connected servos
+        for servo_id in servos:
+            servos[servo_id].read_voltage()
         
         # Broadcast a complete list of servos (the servos_list function will filter for responsive ones)
         broadcast_servos_list(node, servos)

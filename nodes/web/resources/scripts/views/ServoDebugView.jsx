@@ -480,7 +480,7 @@ const ServoDebugView = () => {
   };
   
   const loadingView = (
-    <Container size="xl" py="md">
+    <Container size="lg" py="md">
       <Paper p="md" radius="md" withBorder>
         <Group justify="space-between" mb="md">
           <Group>
@@ -516,18 +516,14 @@ const ServoDebugView = () => {
   }
   
   const servoStatus = {
-    Position: position || 'N/A',
-    Speed: speed || 'N/A',
-    Alias: servo.alias || 'None',
+    'Attached Control': servo.attached_control || 'None',
+    'Voltage': servo.voltage ? `${servo.voltage.toFixed(1)}V` : 'N/A',
     'Min Pulse': servo.min_pulse !== undefined ? servo.min_pulse : 'Not calibrated',
-    'Max Pulse': servo.max_pulse !== undefined ? servo.max_pulse : 'Not calibrated',
-    'Calibrated': servo.calibrated ? 'Yes' : 'No',
-    'Inverted': servo.invert ? 'Yes' : 'No',
-    'Attached Control': servo.attached_control || 'None'
+    'Max Pulse': servo.max_pulse !== undefined ? servo.max_pulse : 'Not calibrated'
   };
   
   return (
-    <Container size="xl" py="md">
+    <Container size="lg" py="md">
       {/* Toast notification */}
       {isToastVisible && (
         <Notification
@@ -557,7 +553,7 @@ const ServoDebugView = () => {
       
       <Paper radius="md" withBorder p={0}>
         {/* Header Section */}
-        <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', height: '45px' }}>
           <Group justify="space-between">
             <Group>
               <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
@@ -629,192 +625,183 @@ const ServoDebugView = () => {
           </Group>
         </Box>
         
-        <Box p="md">
-          <Grid gutter="md">
-            {/* Control Card */}
-            <Grid.Col span={{ base: 12, md: 6 }}>
-              <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
-                <Box 
-                  py="xs" 
-                  px="md" 
-                  bg="rgba(255, 215, 0, 0.05)" 
-                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
-                >
-                  <Group>
-                    <i className="fa-solid fa-sliders-h" style={{ color: '#FFB300' }}></i>
-                    <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
-                  </Group>
-                </Box>
-                
-                <Stack p="xs" align="center" style={{ flex: 1 }}>
-                  <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative'
-                  }}>
-                    {/* Render slider when it's ready */}
-                    {sliderReady ? (
-                      <CircularSliderWithChildren
-                        size={220}
-                        minValue={0}
-                        maxValue={300}
-                        startAngle={0}
-                        endAngle={300}
-                        handleSize={18}
-                        handle1={{
-                          value: displayPosition,
-                          onChange: handlePositionChange
+        <Box p={0}>
+          <Grid gutter={5} style={{ margin: 0 }}>
+            {/* Control Section */}
+            <Grid.Col span={6} p={5}>
+              <Stack spacing={2} align="center">
+                <Box sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative'
+                }}>
+                  {/* Render slider when it's ready */}
+                  {sliderReady ? (
+                    <CircularSliderWithChildren
+                      size={260} 
+                      minValue={0}
+                      maxValue={300}
+                      startAngle={0}
+                      endAngle={300}
+                      handleSize={14} 
+                      handle1={{
+                        value: displayPosition,
+                        onChange: handlePositionChange
+                      }}
+                      arcColor="#FFB300"
+                      arcBackgroundColor="rgba(255, 179, 0, 0.15)"
+                      coerceToInt={true}
+                      handleColor="#FFB300"
+                      trackColor="rgba(255, 179, 0, 0.05)"
+                    >
+                      <div 
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          textAlign: 'center',
+                          width: '100%',
+                          height: '100%',
+                          marginTop: '2px'
                         }}
-                        arcColor="#FFB300"
-                        arcBackgroundColor="rgba(255, 179, 0, 0.15)"
-                        coerceToInt={true}
-                        handleColor="#FFB300"
-                        trackColor="rgba(255, 179, 0, 0.05)"
                       >
-                        <div 
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            textAlign: 'center',
-                            width: '100%',
-                            height: '100%',
-                            marginTop: '10px'
+                        <Text size="xl" fw={700} c="amber" lh={1}>
+                          {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
+                            `${displayPosition}°` : 
+                            '0°'
+                          }
+                        </Text>
+                        <Text size="sm" c="dimmed" lh={1} mb={3}>angle</Text>
+                        <Badge color="amber" variant="light" size="xs" radius="sm" px={5} py={1} 
+                          sx={{ 
+                            boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
+                            background: "rgba(255, 179, 0, 0.1)",
+                            border: "1px solid rgba(255, 179, 0, 0.3)"
                           }}
                         >
-                          <Text size="28px" fw={700} c="amber" lh={1}>
-                            {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
-                              `${displayPosition}°` : 
-                              '0°'
-                            }
-                          </Text>
-                          <Text size="sm" c="dimmed" lh={1} mb={8}>angle</Text>
-                          <Badge color="amber" variant="light" size="sm" radius="sm" px={8} py={4} 
-                            sx={{ 
-                              boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
-                              background: "rgba(255, 179, 0, 0.1)",
-                              border: "1px solid rgba(255, 179, 0, 0.3)"
-                            }}
-                          >
-                            {position || '0'}
-                          </Badge>
-                          <Text size="sm" c="dimmed" lh={1} mt={4}>pulse</Text>
-                        </div>
-                      </CircularSliderWithChildren>
-                    ) : (
-                      <Box 
-                        style={{ 
-                          width: 220, 
-                          height: 220, 
-                          display: 'flex', 
-                          flexDirection: 'column',
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          border: '3px solid rgba(255, 179, 0, 0.3)',
-                          borderRadius: '50%',
-                          color: 'var(--mantine-color-dimmed)',
-                          background: 'rgba(255, 179, 0, 0.05)',
-                          boxShadow: '0 0 15px rgba(255, 179, 0, 0.2)'
-                        }}
-                      >
-                        <Box 
-                          sx={{
-                            width: rem(48),
-                            height: rem(48),
-                            border: '4px solid rgba(255, 255, 255, 0.1)',
-                            borderTop: '4px solid var(--mantine-color-amber-5)',
-                            borderRadius: '50%',
-                            animation: 'spin 1s linear infinite',
-                            marginBottom: rem(10)
-                          }}
-                        ></Box>
-                        <Text size="sm" c="dimmed" lh={1}>Loading...</Text>
-                      </Box>
-                    )}
-                  </Box>
-                  
-                  <Box w="100%" mt={10}>
-                    <Group justify="space-between" mb={2}>
-                      <Text size="sm" fw={500}>Speed Control</Text>
-                      <Badge color="amber" variant="filled" size="sm" 
-                        style={{
-                          boxShadow: "0 0 8px rgba(255, 179, 0, 0.4)",
-                          border: "1px solid rgba(255, 179, 0, 0.6)"
-                        }}
-                      >
-                        {speed !== null ? speed : 'Loading...'}
-                      </Badge>
-                    </Group>
-                    {speed !== null ? (
-                      <Slider
-                        min={50}
-                        max={2000}
-                        step={10}
-                        value={speed}
-                        onChange={handleSpeedChange}
-                        onChangeEnd={handleSpeedChangeComplete}
-                        color="amber"
-                        labelAlwaysOn={false}
-                        size="sm"
-                      />
-                    ) : (
-                      <div style={{ height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--mantine-color-dimmed)' }}>Loading...</span>
+                          {position || '0'}
+                        </Badge>
+                        <Text size="2xs" c="dimmed" lh={1} mt={2}>pulse</Text>
                       </div>
-                    )}
-                    <Text size="xs" c="dimmed" mt={1} mb={0}>Lower values = faster movement</Text>
-                  </Box>
-                </Stack>
-              </Paper>
-            </Grid.Col>
-          
-            {/* Info Card */}
-            <Grid.Col span={{ base: 12, md: 6 }}>
-              <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
-                <Box 
-                  py="xs" 
-                  px="md" 
-                  bg="rgba(255, 215, 0, 0.05)" 
-                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
-                >
-                  <Group>
-                    <i className="fa-solid fa-info-circle" style={{ color: '#FFB300' }}></i>
-                    <Title order={5} c="amber" style={{ marginTop: 0 }}>Information</Title>
-                  </Group>
-                </Box>
-                
-                <Box p="xs" style={{ flex: 1 }}>
-                  <Table striped highlightOnHover withTableBorder withColumnBorders>
-                    <Table.Tbody>
-                      {Object.entries(servoStatus).map(([key, value]) => (
-                        <Table.Tr key={key}>
-                          <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)' }}>{key}</Table.Td>
-                          <Table.Td style={{ color: 'var(--mantine-color-amber-filled)', textAlign: 'right' }}>{value}</Table.Td>
-                        </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                  
-                  {servo.properties && Object.keys(servo.properties).length > 0 && (
-                    <>
-                      <Title order={6} c="amber" mt="md" mb="xs">Advanced Properties</Title>
-                      <Table size="xs" striped highlightOnHover withTableBorder withColumnBorders>
-                        <Table.Tbody>
-                          {Object.entries(servo.properties).map(([key, value]) => (
-                            <Table.Tr key={key}>
-                              <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)' }}>{key}</Table.Td>
-                              <Table.Td style={{ textAlign: 'right' }}>{value}</Table.Td>
-                            </Table.Tr>
-                          ))}
-                        </Table.Tbody>
-                      </Table>
-                    </>
+                    </CircularSliderWithChildren>
+                  ) : (
+                    <Box 
+                      style={{ 
+                        width: 260, 
+                        height: 260, 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        border: '3px solid rgba(255, 179, 0, 0.3)',
+                        borderRadius: '50%',
+                        color: 'var(--mantine-color-dimmed)',
+                        background: 'rgba(255, 179, 0, 0.05)',
+                        boxShadow: '0 0 15px rgba(255, 179, 0, 0.2)'
+                      }}
+                    >
+                      <Box 
+                        sx={{
+                          width: rem(24),
+                          height: rem(24),
+                          border: '3px solid rgba(255, 255, 255, 0.1)',
+                          borderTop: '3px solid var(--mantine-color-amber-5)',
+                          borderRadius: '50%',
+                          animation: 'spin 1s linear infinite',
+                          marginBottom: rem(3)
+                        }}
+                      ></Box>
+                      <Text size="xs" c="dimmed" lh={1}>Loading...</Text>
+                    </Box>
                   )}
                 </Box>
-              </Paper>
+              </Stack>
+            </Grid.Col>
+          
+            {/* Info Section */}
+            <Grid.Col span={6} p={5}>
+              {/* Speed slider section */}
+              <Box w="100%" style={{ marginBottom: '15px', marginTop: '8px', paddingLeft: '10px', paddingRight: '10px' }}>
+                <Group justify="space-between" mb={1}>
+                  <Text fw={500} style={{ fontSize: '0.75rem' }}>Speed</Text>
+                  <Badge color="amber" variant="filled" size="xs" 
+                    style={{
+                      boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
+                      border: "1px solid rgba(255, 179, 0, 0.6)"
+                    }}
+                  >
+                    {speed !== null ? speed : 'Loading...'}
+                  </Badge>
+                </Group>
+                {speed !== null ? (
+                  <Slider
+                    min={50}
+                    max={2000}
+                    step={50}
+                    value={speed}
+                    onChange={handleSpeedChange}
+                    onChangeEnd={handleSpeedChangeComplete}
+                    color="amber"
+                    labelAlwaysOn={false}
+                    size="xs"
+                    style={{ marginBottom: 2 }}
+                  />
+                ) : (
+                  <div style={{ height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--mantine-color-dimmed)' }}>Loading...</span>
+                  </div>
+                )}
+                <Text c="dimmed" style={{ marginTop: 0, fontSize: '0.65rem' }}>Lower = faster</Text>
+              </Box>
+              <Box style={{ overflowY: 'auto', padding: '10px' }}>
+                <Table striped highlightOnHover withBorder>
+                  <Table.Tbody>
+                    {Object.entries(servoStatus).map(([key, value]) => (
+                      <Table.Tr key={key}>
+                        <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)', fontSize: '0.75rem', padding: '1px 6px' }}>{key}</Table.Td>
+                        <Table.Td style={{ color: 'var(--mantine-color-amber-filled)', textAlign: 'right', fontSize: '0.75rem', padding: '1px 6px' }}>
+                          {key === 'Voltage' && servo.voltage ? (
+                            <Group justify="right" spacing="xs" wrap="nowrap">
+                              <div
+                                style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  backgroundColor: servo.voltage >= 6.0 ? '#4CAF50' : (servo.voltage >= 5.0 ? '#FFC107' : '#F44336'),
+                                  display: 'inline-block',
+                                  marginRight: '2px'
+                                }}
+                              />
+                              {value}
+                            </Group>
+                          ) : (
+                            value
+                          )}
+                        </Table.Td>
+                      </Table.Tr>
+                    ))}
+                  </Table.Tbody>
+                </Table>
+                
+                {servo.properties && Object.keys(servo.properties).length > 0 && (
+                  <>
+                    <Text fw={500} c="amber" mt="xs" mb="xs" size="xs">Advanced Properties</Text>
+                    <Table size="xs" striped highlightOnHover withBorder>
+                      <Table.Tbody>
+                        {Object.entries(servo.properties).map(([key, value]) => (
+                          <Table.Tr key={key}>
+                            <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)', fontSize: '0.65rem', padding: '1px 4px' }}>{key}</Table.Td>
+                            <Table.Td style={{ textAlign: 'right', fontSize: '0.65rem', padding: '1px 4px' }}>{value}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </>
+                )}
+              </Box>
             </Grid.Col>
           </Grid>
         </Box>
@@ -1106,7 +1093,7 @@ const ServoDebugView = () => {
                   <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
                   <Text fw={500}>Current Configuration</Text>
                 </Group>
-                <Table striped withTableBorder size="xs">
+                <Table striped withColumnBorders size="xs">
                   <Table.Tbody>
                     <Table.Tr>
                       <Table.Td fw={500}>Control</Table.Td>

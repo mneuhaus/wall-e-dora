@@ -27,6 +27,7 @@ ADDR_SCS_TORQUE_ENABLE = 40
 ADDR_SCS_GOAL_POSITION = 42
 ADDR_SCS_PRESENT_POSITION = 56
 ADDR_SCS_MOVING_SPEED = 46
+ADDR_SCS_PRESENT_VOLTAGE = 62  # Address for reading current voltage
 
 # Default device settings
 BAUDRATE = 1000000
@@ -309,3 +310,55 @@ class Servo:
     def calibrate(self) -> bool:
         """Calibrate the servo min/max values."""
         return calibrate_servo(self)
+        
+    def read_voltage(self) -> float:
+        """
+        Read the current voltage from the servo.
+        
+        Returns:
+            float: The current voltage in volts, or 0.0 if unable to read
+        """
+        device_name = self.serial_conn.port
+        port_handler = None
+        
+        try:
+            # Initialize SDK components
+            port_handler = PortHandler(device_name)
+            packet_handler = PacketHandler(PROTOCOL_END)
+            
+            # Open port
+            if not port_handler.openPort():
+                print(f"Failed to open port for servo {self.id}")
+                return 0.0
+                
+            if not port_handler.setBaudRate(BAUDRATE):
+                print(f"Failed to set baudrate for servo {self.id}")
+                port_handler.closePort()
+                return 0.0
+            
+            # Read voltage (1 byte)
+            voltage_raw, result, error = packet_handler.read1ByteTxRx(
+                port_handler, self.id, ADDR_SCS_PRESENT_VOLTAGE
+            )
+            
+            if result != COMM_SUCCESS or error != 0:
+                print(f"Failed to read voltage from servo {self.id}")
+                port_handler.closePort()
+                return 0.0
+            
+            # Convert raw voltage to actual voltage
+            # Most servos use a factor of 10 (e.g., a value of 120 means 12.0V)
+            voltage = voltage_raw / 10.0
+            
+            # Update the servo settings
+            self.settings.voltage = voltage
+            
+            # Clean up
+            port_handler.closePort()
+            return voltage
+            
+        except Exception as e:
+            print(f"Error reading voltage from servo {self.id}: {e}")
+            if port_handler and port_handler.isOpen():
+                port_handler.closePort()
+            return 0.0
