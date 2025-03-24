@@ -144,18 +144,8 @@ class Servo:
             print(f"Invalid servo ID {new_id}. Must be between 1 and 31.")
             return False
             
-        # Try SDK approach first
-        try:
-            return self._set_id_with_sdk(new_id)
-        except Exception as sdk_error:
-            print(f"SDK ID change failed, falling back to legacy method: {sdk_error}")
-            # Fallback to legacy approach
-            response = self.send_command(f"ID{new_id}")
-            if response and "OK" in response:
-                self.id = new_id
-                self.settings.id = new_id
-                return True
-        return False
+        # Use only SDK approach
+        return self._set_id_with_sdk(new_id)
         
     def _set_id_with_sdk(self, new_id: int) -> bool:
         """
@@ -241,20 +231,8 @@ class Servo:
             if self.settings.invert:
                 safe_position = self.settings.max_pulse - (safe_position - self.settings.min_pulse)
             
-            # Legacy approach - keep as fallback
-            try:
-                # Try using the SDK-based approach first
-                return self._move_with_sdk(safe_position)
-            except Exception as sdk_error:
-                print(f"SDK move failed, falling back to legacy method: {sdk_error}")
-                # Fallback to the legacy approach if SDK fails
-                command = f"P{safe_position}T{self.settings.speed}"
-                response = self.send_command(command)
-                
-                if response and "OK" in response:
-                    self.settings.position = position  # Store the requested position
-                    return True
-                return False
+            # Use only the SDK-based approach
+            return self._move_with_sdk(safe_position)
                 
         except Exception as e:
             print(f"Error moving servo {self.id}: {e}")
@@ -270,6 +248,9 @@ class Servo:
         Returns:
             bool: True if successful, False otherwise
         """
+        # Ensure position is within the valid range (0-1023)
+        position = max(0, min(1023, position))
+        
         servo_id = self.id
         device_name = self.serial_conn.port
         port_handler = None

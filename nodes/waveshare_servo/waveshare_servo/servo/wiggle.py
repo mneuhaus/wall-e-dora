@@ -94,7 +94,7 @@ def wiggle_servo(servo, wiggle_range=40, iterations=5):
         
         # If position read is 0, use middle position as fallback
         if current_position == 0:
-            current_position = 2048  # Middle position for a typical SCS servo
+            current_position = 512  # Middle position (1023/2) for these servos
             print(f"Using default middle position: {current_position}")
         
         # Define target positions for wiggle

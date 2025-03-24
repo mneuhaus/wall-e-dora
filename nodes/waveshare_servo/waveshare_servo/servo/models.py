@@ -10,8 +10,8 @@ class ServoSettings:
     """Represents settings for a single servo."""
     id: int
     alias: str = ""
-    min_pulse: int = 500
-    max_pulse: int = 2500
+    min_pulse: int = 0
+    max_pulse: int = 1023
     speed: int = 1000
     calibrated: bool = False
     position: int = 0

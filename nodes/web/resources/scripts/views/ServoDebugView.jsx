@@ -51,7 +51,7 @@ const ServoDebugView = () => {
   const [speed, setSpeed] = useState(null); // Start with null so we know when it's initialized from server
   const [sliderReady, setSliderReady] = useState(false); // Track if slider should be rendered
   const [min, setMin] = useState(0);
-  const [max, setMax] = useState(4095);
+  const [max, setMax] = useState(1023);
   const [newId, setNewId] = useState('');
   const [aliasInput, setAliasInput] = useState('');
   const [attachIndex, setAttachIndex] = useState("");
@@ -94,21 +94,24 @@ const ServoDebugView = () => {
     
     if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
       console.warn('Invalid servoMin:', servoMin);
-      return 0;
+      servoMin = 0; // Default min
     }
     
     if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
       console.warn('Invalid servoMax:', servoMax);
-      return 0;
+      servoMax = 1023; // Default max
     }
     
     // Ensure min and max are valid
     if (servoMax <= servoMin) {
       console.warn('Invalid range: servoMax must be greater than servoMin', 'servoMin:', servoMin, 'servoMax:', servoMax);
-      return 0;
+      servoMin = 0;
+      servoMax = 1023;
     }
     
-    return Math.round(300 * (servoPos - servoMin) / (servoMax - servoMin));
+    // Directly map servo position (0-1023) to UI angle (0-300 degrees)
+    // 1023 steps = 300 degrees, so ~0.293 degrees per step
+    return Math.round(300 * (servoPos / 1023));
   }, []);
   
   // Helper function to map UI angle to servo position
@@ -116,26 +119,16 @@ const ServoDebugView = () => {
     // Validate inputs to prevent NaN
     if (uiPos === null || uiPos === undefined || typeof uiPos !== 'number' || isNaN(uiPos)) {
       console.warn('Invalid uiPos:', uiPos);
-      return 0; // Default to 0 if servoMin is invalid
-    }
-    
-    if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
-      console.warn('Invalid servoMin:', servoMin);
       return 0;
     }
     
-    if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
-      console.warn('Invalid servoMax:', servoMax);
-      return servoMin || 0;
-    }
+    // Force servo range to valid values (0-1023)
+    servoMin = 0;
+    servoMax = 1023;
     
-    // Ensure min and max are valid
-    if (servoMax <= servoMin) {
-      console.warn('Invalid range: servoMax must be greater than servoMin', 'servoMin:', servoMin, 'servoMax:', servoMax);
-      return servoMin;
-    }
-    
-    return Math.round(servoMin + (uiPos / 300) * (servoMax - servoMin));
+    // Directly map UI angle (0-300 degrees) to servo position (0-1023)
+    // 300 degrees = 1023 steps
+    return Math.round((uiPos / 300) * 1023);
   }, []);
 
   // Force slider to re-render when displayPosition changes
@@ -155,24 +148,11 @@ const ServoDebugView = () => {
       console.log(`Processing servo data for ID ${id}:`, servoInfo);
       setServo(servoInfo);
       
-      // Get min/max pulse values with validation
-      let servoMinPulse = 500;
-      if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null && !isNaN(servoInfo.min_pulse)) {
-        servoMinPulse = Number(servoInfo.min_pulse);
-      }
+      // Force min/max pulse values to known valid range
+      let servoMinPulse = 0;
+      let servoMaxPulse = 1023;
       
-      let servoMaxPulse = 2500;
-      if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null && !isNaN(servoInfo.max_pulse)) {
-        servoMaxPulse = Number(servoInfo.max_pulse);
-      }
-      
-      // Ensure max > min
-      if (servoMaxPulse <= servoMinPulse) {
-        console.warn('Invalid servo range: max <= min, using default values');
-        servoMinPulse = 500;
-        servoMaxPulse = 2500;
-      }
-      
+      // Set the standard range regardless of what comes from the server
       setMin(servoMinPulse);
       setMax(servoMaxPulse);
       
