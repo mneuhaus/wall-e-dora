@@ -999,7 +999,7 @@ const ServoDebugView = () => {
                       }}
                     >
                       <Text fw={500} size="sm" mb="xs">Sensitivity Multiplier</Text>
-                      <Group spacing="xs" noWrap align="center">
+                      <Group spacing="xs" wrap="nowrap" align="center">
                         <i className="fa-solid fa-turtle" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
                         <Slider
                           min={0.1}
