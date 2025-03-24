@@ -159,6 +159,11 @@ const ServoDebugView = () => {
       setTimeout(() => setSliderReady(true), 50);
     }
   }, [displayPosition, sliderReady]);
+  
+  // Debug modal state changes
+  useEffect(() => {
+    console.log('Modal state changed:', openedModal);
+  }, [openedModal]);
 
   useEffect(() => {
     console.log(`ServoDebugView initialized for servo ${id}`);
@@ -539,12 +544,39 @@ const ServoDebugView = () => {
                       <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
                     </Group>
                     <Group spacing="xs">
+                      <Tooltip label="Test Servo">
+                        <ActionIcon 
+                          color="amber" 
+                          variant={isTesting ? "filled" : "subtle"}
+                          radius="xl" 
+                          onClick={handleWiggle}
+                          disabled={isTesting}
+                        >
+                          <i className="fa-solid fa-arrows-left-right"></i>
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Calibrate Servo">
+                        <ActionIcon 
+                          color="amber" 
+                          variant={isCalibrating ? "filled" : "subtle"}
+                          radius="xl" 
+                          onClick={handleCalibrate}
+                          disabled={isCalibrating}
+                        >
+                          <i className="fa-solid fa-ruler"></i>
+                        </ActionIcon>
+                      </Tooltip>
+                      <Divider orientation="vertical" mx={2} />
                       <Tooltip label="Edit Alias">
                         <ActionIcon 
                           color="amber" 
                           variant="subtle" 
                           radius="xl" 
-                          onClick={() => setOpenedModal('alias')}
+                          onClick={() => {
+                            console.log('Opening alias modal');
+                            setOpenedModal('alias');
+                            console.log('Modal state after set:', 'alias');
+                          }}
                         >
                           <i className="fa-solid fa-tag"></i>
                         </ActionIcon>
@@ -694,29 +726,6 @@ const ServoDebugView = () => {
                     )}
                     <Text size="xs" c="dimmed" mt={1} mb={0}>Lower values = faster movement</Text>
                   </Box>
-                  
-                  <Group grow w="100%" mt={10}>
-                    <Button 
-                      variant={isTesting ? "filled" : "outline"}
-                      color="amber"
-                      onClick={handleWiggle}
-                      disabled={isTesting}
-                      leftSection={<i className="fa-solid fa-arrows-left-right"></i>}
-                      size="xs"
-                    >
-                      Test
-                    </Button>
-                    <Button 
-                      variant={isCalibrating ? "filled" : "outline"}
-                      color="amber"
-                      onClick={handleCalibrate}
-                      disabled={isCalibrating}
-                      leftSection={<i className="fa-solid fa-ruler"></i>}
-                      size="xs"
-                    >
-                      Calibrate
-                    </Button>
-                  </Group>
                 </Stack>
               </Paper>
             </Grid.Col>
@@ -784,6 +793,7 @@ const ServoDebugView = () => {
           blur: 3,
         }}
       >
+        {console.log('Modal render - opened state:', openedModal === 'alias', 'openedModal value:', openedModal)}
         <Stack spacing="md">
           <TextInput
             label="Servo Alias"
