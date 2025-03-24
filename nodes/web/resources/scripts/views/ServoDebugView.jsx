@@ -640,7 +640,7 @@ const ServoDebugView = () => {
                   {/* Render slider when it's ready */}
                   {sliderReady ? (
                     <CircularSliderWithChildren
-                      size={260} 
+                      size={234} 
                       minValue={0}
                       maxValue={300}
                       startAngle={0}
@@ -690,8 +690,8 @@ const ServoDebugView = () => {
                   ) : (
                     <Box 
                       style={{ 
-                        width: 260, 
-                        height: 260, 
+                        width: 234, 
+                        height: 234, 
                         display: 'flex', 
                         flexDirection: 'column',
                         alignItems: 'center', 
