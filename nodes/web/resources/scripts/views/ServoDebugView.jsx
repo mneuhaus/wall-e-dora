@@ -36,10 +36,11 @@ import {
   Divider,
   Grid,
   Box,
-  Collapse,
+  Modal,
   Notification,
   Table,
-  rem
+  rem,
+  Tooltip
 } from '@mantine/core';
 
 const ServoDebugView = () => {
@@ -56,7 +57,7 @@ const ServoDebugView = () => {
   const [attachIndex, setAttachIndex] = useState("");
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
+  const [openedModal, setOpenedModal] = useState(null); // For tracking which modal is open
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
@@ -524,7 +525,7 @@ const ServoDebugView = () => {
         <Box p="md">
           <Grid gutter="md">
             {/* Control Card */}
-            <Grid.Col span={{ base: 12, md: 4 }}>
+            <Grid.Col span={{ base: 12, md: 7 }}>
               <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
                 <Box 
                   py="xs" 
@@ -532,9 +533,43 @@ const ServoDebugView = () => {
                   bg="rgba(255, 215, 0, 0.05)" 
                   style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
                 >
-                  <Group>
-                    <i className="fa-solid fa-sliders-h" style={{ color: '#FFB300' }}></i>
-                    <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
+                  <Group justify="space-between">
+                    <Group>
+                      <i className="fa-solid fa-sliders-h" style={{ color: '#FFB300' }}></i>
+                      <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
+                    </Group>
+                    <Group spacing="xs">
+                      <Tooltip label="Edit Alias">
+                        <ActionIcon 
+                          color="amber" 
+                          variant="subtle" 
+                          radius="xl" 
+                          onClick={() => setOpenedModal('alias')}
+                        >
+                          <i className="fa-solid fa-tag"></i>
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Gamepad Mapping">
+                        <ActionIcon 
+                          color="amber" 
+                          variant="subtle" 
+                          radius="xl" 
+                          onClick={() => setOpenedModal('gamepad')}
+                        >
+                          <i className="fa-solid fa-gamepad"></i>
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Advanced Settings">
+                        <ActionIcon 
+                          color="amber" 
+                          variant="subtle" 
+                          radius="xl" 
+                          onClick={() => setOpenedModal('advanced')}
+                        >
+                          <i className="fa-solid fa-cog"></i>
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
                   </Group>
                 </Box>
                 
@@ -686,222 +721,8 @@ const ServoDebugView = () => {
               </Paper>
             </Grid.Col>
           
-            {/* Settings Card (includes Gamepad) */}
-            <Grid.Col span={{ base: 12, md: 4 }}>
-              <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
-                <Box 
-                  py="xs" 
-                  px="md" 
-                  bg="rgba(255, 215, 0, 0.05)" 
-                  style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
-                >
-                  <Group justify="space-between">
-                    <Group>
-                      <i className="fa-solid fa-cog" style={{ color: '#FFB300' }}></i>
-                      <Title order={5} c="amber" style={{ marginTop: 0 }}>Settings</Title>
-                    </Group>
-                    <Button 
-                      variant="subtle" 
-                      color="amber" 
-                      size="xs"
-                      onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-                    >
-                      {showAdvancedControls ? 'Hide Advanced' : 'Show Advanced'}
-                    </Button>
-                  </Group>
-                </Box>
-                
-                <Stack p="xs" spacing="md" style={{ flex: 1 }}>
-                  {/* Alias Input */}
-                  <Box>
-                    <TextInput
-                      label="Servo Alias"
-                      placeholder="Friendly name for this servo"
-                      value={aliasInput}
-                      onChange={(e) => setAliasInput(e.target.value)}
-                      maxLength={20}
-                    />
-                    <Group position="right" mt="xs">
-                      <Button 
-                        variant="outline" 
-                        color="amber" 
-                        onClick={handleSetAlias}
-                        disabled={!aliasInput.trim()}
-                        leftSection={<i className="fa-solid fa-tag"></i>}
-                        size="xs"
-                      >
-                        Set Alias
-                      </Button>
-                    </Group>
-                  </Box>
-                  
-                  {/* Gamepad Controls Section */}
-                  <Box>
-                    <Stack spacing="xs">
-                      <Group>
-                        <i className="fa-solid fa-gamepad" style={{ color: '#FFB300' }}></i>
-                        <Text fw={500} c="amber" style={{ marginTop: 0 }}>Gamepad Mapping</Text>
-                      </Group>
-                      
-                      <Text size="sm" c="dimmed">Map this servo to a gamepad control for remote operation</Text>
-                      
-                      <Select
-                        label="Gamepad Control"
-                        placeholder="Choose a control"
-                        value={attachIndex}
-                        onChange={setAttachIndex}
-                        data={[
-                          { group: 'Buttons', items: [
-                            { value: 'FACE_1', label: 'FACE_1 (A/Cross)' },
-                            { value: 'FACE_2', label: 'FACE_2 (B/Circle)' },
-                            { value: 'FACE_3', label: 'FACE_3 (X/Square)' },
-                            { value: 'FACE_4', label: 'FACE_4 (Y/Triangle)' },
-                            { value: 'LEFT_SHOULDER', label: 'LEFT_SHOULDER (LB)' },
-                            { value: 'RIGHT_SHOULDER', label: 'RIGHT_SHOULDER (RB)' },
-                            { value: 'LEFT_SHOULDER_BOTTOM', label: 'LEFT_SHOULDER_BOTTOM (LT)' },
-                            { value: 'RIGHT_SHOULDER_BOTTOM', label: 'RIGHT_SHOULDER_BOTTOM (RT)' },
-                            { value: 'SELECT', label: 'SELECT (Back/Share)' },
-                            { value: 'START', label: 'START (Start/Options)' },
-                            { value: 'LEFT_ANALOG_BUTTON', label: 'LEFT_ANALOG_BUTTON (L3)' },
-                            { value: 'RIGHT_ANALOG_BUTTON', label: 'RIGHT_ANALOG_BUTTON (R3)' },
-                            { value: 'DPAD_UP', label: 'DPAD_UP' },
-                            { value: 'DPAD_DOWN', label: 'DPAD_DOWN' },
-                            { value: 'DPAD_LEFT', label: 'DPAD_LEFT' },
-                            { value: 'DPAD_RIGHT', label: 'DPAD_RIGHT' },
-                            { value: 'HOME', label: 'HOME (Guide/PS)' },
-                          ]},
-                          { group: 'Axes', items: [
-                            { value: 'LEFT_ANALOG_STICK_X', label: 'LEFT_ANALOG_STICK_X' },
-                            { value: 'LEFT_ANALOG_STICK_Y', label: 'LEFT_ANALOG_STICK_Y' },
-                            { value: 'RIGHT_ANALOG_STICK_X', label: 'RIGHT_ANALOG_STICK_X' },
-                            { value: 'RIGHT_ANALOG_STICK_Y', label: 'RIGHT_ANALOG_STICK_Y' },
-                          ]}
-                        ]}
-                      />
-                      
-                      <Group position="right" mt="xs">
-                        <Button 
-                          variant="outline" 
-                          color="amber" 
-                          onClick={handleAttachServo}
-                          disabled={!attachIndex}
-                          leftSection={<i className="fa-solid fa-gamepad"></i>}
-                          size="xs"
-                        >
-                          Attach to Gamepad
-                        </Button>
-                      </Group>
-                      
-                      {/* Status of gamepad control attachment */}
-                      {servo.attached_control 
-                        ? (
-                          <Group spacing={6}>
-                            <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
-                            <Text component="span" size="sm" c="dimmed" style={{ marginTop: 0 }}>Currently attached to:</Text>
-                            <Text component="span" size="sm" c="amber" fw={500} style={{ marginTop: 0 }}>{servo.attached_control}</Text>
-                          </Group>
-                        )
-                        : (
-                          <Group spacing={6}>
-                            <i className="fa-solid fa-info-circle"></i>
-                            <Text component="span" size="sm" c="dimmed" style={{ marginTop: 0 }}>No gamepad control attached</Text>
-                          </Group>
-                        )
-                      }
-                      
-                      {servo.attached_control && (
-                        <Button 
-                          variant="outline"
-                          onClick={() => {
-                            node.emit('detach_servo', [parseInt(id)]);
-                            showToast('Servo detached from gamepad control');
-                          }}
-                          leftSection={<i className="fa-solid fa-unlink"></i>}
-                          mt="xs"
-                        >
-                          Detach Control
-                        </Button>
-                      )}
-                    </Stack>
-                  </Box>
-                  
-                  {/* Advanced Settings */}
-                  <Collapse in={showAdvancedControls}>
-                    <Stack spacing="md" pt="sm" style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
-                      {/* Min/Max Pulse Settings */}
-                      <Box>
-                        <Text fw={500} mb="xs">Servo Pulse Range</Text>
-                        <Grid>
-                          <Grid.Col span={6}>
-                            <NumberInput
-                              label="Min Pulse"
-                              description="Minimum position (0-1023)"
-                              min={0}
-                              max={1023}
-                              value={servo.min_pulse !== undefined ? servo.min_pulse : 0}
-                              onChange={(val) => {
-                                if (val !== null) {
-                                  node.emit('update_servo_setting', [{
-                                    id: parseInt(id),
-                                    property: "min_pulse",
-                                    value: parseInt(val)
-                                  }]);
-                                  showToast(`Min pulse set to ${val}`);
-                                }
-                              }}
-                            />
-                          </Grid.Col>
-                          <Grid.Col span={6}>
-                            <NumberInput
-                              label="Max Pulse"
-                              description="Maximum position (0-1023)"
-                              min={0}
-                              max={1023}
-                              value={servo.max_pulse !== undefined ? servo.max_pulse : 1023}
-                              onChange={(val) => {
-                                if (val !== null) {
-                                  node.emit('update_servo_setting', [{
-                                    id: parseInt(id),
-                                    property: "max_pulse",
-                                    value: parseInt(val)
-                                  }]);
-                                  showToast(`Max pulse set to ${val}`);
-                                }
-                              }}
-                            />
-                          </Grid.Col>
-                        </Grid>
-                        <Text size="xs" c="dimmed" mt={5}>
-                          These values represent the absolute minimum and maximum positions 
-                          that the servo can move to. Valid range is 0-1023.
-                        </Text>
-                      </Box>
-                      
-                      <Paper p="md" withBorder radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
-                        <Stack spacing="xs" align="center">
-                          <Group spacing={4}>
-                            <i className="fa-solid fa-exclamation-triangle" style={{ color: 'var(--mantine-color-red-6)' }}></i>
-                            <Text size="sm" c="red" fw={500} style={{ marginTop: 0 }}>Danger Zone</Text>
-                          </Group>
-                          <Button 
-                            variant="outline"
-                            color="red"
-                            onClick={handleResetServo}
-                            fullWidth
-                            leftSection={<i className="fa-solid fa-rotate-left"></i>}
-                          >
-                            Reset to Factory Defaults
-                          </Button>
-                        </Stack>
-                      </Paper>
-                    </Stack>
-                  </Collapse>
-                </Stack>
-              </Paper>
-            </Grid.Col>
-          
             {/* Info Card */}
-            <Grid.Col span={{ base: 12, md: 4 }}>
+            <Grid.Col span={{ base: 12, md: 5 }}>
               <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
                 <Box 
                   py="xs" 
@@ -948,6 +769,252 @@ const ServoDebugView = () => {
           </Grid>
         </Box>
       </Paper>
+      
+      {/* Modals */}
+      {/* Alias Modal */}
+      <Modal
+        opened={openedModal === 'alias'}
+        onClose={() => setOpenedModal(null)}
+        title={<Text fw={600} c="amber">Edit Servo Alias</Text>}
+        size="md"
+        centered
+        overlayProps={{
+          color: 'rgb(0, 0, 0)',
+          opacity: 0.55,
+          blur: 3,
+        }}
+      >
+        <Stack spacing="md">
+          <TextInput
+            label="Servo Alias"
+            placeholder="Friendly name for this servo"
+            value={aliasInput}
+            onChange={(e) => setAliasInput(e.target.value)}
+            maxLength={20}
+          />
+          <Text size="sm" c="dimmed">
+            Give your servo a meaningful name to easily identify it in the servo list.
+          </Text>
+          <Group position="right" mt="md">
+            <Button 
+              variant="outline" 
+              color="gray" 
+              onClick={() => setOpenedModal(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="filled" 
+              color="amber" 
+              onClick={() => {
+                handleSetAlias();
+                setOpenedModal(null);
+              }}
+              disabled={!aliasInput.trim()}
+            >
+              Save Alias
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+      
+      {/* Gamepad Mapping Modal */}
+      <Modal
+        opened={openedModal === 'gamepad'}
+        onClose={() => setOpenedModal(null)}
+        title={<Text fw={600} c="amber">Gamepad Control Mapping</Text>}
+        size="lg"
+        centered
+        overlayProps={{
+          color: 'rgb(0, 0, 0)',
+          opacity: 0.55,
+          blur: 3,
+        }}
+      >
+        <Stack spacing="md">
+          <Text size="sm">Map this servo to a gamepad control for remote operation</Text>
+          
+          <Select
+            label="Gamepad Control"
+            placeholder="Choose a control"
+            value={attachIndex}
+            onChange={setAttachIndex}
+            data={[
+              { group: 'Buttons', items: [
+                { value: 'FACE_1', label: 'FACE_1 (A/Cross)' },
+                { value: 'FACE_2', label: 'FACE_2 (B/Circle)' },
+                { value: 'FACE_3', label: 'FACE_3 (X/Square)' },
+                { value: 'FACE_4', label: 'FACE_4 (Y/Triangle)' },
+                { value: 'LEFT_SHOULDER', label: 'LEFT_SHOULDER (LB)' },
+                { value: 'RIGHT_SHOULDER', label: 'RIGHT_SHOULDER (RB)' },
+                { value: 'LEFT_SHOULDER_BOTTOM', label: 'LEFT_SHOULDER_BOTTOM (LT)' },
+                { value: 'RIGHT_SHOULDER_BOTTOM', label: 'RIGHT_SHOULDER_BOTTOM (RT)' },
+                { value: 'SELECT', label: 'SELECT (Back/Share)' },
+                { value: 'START', label: 'START (Start/Options)' },
+                { value: 'LEFT_ANALOG_BUTTON', label: 'LEFT_ANALOG_BUTTON (L3)' },
+                { value: 'RIGHT_ANALOG_BUTTON', label: 'RIGHT_ANALOG_BUTTON (R3)' },
+                { value: 'DPAD_UP', label: 'DPAD_UP' },
+                { value: 'DPAD_DOWN', label: 'DPAD_DOWN' },
+                { value: 'DPAD_LEFT', label: 'DPAD_LEFT' },
+                { value: 'DPAD_RIGHT', label: 'DPAD_RIGHT' },
+                { value: 'HOME', label: 'HOME (Guide/PS)' },
+              ]},
+              { group: 'Axes', items: [
+                { value: 'LEFT_ANALOG_STICK_X', label: 'LEFT_ANALOG_STICK_X' },
+                { value: 'LEFT_ANALOG_STICK_Y', label: 'LEFT_ANALOG_STICK_Y' },
+                { value: 'RIGHT_ANALOG_STICK_X', label: 'RIGHT_ANALOG_STICK_X' },
+                { value: 'RIGHT_ANALOG_STICK_Y', label: 'RIGHT_ANALOG_STICK_Y' },
+              ]}
+            ]}
+          />
+          
+          {/* Status of gamepad control attachment */}
+          {servo?.attached_control && (
+            <Paper p="xs" withBorder radius="md" bg="rgba(76, 175, 80, 0.05)">
+              <Group spacing={6}>
+                <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
+                <Text component="span" size="sm">Currently attached to:</Text>
+                <Text component="span" size="sm" c="amber" fw={500}>{servo.attached_control}</Text>
+              </Group>
+            </Paper>
+          )}
+          
+          <Group position="right" mt="md">
+            {servo?.attached_control && (
+              <Button 
+                variant="outline"
+                color="red"
+                onClick={() => {
+                  node.emit('detach_servo', [parseInt(id)]);
+                  showToast('Servo detached from gamepad control');
+                  setOpenedModal(null);
+                }}
+                leftSection={<i className="fa-solid fa-unlink"></i>}
+              >
+                Detach Control
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              color="gray" 
+              onClick={() => setOpenedModal(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="filled" 
+              color="amber" 
+              onClick={() => {
+                handleAttachServo();
+                setOpenedModal(null);
+              }}
+              disabled={!attachIndex}
+            >
+              Save Mapping
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+      
+      {/* Advanced Settings Modal */}
+      <Modal
+        opened={openedModal === 'advanced'}
+        onClose={() => setOpenedModal(null)}
+        title={<Text fw={600} c="amber">Advanced Servo Settings</Text>}
+        size="lg"
+        centered
+        overlayProps={{
+          color: 'rgb(0, 0, 0)',
+          opacity: 0.55,
+          blur: 3,
+        }}
+      >
+        <Stack spacing="md">
+          {/* Min/Max Pulse Settings */}
+          <Box>
+            <Text fw={500} mb="xs">Servo Pulse Range</Text>
+            <Grid>
+              <Grid.Col span={6}>
+                <NumberInput
+                  label="Min Pulse"
+                  description="Minimum position (0-1023)"
+                  min={0}
+                  max={1023}
+                  value={servo?.min_pulse !== undefined ? servo.min_pulse : 0}
+                  onChange={(val) => {
+                    if (val !== null) {
+                      node.emit('update_servo_setting', [{
+                        id: parseInt(id),
+                        property: "min_pulse",
+                        value: parseInt(val)
+                      }]);
+                      showToast(`Min pulse set to ${val}`);
+                    }
+                  }}
+                />
+              </Grid.Col>
+              <Grid.Col span={6}>
+                <NumberInput
+                  label="Max Pulse"
+                  description="Maximum position (0-1023)"
+                  min={0}
+                  max={1023}
+                  value={servo?.max_pulse !== undefined ? servo.max_pulse : 1023}
+                  onChange={(val) => {
+                    if (val !== null) {
+                      node.emit('update_servo_setting', [{
+                        id: parseInt(id),
+                        property: "max_pulse",
+                        value: parseInt(val)
+                      }]);
+                      showToast(`Max pulse set to ${val}`);
+                    }
+                  }}
+                />
+              </Grid.Col>
+            </Grid>
+            <Text size="xs" c="dimmed" mt={5}>
+              These values represent the absolute minimum and maximum positions 
+              that the servo can move to. Valid range is 0-1023.
+            </Text>
+          </Box>
+          
+          <Divider my="md" label="Danger Zone" labelPosition="center" color="red" />
+          
+          <Paper p="md" withBorder radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
+            <Stack spacing="xs">
+              <Text size="sm" c="red" fw={500} align="center">Reset Servo Configuration</Text>
+              <Text size="xs" c="dimmed" align="center">
+                This will reset all servo settings to factory defaults including calibration, 
+                range values, alias, and gamepad mappings.
+              </Text>
+              <Button 
+                variant="outline"
+                color="red"
+                onClick={() => {
+                  handleResetServo();
+                  setOpenedModal(null);
+                }}
+                fullWidth
+                leftSection={<i className="fa-solid fa-rotate-left"></i>}
+                mt="xs"
+              >
+                Reset to Factory Defaults
+              </Button>
+            </Stack>
+          </Paper>
+          
+          <Group position="right" mt="md">
+            <Button 
+              variant="outline" 
+              color="gray" 
+              onClick={() => setOpenedModal(null)}
+            >
+              Close
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       
       {/* CSS is now handled through Mantine's styling system */}
     </Container>
