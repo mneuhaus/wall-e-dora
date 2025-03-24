@@ -524,6 +524,65 @@ const ServoDebugView = () => {
                 {servo.alias ? `${servo.alias} (#${id})` : `Servo #${id}`}
               </Title>
             </Group>
+            <Group spacing="xs">
+              <Tooltip label="Test Servo">
+                <ActionIcon 
+                  color="amber" 
+                  variant={isTesting ? "filled" : "subtle"}
+                  radius="xl" 
+                  onClick={handleWiggle}
+                  disabled={isTesting}
+                >
+                  <i className="fa-solid fa-arrows-left-right"></i>
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Calibrate Servo">
+                <ActionIcon 
+                  color="amber" 
+                  variant={isCalibrating ? "filled" : "subtle"}
+                  radius="xl" 
+                  onClick={handleCalibrate}
+                  disabled={isCalibrating}
+                >
+                  <i className="fa-solid fa-ruler"></i>
+                </ActionIcon>
+              </Tooltip>
+              <Divider orientation="vertical" mx={2} />
+              <Tooltip label="Edit Alias">
+                <ActionIcon 
+                  color="amber" 
+                  variant="subtle" 
+                  radius="xl" 
+                  onClick={() => {
+                    console.log('Opening alias modal');
+                    setOpenedModal('alias');
+                    console.log('Modal state after set:', 'alias');
+                  }}
+                >
+                  <i className="fa-solid fa-tag"></i>
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Gamepad Mapping">
+                <ActionIcon 
+                  color="amber" 
+                  variant="subtle" 
+                  radius="xl" 
+                  onClick={() => setOpenedModal('gamepad')}
+                >
+                  <i className="fa-solid fa-gamepad"></i>
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Advanced Settings">
+                <ActionIcon 
+                  color="amber" 
+                  variant="subtle" 
+                  radius="xl" 
+                  onClick={() => setOpenedModal('advanced')}
+                >
+                  <i className="fa-solid fa-cog"></i>
+                </ActionIcon>
+              </Tooltip>
+            </Group>
           </Group>
         </Box>
         
@@ -538,70 +597,9 @@ const ServoDebugView = () => {
                   bg="rgba(255, 215, 0, 0.05)" 
                   style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}
                 >
-                  <Group justify="space-between">
-                    <Group>
-                      <i className="fa-solid fa-sliders-h" style={{ color: '#FFB300' }}></i>
-                      <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
-                    </Group>
-                    <Group spacing="xs">
-                      <Tooltip label="Test Servo">
-                        <ActionIcon 
-                          color="amber" 
-                          variant={isTesting ? "filled" : "subtle"}
-                          radius="xl" 
-                          onClick={handleWiggle}
-                          disabled={isTesting}
-                        >
-                          <i className="fa-solid fa-arrows-left-right"></i>
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="Calibrate Servo">
-                        <ActionIcon 
-                          color="amber" 
-                          variant={isCalibrating ? "filled" : "subtle"}
-                          radius="xl" 
-                          onClick={handleCalibrate}
-                          disabled={isCalibrating}
-                        >
-                          <i className="fa-solid fa-ruler"></i>
-                        </ActionIcon>
-                      </Tooltip>
-                      <Divider orientation="vertical" mx={2} />
-                      <Tooltip label="Edit Alias">
-                        <ActionIcon 
-                          color="amber" 
-                          variant="subtle" 
-                          radius="xl" 
-                          onClick={() => {
-                            console.log('Opening alias modal');
-                            setOpenedModal('alias');
-                            console.log('Modal state after set:', 'alias');
-                          }}
-                        >
-                          <i className="fa-solid fa-tag"></i>
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="Gamepad Mapping">
-                        <ActionIcon 
-                          color="amber" 
-                          variant="subtle" 
-                          radius="xl" 
-                          onClick={() => setOpenedModal('gamepad')}
-                        >
-                          <i className="fa-solid fa-gamepad"></i>
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="Advanced Settings">
-                        <ActionIcon 
-                          color="amber" 
-                          variant="subtle" 
-                          radius="xl" 
-                          onClick={() => setOpenedModal('advanced')}
-                        >
-                          <i className="fa-solid fa-cog"></i>
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
+                  <Group>
+                    <i className="fa-solid fa-sliders-h" style={{ color: '#FFB300' }}></i>
+                    <Title order={5} c="amber" style={{ marginTop: 0 }}>Control</Title>
                   </Group>
                 </Box>
                 
