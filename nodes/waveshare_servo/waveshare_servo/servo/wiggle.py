@@ -3,99 +3,165 @@ Wiggle operation for servo identification.
 """
 
 import time
+from .sdk import (
+    PortHandler, 
+    PacketHandler, 
+    COMM_SUCCESS
+)
+
+# Control table addresses for SCS servos
+ADDR_SCS_TORQUE_ENABLE = 40
+ADDR_SCS_GOAL_POSITION = 42
+ADDR_SCS_PRESENT_POSITION = 56
+
+# Default device settings
+BAUDRATE = 1000000
+PROTOCOL_END = 1  # Using protocol_end = 1
 
 
-def wiggle_servo(servo, wiggle_range=300, iterations=3):
+def wiggle_servo(servo, wiggle_range=40, iterations=5):
     """
-    Wiggle a servo for identification by moving it back and forth.
+    Wiggle a servo for identification by moving it back and forth by approximately 3% of rotation.
+    
+    This function uses the direct SDK approach to interact with the servo hardware.
     
     Args:
         servo: The servo object to wiggle
-        wiggle_range: The number of pulse units to move in each direction
+        wiggle_range: The number of steps to move in each direction (default: 40 - approx 3% of rotation)
         iterations: Number of times to complete the wiggle pattern
         
     Returns:
         bool: True if wiggle was successful, False otherwise
     """
     try:
-        print(f"Wiggling servo {servo.id}")
+        servo_id = servo.id
+        print(f"Wiggling servo {servo_id}")
         
-        # Get current position - use a small offset if position is None/0
-        current_pos = servo.settings.position
-        if current_pos is None or current_pos == 0:
-            # Use the middle of min/max range as fallback
-            current_pos = (servo.settings.min_pulse + servo.settings.max_pulse) // 2
-            print(f"No current position, using midpoint: {current_pos}")
+        # Initialize SDK classes for direct control
+        # Get the port path from the serial_conn object
+        device_name = servo.serial_conn.port
+        port_handler = PortHandler(device_name)
+        packet_handler = PacketHandler(PROTOCOL_END)
         
-        # Store original speed for restoration later
-        original_speed = servo.settings.speed
-        # Set a very fast speed for wiggling - 50 is the minimum (fastest)
-        servo.settings.speed = 50  # Make wiggle very fast for better visibility
-        
-        # Calculate wiggle size based on the servo's range
-        servo_range = servo.settings.max_pulse - servo.settings.min_pulse
-        # Adjust wiggle range to be proportional to the servo's range but at least 200 units
-        wiggle_range = max(200, min(wiggle_range, int(servo_range * 0.15)))  # 15% of servo range or at least 200
-        
-        print(f"Wiggling servo {servo.id} at position {current_pos} with range ±{wiggle_range}")
-        
-        # Send direct commands for faster response
-        try:
-            # Send setup command to ensure the servo is initialized
-            servo.send_command(f"P{current_pos}T{servo.settings.speed}")
-            time.sleep(0.3)  # Wait for it to reach start position
+        # Open port
+        if not port_handler.openPort():
+            print("Failed to open the port.")
+            return False
+
+        if not port_handler.setBaudRate(BAUDRATE):
+            print("Failed to set baudrate.")
+            port_handler.closePort()
+            return False
             
-            # Perform wiggle pattern with direct commands
-            for i in range(iterations):
-                # Abrupt movements for better visibility
-                servo.send_command(f"P{current_pos - wiggle_range}T50")  # Left fast
-                time.sleep(0.1)
-                servo.send_command(f"P{current_pos + wiggle_range}T50")  # Right fast  
-                time.sleep(0.1)
-                servo.send_command(f"P{current_pos - wiggle_range}T50")  # Left fast
-                time.sleep(0.1)
-                servo.send_command(f"P{current_pos + wiggle_range}T50")  # Right fast
-                time.sleep(0.1)
-                
-                # Small pause between iterations
-                if i < iterations - 1:
-                    time.sleep(0.1)
-        except Exception as e:
-            print(f"Error during direct wiggle commands: {e}")
-            # Fallback to standard move method if direct commands fail
-            for i in range(iterations):
-                print(f"Fallback wiggle iteration {i+1}/{iterations}")
-                
-                # More pronounced movements - left, right, left, right, center
-                positions = [
-                    current_pos - wiggle_range,  # Far left
-                    current_pos + wiggle_range,  # Far right
-                    current_pos - wiggle_range,  # Far left
-                    current_pos + wiggle_range,  # Far right
-                    current_pos,                 # Back to center
-                ]
-                
-                for pos in positions:
-                    # Ensure position stays within servo min/max range
-                    safe_pos = max(
-                        servo.settings.min_pulse, min(servo.settings.max_pulse, pos)
-                    )
-                    servo.move(safe_pos)
-                    time.sleep(0.1)  # Very short delay for fast wiggle
+        # Ping the servo to verify it's responsive
+        print(f"Pinging servo ID {servo_id}...")
+        model_num, result, error = packet_handler.ping(port_handler, servo_id)
+        if result != COMM_SUCCESS or error != 0:
+            print(f"Servo ID {servo_id} is not responding to ping!")
+            port_handler.closePort()
+            return False
+        print(f"Servo ID {servo_id} responded to ping. Model number: {model_num}")
         
-        # Return to center position at normal speed
-        servo.settings.speed = original_speed
-        servo.move(current_pos)
+        # Ensure torque is enabled
+        print(f"Enabling torque on servo ID {servo_id}...")
+        scs_comm_result, scs_error = packet_handler.write1ByteTxRx(
+            port_handler, servo_id, ADDR_SCS_TORQUE_ENABLE, 1
+        )
         
-        print(f"Wiggle complete for servo {servo.id}")
+        if scs_comm_result != COMM_SUCCESS or scs_error != 0:
+            print(f"Failed to enable torque on servo ID {servo_id}.")
+            print(f"  - Result: {packet_handler.getTxRxResult(scs_comm_result)}")
+            if scs_error != 0:
+                print(f"  - Error: {packet_handler.getRxPacketError(scs_error)}")
+            port_handler.closePort()
+            return False
+        
+        # Read current position
+        print(f"Reading current position from servo ID {servo_id}...")
+        current_position, scs_comm_result, scs_error = packet_handler.read2ByteTxRx(
+            port_handler, servo_id, ADDR_SCS_PRESENT_POSITION
+        )
+        
+        if scs_comm_result != COMM_SUCCESS or scs_error != 0:
+            print(f"Failed to read the current position from servo ID {servo_id}.")
+            print(f"  - Result: {packet_handler.getTxRxResult(scs_comm_result)}")
+            if scs_error != 0:
+                print(f"  - Error: {packet_handler.getRxPacketError(scs_error)}")
+            port_handler.closePort()
+            return False
+        
+        print(f"Current position: {current_position}")
+        
+        # If position read is 0, use middle position as fallback
+        if current_position == 0:
+            current_position = 2048  # Middle position for a typical SCS servo
+            print(f"Using default middle position: {current_position}")
+        
+        # Define target positions for wiggle
+        position_high = current_position + wiggle_range
+        position_low = current_position - wiggle_range
+        
+        # Perform wiggle pattern
+        for i in range(iterations):
+            print(f"Cycle {i+1}: Moving to position {position_high}")
+            scs_comm_result, scs_error = packet_handler.write2ByteTxRx(
+                port_handler, servo_id, ADDR_SCS_GOAL_POSITION, position_high
+            )
+            
+            if scs_comm_result != COMM_SUCCESS or scs_error != 0:
+                print(f"Failed to set position {position_high}.")
+                print(f"  - Result: {packet_handler.getTxRxResult(scs_comm_result)}")
+                if scs_error != 0:
+                    print(f"  - Error: {packet_handler.getRxPacketError(scs_error)}")
+            time.sleep(0.5)  # Wait for movement
+            
+            print(f"Cycle {i+1}: Moving to position {position_low}")
+            scs_comm_result, scs_error = packet_handler.write2ByteTxRx(
+                port_handler, servo_id, ADDR_SCS_GOAL_POSITION, position_low
+            )
+            
+            if scs_comm_result != COMM_SUCCESS or scs_error != 0:
+                print(f"Failed to set position {position_low}.")
+                print(f"  - Result: {packet_handler.getTxRxResult(scs_comm_result)}")
+                if scs_error != 0:
+                    print(f"  - Error: {packet_handler.getRxPacketError(scs_error)}")
+            time.sleep(0.5)  # Wait for movement
+        
+        # Restore servo to original position
+        print(f"Restoring servo to original position {current_position}")
+        scs_comm_result, scs_error = packet_handler.write2ByteTxRx(
+            port_handler, servo_id, ADDR_SCS_GOAL_POSITION, current_position
+        )
+        
+        if scs_comm_result != COMM_SUCCESS or scs_error != 0:
+            print(f"Failed to restore original position.")
+            print(f"  - Result: {packet_handler.getTxRxResult(scs_comm_result)}")
+            if scs_error != 0:
+                print(f"  - Error: {packet_handler.getRxPacketError(scs_error)}")
+        time.sleep(0.5)  # Wait for movement to complete
+        
+        # Disable torque
+        print(f"Disabling torque on servo ID {servo_id}...")
+        scs_comm_result, scs_error = packet_handler.write1ByteTxRx(
+            port_handler, servo_id, ADDR_SCS_TORQUE_ENABLE, 0
+        )
+        if scs_comm_result != COMM_SUCCESS or scs_error != 0:
+            print(f"Failed to disable torque.")
+            print(f"  - Result: {packet_handler.getTxRxResult(scs_comm_result)}")
+            if scs_error != 0:
+                print(f"  - Error: {packet_handler.getRxPacketError(scs_error)}")
+        
+        # Clean up
+        port_handler.closePort()
+        print(f"Wiggle complete for servo {servo_id}")
         return True
+    
     except Exception as e:
         print(f"Error wiggling servo {servo.id}: {e}")
-        
-        # Try to restore speed even if there was an error
         try:
-            servo.settings.speed = original_speed
+            # Try to close the port if it's still open
+            if 'port_handler' in locals() and port_handler.isOpen():
+                port_handler.closePort()
         except:
             pass
-            
         return False
