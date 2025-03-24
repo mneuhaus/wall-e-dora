@@ -52,7 +52,6 @@ const ServoDebugView = () => {
   const [sliderReady, setSliderReady] = useState(false); // Track if slider should be rendered
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(1023);
-  const [newId, setNewId] = useState('');
   const [aliasInput, setAliasInput] = useState('');
   const [attachIndex, setAttachIndex] = useState("");
   const [isCalibrating, setIsCalibrating] = useState(false);
@@ -376,32 +375,7 @@ const ServoDebugView = () => {
     }, 3000);
   };
   
-  const handleChangeId = () => {
-    if (newId.trim() === '') return;
-    
-    const newIdInt = parseInt(newId);
-    if (isNaN(newIdInt) || newIdInt < 1 || newIdInt > 31) {
-      showToast('ID must be between 1 and 31', 'error');
-      return;
-    }
-    
-    // Confirm before changing ID
-    if (window.confirm(`Are you sure you want to change the servo ID from ${id} to ${newId}? You'll be redirected to the new servo page.`)) {
-      // Using update_servo_setting now
-      node.emit('update_servo_setting', [{
-        id: parseInt(id),
-        property: "id",
-        value: newIdInt
-      }]);
-      setNewId('');
-      showToast(`Changing servo ID to ${newId}...`);
-      
-      // Navigate to the new servo page after a short delay
-      setTimeout(() => {
-        navigate(`/servo/${newId}`);
-      }, 1500);
-    }
-  };
+  // handleChangeId function removed as it's rarely needed
   
   const handleSetAlias = () => {
     if (aliasInput.trim() === '') return;
@@ -854,28 +828,6 @@ const ServoDebugView = () => {
                   {/* Advanced Settings */}
                   <Collapse in={showAdvancedControls}>
                     <Stack spacing="md" pt="sm" style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.1)' }}>
-                      <Box>
-                        <NumberInput
-                          label="Change Servo ID"
-                          placeholder="New ID (1-253)"
-                          min={1}
-                          max={253}
-                          value={newId || undefined}
-                          onChange={(val) => setNewId(val?.toString() || '')}
-                        />
-                        <Group position="right" mt="xs">
-                          <Button 
-                            variant="outline" 
-                            onClick={handleChangeId}
-                            disabled={!newId}
-                            leftSection={<i className="fa-solid fa-id-card"></i>}
-                            size="xs"
-                          >
-                            Update ID
-                          </Button>
-                        </Group>
-                      </Box>
-
                       {/* Min/Max Pulse Settings */}
                       <Box>
                         <Text fw={500} mb="xs">Servo Pulse Range</Text>
