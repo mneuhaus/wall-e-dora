@@ -1106,7 +1106,7 @@ const ServoDebugView = () => {
                   <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
                   <Text fw={500}>Current Configuration</Text>
                 </Group>
-                <Table striped withBorder size="xs">
+                <Table striped withTableBorder size="xs">
                   <Table.Tbody>
                     <Table.Tr>
                       <Table.Td fw={500}>Control</Table.Td>
