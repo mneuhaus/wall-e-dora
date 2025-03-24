@@ -37,6 +37,8 @@ import {
   Grid,
   Box,
   Modal,
+  Switch,
+  Radio,
   Notification,
   Table,
   rem,
@@ -55,6 +57,10 @@ const ServoDebugView = () => {
   const [max, setMax] = useState(1023);
   const [aliasInput, setAliasInput] = useState('');
   const [attachIndex, setAttachIndex] = useState("");
+  const [controlType, setControlType] = useState(""); // 'button' or 'axis'
+  const [controlMode, setControlMode] = useState(""); // 'toggle'/'momentary' for buttons, 'absolute'/'relative' for axes
+  const [invertControl, setInvertControl] = useState(false);
+  const [multiplier, setMultiplier] = useState(1);
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [openedModal, setOpenedModal] = useState(null); // For tracking which modal is open
@@ -160,10 +166,22 @@ const ServoDebugView = () => {
     }
   }, [displayPosition, sliderReady]);
   
-  // Debug modal state changes
+  // Debug modal state changes and initialize modal data
   useEffect(() => {
     console.log('Modal state changed:', openedModal);
-  }, [openedModal]);
+    
+    // If gamepad modal is opened, initialize with existing config if available
+    if (openedModal === 'gamepad' && servo?.gamepad_config) {
+      const config = servo.gamepad_config;
+      
+      // Set values from existing config
+      setAttachIndex(config.control || '');
+      setControlType(config.type || '');
+      setControlMode(config.mode || '');
+      setInvertControl(config.invert || false);
+      setMultiplier(config.multiplier || 1);
+    }
+  }, [openedModal, servo]);
 
   useEffect(() => {
     console.log(`ServoDebugView initialized for servo ${id}`);
@@ -404,15 +422,32 @@ const ServoDebugView = () => {
   };
   
   const handleAttachServo = () => {
-    if (!attachIndex) return;
+    if (!attachIndex || !controlType || !controlMode) return;
     
-    // Update to use update_servo_setting
+    // Build gamepad configuration object with all needed parameters
+    const gamepadConfig = {
+      control: attachIndex,
+      type: controlType, // 'button' or 'axis'
+      mode: controlMode, // 'toggle'/'momentary' for buttons, 'absolute'/'relative' for axes
+      invert: invertControl,
+      multiplier: multiplier
+    };
+    
+    // Update to use update_servo_setting with the full gamepad configuration
+    node.emit('update_servo_setting', [{
+      id: parseInt(id),
+      property: "gamepad_config",
+      value: gamepadConfig
+    }]);
+    
+    // Also set the attached_control for backward compatibility
     node.emit('update_servo_setting', [{
       id: parseInt(id),
       property: "attached_control",
       value: attachIndex
     }]);
-    showToast(`Attached to gamepad control: ${attachIndex}`);
+    
+    showToast(`Attached to gamepad control: ${attachIndex} (${controlMode} mode)`);
   };
   
   const handleResetServo = () => {
@@ -834,7 +869,17 @@ const ServoDebugView = () => {
       {/* Gamepad Mapping Modal */}
       <Modal
         opened={openedModal === 'gamepad'}
-        onClose={() => setOpenedModal(null)}
+        onClose={() => {
+          // Only reset if we're not currently attached or don't have config
+          if (!servo?.gamepad_config) {
+            setAttachIndex('');
+            setControlType('');
+            setControlMode('');
+            setInvertControl(false);
+            setMultiplier(1);
+          }
+          setOpenedModal(null);
+        }}
         title={<Text fw={600} c="amber">Gamepad Control Mapping</Text>}
         size="lg"
         centered
@@ -847,11 +892,29 @@ const ServoDebugView = () => {
         <Stack spacing="md">
           <Text size="sm">Map this servo to a gamepad control for remote operation</Text>
           
+          {/* Control Selection */}
           <Select
             label="Gamepad Control"
             placeholder="Choose a control"
             value={attachIndex}
-            onChange={setAttachIndex}
+            onChange={(value) => {
+              setAttachIndex(value);
+              
+              // Determine if it's a button or axis based on the selection
+              if (value && value.includes('STICK')) {
+                setControlType('axis');
+                // Default to absolute mode for axes
+                if (!controlMode || controlMode === 'toggle' || controlMode === 'momentary') {
+                  setControlMode('absolute');
+                }
+              } else if (value) {
+                setControlType('button');
+                // Default to toggle mode for buttons
+                if (!controlMode || controlMode === 'absolute' || controlMode === 'relative') {
+                  setControlMode('toggle');
+                }
+              }
+            }}
             data={[
               { group: 'Buttons', items: [
                 { value: 'FACE_1', label: 'FACE_1 (A/Cross)' },
@@ -881,14 +944,196 @@ const ServoDebugView = () => {
             ]}
           />
           
+          {/* Conditional UI based on control type */}
+          {attachIndex && (
+            <>
+              <Divider label="Control Configuration" labelPosition="center" />
+              
+              {/* Common options */}
+              <Grid>
+                <Grid.Col span={controlType === 'axis' ? 6 : 12}>
+                  <Box 
+                    py="xs"
+                    px="md"
+                    sx={{ 
+                      border: '1px solid rgba(255, 179, 0, 0.2)',
+                      borderRadius: 'var(--mantine-radius-md)',
+                      background: 'rgba(255, 179, 0, 0.05)'
+                    }}
+                  >
+                    <Group position="apart" mb="sm">
+                      <Text fw={500} size="sm">Invert Control</Text>
+                      <Switch 
+                        checked={invertControl}
+                        onChange={(event) => setInvertControl(event.currentTarget.checked)}
+                        color="amber"
+                        size="md"
+                        thumbIcon={
+                          invertControl ? (
+                            <i className="fa-solid fa-check" style={{ color: '#000', fontSize: '0.6rem' }} />
+                          ) : (
+                            <i className="fa-solid fa-times" style={{ color: '#000', fontSize: '0.6rem' }} />
+                          )
+                        }
+                      />
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      {controlType === 'button' ? 
+                        'When inverted, button press maps to maximum position instead of minimum' :
+                        'When inverted, joystick movement direction is reversed'
+                      }
+                    </Text>
+                  </Box>
+                </Grid.Col>
+                
+                {/* Axis-specific controls */}
+                {controlType === 'axis' && (
+                  <Grid.Col span={6}>
+                    <Box 
+                      py="xs"
+                      px="md"
+                      sx={{ 
+                        border: '1px solid rgba(255, 179, 0, 0.2)',
+                        borderRadius: 'var(--mantine-radius-md)',
+                        background: 'rgba(255, 179, 0, 0.05)'
+                      }}
+                    >
+                      <Text fw={500} size="sm" mb="xs">Sensitivity Multiplier</Text>
+                      <Group spacing="xs" noWrap align="center">
+                        <i className="fa-solid fa-turtle" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
+                        <Slider
+                          min={0.1}
+                          max={5}
+                          step={0.1}
+                          precision={1}
+                          value={multiplier}
+                          onChange={setMultiplier}
+                          color="amber"
+                          style={{ flex: 1 }}
+                          size="sm"
+                          marks={[
+                            { value: 0.1, label: '0.1' },
+                            { value: 1, label: '1' },
+                            { value: 5, label: '5' }
+                          ]}
+                        />
+                        <i className="fa-solid fa-rabbit" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
+                      </Group>
+                      <Text size="xs" c="dimmed" mt="xs">
+                        Higher values = more sensitive joystick response
+                      </Text>
+                    </Box>
+                  </Grid.Col>
+                )}
+              </Grid>
+              
+              {/* Control mode selection */}
+              <Box>
+                <Text fw={500} size="sm" mb="xs">Control Mode</Text>
+                <Paper withBorder p="md" radius="md">
+                  {controlType === 'button' ? (
+                    /* Button modes */
+                    <Radio.Group
+                      value={controlMode}
+                      onChange={setControlMode}
+                      name="controlMode"
+                      withAsterisk
+                    >
+                      <Group mt="xs">
+                        <Radio
+                          value="toggle"
+                          label={
+                            <Box>
+                              <Text>Toggle (Solid State)</Text>
+                              <Text size="xs" c="dimmed">Button press toggles between min and max position</Text>
+                            </Box>
+                          }
+                        />
+                        <Radio
+                          value="momentary"
+                          label={
+                            <Box>
+                              <Text>Momentary</Text>
+                              <Text size="xs" c="dimmed">Button held = min position, released = max position (or inverted)</Text>
+                            </Box>
+                          }
+                        />
+                      </Group>
+                    </Radio.Group>
+                  ) : (
+                    /* Axis modes */
+                    <Radio.Group
+                      value={controlMode}
+                      onChange={setControlMode}
+                      name="controlMode"
+                      withAsterisk
+                    >
+                      <Group mt="xs">
+                        <Radio
+                          value="absolute"
+                          label={
+                            <Box>
+                              <Text>Absolute</Text>
+                              <Text size="xs" c="dimmed">Joystick position directly maps to servo position</Text>
+                            </Box>
+                          }
+                        />
+                        <Radio
+                          value="relative"
+                          label={
+                            <Box>
+                              <Text>Relative</Text>
+                              <Text size="xs" c="dimmed">Joystick changes position gradually based on multiplier</Text>
+                            </Box>
+                          }
+                        />
+                      </Group>
+                    </Radio.Group>
+                  )}
+                </Paper>
+              </Box>
+            </>
+          )}
+          
           {/* Status of gamepad control attachment */}
           {servo?.attached_control && (
-            <Paper p="xs" withBorder radius="md" bg="rgba(76, 175, 80, 0.05)">
-              <Group spacing={6}>
-                <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
-                <Text component="span" size="sm">Currently attached to:</Text>
-                <Text component="span" size="sm" c="amber" fw={500}>{servo.attached_control}</Text>
-              </Group>
+            <Paper p="md" withBorder radius="md" bg="rgba(76, 175, 80, 0.05)">
+              <Stack spacing="xs">
+                <Group spacing={6}>
+                  <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
+                  <Text fw={500}>Current Configuration</Text>
+                </Group>
+                <Table striped withBorder size="xs">
+                  <Table.Tbody>
+                    <Table.Tr>
+                      <Table.Td fw={500}>Control</Table.Td>
+                      <Table.Td>{servo.attached_control}</Table.Td>
+                    </Table.Tr>
+                    {servo.gamepad_config && (
+                      <>
+                        <Table.Tr>
+                          <Table.Td fw={500}>Type</Table.Td>
+                          <Table.Td style={{ textTransform: 'capitalize' }}>{servo.gamepad_config.type || 'Button'}</Table.Td>
+                        </Table.Tr>
+                        <Table.Tr>
+                          <Table.Td fw={500}>Mode</Table.Td>
+                          <Table.Td style={{ textTransform: 'capitalize' }}>{servo.gamepad_config.mode || 'Toggle'}</Table.Td>
+                        </Table.Tr>
+                        <Table.Tr>
+                          <Table.Td fw={500}>Inverted</Table.Td>
+                          <Table.Td>{servo.gamepad_config.invert ? 'Yes' : 'No'}</Table.Td>
+                        </Table.Tr>
+                        {servo.gamepad_config.type === 'axis' && (
+                          <Table.Tr>
+                            <Table.Td fw={500}>Multiplier</Table.Td>
+                            <Table.Td>{servo.gamepad_config.multiplier || 1}</Table.Td>
+                          </Table.Tr>
+                        )}
+                      </>
+                    )}
+                  </Table.Tbody>
+                </Table>
+              </Stack>
             </Paper>
           )}
           
@@ -921,7 +1166,7 @@ const ServoDebugView = () => {
                 handleAttachServo();
                 setOpenedModal(null);
               }}
-              disabled={!attachIndex}
+              disabled={!attachIndex || !controlType || !controlMode}
             >
               Save Mapping
             </Button>
