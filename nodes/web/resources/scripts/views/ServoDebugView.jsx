@@ -589,7 +589,7 @@ const ServoDebugView = () => {
         <Box p="md">
           <Grid gutter="md">
             {/* Control Card */}
-            <Grid.Col span={{ base: 12, md: 7 }}>
+            <Grid.Col span={{ base: 12, md: 6 }}>
               <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
                 <Box 
                   py="xs" 
@@ -729,7 +729,7 @@ const ServoDebugView = () => {
             </Grid.Col>
           
             {/* Info Card */}
-            <Grid.Col span={{ base: 12, md: 5 }}>
+            <Grid.Col span={{ base: 12, md: 6 }}>
               <Paper radius="md" withBorder shadow="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
                 <Box 
                   py="xs" 
