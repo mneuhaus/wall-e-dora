@@ -3,6 +3,7 @@ Individual servo control for the Waveshare Servo Node.
 """
 
 from typing import Optional
+import time
 
 # Import from local modules
 from .models import ServoSettings
@@ -15,6 +16,21 @@ from .protocol import (
 )
 from .wiggle import wiggle_servo
 from .calibrate import calibrate_servo
+from .sdk import (
+    PortHandler, 
+    PacketHandler, 
+    COMM_SUCCESS
+)
+
+# Control table addresses for SCS servos
+ADDR_SCS_TORQUE_ENABLE = 40
+ADDR_SCS_GOAL_POSITION = 42
+ADDR_SCS_PRESENT_POSITION = 56
+ADDR_SCS_MOVING_SPEED = 46
+
+# Default device settings
+BAUDRATE = 1000000
+PROTOCOL_END = 1  # Using protocol_end = 1
 
 
 class Servo:
@@ -76,24 +92,147 @@ class Servo:
         except Exception as e:
             print(f"Error sending command to servo {self.id}: {e}")
             return None
+            
+    def is_responsive(self) -> bool:
+        """
+        Check if the servo is responsive using the SDK.
+        
+        Returns:
+            bool: True if the servo responds to ping, False otherwise
+        """
+        device_name = self.serial_conn.port
+        port_handler = None
+        
+        try:
+            # Initialize SDK components
+            port_handler = PortHandler(device_name)
+            packet_handler = PacketHandler(PROTOCOL_END)
+            
+            # Open port
+            if not port_handler.openPort():
+                return False
+                
+            if not port_handler.setBaudRate(BAUDRATE):
+                port_handler.closePort()
+                return False
+                
+            # Ping the servo
+            model_num, result, error = packet_handler.ping(port_handler, self.id)
+            
+            # Clean up
+            port_handler.closePort()
+            
+            # Return result
+            return result == COMM_SUCCESS and error == 0
+            
+        except Exception as e:
+            if port_handler and port_handler.isOpen():
+                port_handler.closePort()
+            return False
 
     def set_id(self, new_id: int) -> bool:
-        """Set a new ID for the servo."""
-        if 1 <= new_id <= 31:
+        """
+        Set a new ID for the servo.
+        
+        Args:
+            new_id: The new ID to assign to the servo
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not (1 <= new_id <= 31):
+            print(f"Invalid servo ID {new_id}. Must be between 1 and 31.")
+            return False
+            
+        # Try SDK approach first
+        try:
+            return self._set_id_with_sdk(new_id)
+        except Exception as sdk_error:
+            print(f"SDK ID change failed, falling back to legacy method: {sdk_error}")
+            # Fallback to legacy approach
             response = self.send_command(f"ID{new_id}")
             if response and "OK" in response:
                 self.id = new_id
                 self.settings.id = new_id
                 return True
         return False
+        
+    def _set_id_with_sdk(self, new_id: int) -> bool:
+        """
+        Set servo ID using SDK approach.
+        
+        Args:
+            new_id: The new ID to assign to the servo
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        old_id = self.id
+        device_name = self.serial_conn.port
+        port_handler = None
+        
+        try:
+            # Initialize SDK components
+            port_handler = PortHandler(device_name)
+            packet_handler = PacketHandler(PROTOCOL_END)
+            
+            # Open port
+            if not port_handler.openPort():
+                print(f"Failed to open port for servo {old_id}")
+                return False
+                
+            if not port_handler.setBaudRate(BAUDRATE):
+                print(f"Failed to set baudrate for servo {old_id}")
+                port_handler.closePort()
+                return False
+                
+            # The ID register is at address 5 for SCS servos
+            id_register = 5
+            
+            # Write the new ID to the servo
+            id_result, id_error = packet_handler.write1ByteTxRx(
+                port_handler, old_id, id_register, new_id
+            )
+            
+            if id_result != COMM_SUCCESS or id_error != 0:
+                print(f"Failed to set new ID {new_id} for servo {old_id}")
+                print(f"  - Result: {packet_handler.getTxRxResult(id_result)}")
+                if id_error != 0:
+                    print(f"  - Error: {packet_handler.getRxPacketError(id_error)}")
+                port_handler.closePort()
+                return False
+                
+            # Update the servo object's ID attributes
+            self.id = new_id
+            self.settings.id = new_id
+            
+            # Clean up
+            port_handler.closePort()
+            print(f"Successfully changed servo ID from {old_id} to {new_id}")
+            return True
+            
+        except Exception as e:
+            print(f"SDK ID change error for servo {old_id}: {e}")
+            if port_handler and port_handler.isOpen():
+                port_handler.closePort()
+            return False
 
     def wiggle(self) -> bool:
         """Wiggle the servo for identification."""
         return wiggle_servo(self)
 
     def move(self, position: int) -> bool:
-        """Move the servo to a specific position."""
+        """
+        Move the servo to a specific position using SDK-based approach.
+        
+        Args:
+            position: The target position value
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
         try:
+            # Apply min/max constraints
             safe_position = max(
                 self.settings.min_pulse, min(self.settings.max_pulse, position)
             )
@@ -102,15 +241,88 @@ class Servo:
             if self.settings.invert:
                 safe_position = self.settings.max_pulse - (safe_position - self.settings.min_pulse)
             
-            command = f"P{safe_position}T{self.settings.speed}"
-            response = self.send_command(command)
-            
-            if response and "OK" in response:
-                self.settings.position = position  # Store the requested position
-                return True
-            return False
+            # Legacy approach - keep as fallback
+            try:
+                # Try using the SDK-based approach first
+                return self._move_with_sdk(safe_position)
+            except Exception as sdk_error:
+                print(f"SDK move failed, falling back to legacy method: {sdk_error}")
+                # Fallback to the legacy approach if SDK fails
+                command = f"P{safe_position}T{self.settings.speed}"
+                response = self.send_command(command)
+                
+                if response and "OK" in response:
+                    self.settings.position = position  # Store the requested position
+                    return True
+                return False
+                
         except Exception as e:
             print(f"Error moving servo {self.id}: {e}")
+            return False
+            
+    def _move_with_sdk(self, position: int) -> bool:
+        """
+        Move the servo using the SDK approach for more reliable control.
+        
+        Args:
+            position: The target position value
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        servo_id = self.id
+        device_name = self.serial_conn.port
+        port_handler = None
+        
+        try:
+            # Initialize SDK components
+            port_handler = PortHandler(device_name)
+            packet_handler = PacketHandler(PROTOCOL_END)
+            
+            # Open port
+            if not port_handler.openPort():
+                print(f"Failed to open port for servo {servo_id}")
+                return False
+                
+            if not port_handler.setBaudRate(BAUDRATE):
+                print(f"Failed to set baudrate for servo {servo_id}")
+                port_handler.closePort()
+                return False
+            
+            # Set the speed first if it's not zero
+            if self.settings.speed > 0:
+                speed_result, speed_error = packet_handler.write2ByteTxRx(
+                    port_handler, servo_id, ADDR_SCS_MOVING_SPEED, self.settings.speed
+                )
+                
+                if speed_result != COMM_SUCCESS or speed_error != 0:
+                    print(f"Warning: Failed to set speed for servo {servo_id}")
+                    # Continue anyway as position is more important
+            
+            # Now set the position
+            pos_result, pos_error = packet_handler.write2ByteTxRx(
+                port_handler, servo_id, ADDR_SCS_GOAL_POSITION, position
+            )
+            
+            if pos_result != COMM_SUCCESS or pos_error != 0:
+                print(f"Failed to set position {position} for servo {servo_id}")
+                print(f"  - Result: {packet_handler.getTxRxResult(pos_result)}")
+                if pos_error != 0:
+                    print(f"  - Error: {packet_handler.getRxPacketError(pos_error)}")
+                port_handler.closePort()
+                return False
+            
+            # Store position in settings for reference
+            self.settings.position = position
+            
+            # Clean up
+            port_handler.closePort()
+            return True
+            
+        except Exception as e:
+            print(f"SDK move error for servo {servo_id}: {e}")
+            if port_handler and port_handler.isOpen():
+                port_handler.closePort()
             return False
 
     def calibrate(self) -> bool:
