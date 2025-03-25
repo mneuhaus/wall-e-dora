@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import node from '../../Node';
 import { useAppContext } from '../../contexts/AppContext';
+const currentControlRef = useRef(currentControl);
+const isOpenRef = useRef(isOpen);
 
 import {
   Modal,
@@ -111,6 +113,14 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     }
   }, [isOpen, gamepad]);
 
+  useEffect(() => {
+    currentControlRef.current = currentControl;
+  }, [currentControl]);
+
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
@@ -130,7 +140,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     console.log('Starting input polling...');
     
     pollingRef.current = setInterval(() => {
-      if (!isOpen || !currentControl) {
+      if (!isOpenRef.current || !currentControlRef.current) {
         console.log('Skipping poll (dialog closed or no control)');
         return;
       }
