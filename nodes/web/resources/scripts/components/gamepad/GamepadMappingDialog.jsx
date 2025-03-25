@@ -65,10 +65,10 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   
   // Generate profile name from gamepad ID
   const makeProfileName = (gamepad) => {
-    if (!gamepad) return 'Custom Gamepad Profile';
+    if (!gamepad?.id) return 'Custom Gamepad Profile';
     
     // Extract vendor/product name if available
-    const id = gamepad.id;
+    const id = gamepad.id || '';
     let name = 'Unknown Gamepad';
     
     if (id.includes('Vendor:') || id.includes('Product:')) {
