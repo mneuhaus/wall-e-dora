@@ -337,6 +337,8 @@ def main():
                 # Handle gamepad profile events
                 if event["id"] == "save_gamepad_profile":
                     handle_save_gamepad_profile(event, node, profile_manager)
+                    print(f"Saved gamepad profile: {event['value'][0]}")
+                    print(f"Profiles storage directory: {profile_manager.profiles_dir}")
                     # After saving, emit updated profiles list
                     emit_profiles_list(node, profile_manager)
                     continue
