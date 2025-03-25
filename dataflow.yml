@@ -39,11 +39,6 @@ nodes:
       servos_list: waveshare_servo/servos_list
       setting_updated: config/setting_updated
       settings: config/settings
-      save_gamepad_profile: web/save_gamepad_profile
-      get_gamepad_profile: web/get_gamepad_profile
-      check_gamepad_profile: web/check_gamepad_profile
-      delete_gamepad_profile: web/delete_gamepad_profile
-      list_gamepad_profiles: web/list_gamepad_profiles
       # camera_feed: opencv-video-capture/image
     outputs:
       - slider_input
