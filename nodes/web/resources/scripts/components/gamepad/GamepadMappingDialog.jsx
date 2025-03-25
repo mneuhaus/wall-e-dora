@@ -476,7 +476,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
           
           <Grid.Col span={8}>
             <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{height: '100%'}}>
-              <Stack align="center" spacing="sm">
+              <Stack align="center" spacing={8}>
             {currentControl && (
               <>
                 <Title order={4} align="center">
