@@ -14,7 +14,7 @@ class BatteryTracker:
         self.capacity_ah = 2.5  # Initial estimate of capacity in Amp-hours
         self.threshold_soc = 20.0  # Threshold percentage  
         self.nominal_voltage = 11.1  # 3S nominal voltage
-        self.min_voltage = 8.0  # Empty battery threshold
+        self.min_voltage = 9.0  # Empty battery threshold
         self.max_voltage = 12.2  # Full battery threshold
 
         # Smoothing parameters for exponential moving averages
