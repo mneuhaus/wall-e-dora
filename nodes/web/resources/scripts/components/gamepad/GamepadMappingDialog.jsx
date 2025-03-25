@@ -492,9 +492,9 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                 fullWidth
                 onClick={goToNextControl}
                 rightIcon={<i className="fa-solid fa-arrow-right" />}
-                disabled={pressCount < 3}
+                disabled={step + 1 < controlsToMap.length && pressCount < 3}
               >
-                Next
+                {step + 1 >= controlsToMap.length ? 'Close' : 'Next'}
               </Button>
             </Grid.Col>
           </Grid>
