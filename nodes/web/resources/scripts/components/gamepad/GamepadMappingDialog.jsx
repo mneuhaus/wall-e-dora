@@ -271,6 +271,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       
       setCurrentControl(nextControl);
       setDetectedControl(null);
+      detectedControlRef.current = null; // Reset ref too
       setPressCount(0);
       console.log(`Moving to control ${nextIndex}: ${nextControl.id}`);
       
