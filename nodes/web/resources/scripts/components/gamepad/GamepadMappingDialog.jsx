@@ -158,12 +158,12 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   
   // Detect button/axis inputs
   const detectInput = (gamepad) => {
-    if (!gamepad || !currentControl) {
-      console.log("detectInput: gamepad or currentControl is missing", gamepad, currentControl);
+    if (!gamepad || !currentControlRef.current) {
+      console.log("detectInput: gamepad or currentControl is missing", gamepad, currentControlRef.current);
       return;
     }
     
-    const isAxisMapping = currentControl.type === 'axis';
+    const isAxisMapping = currentControlRef.current.type === 'axis';
     const buttonThreshold = 0.2;
     const axisThreshold = 0.3;
     
@@ -211,7 +211,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   const recordInput = (type, index) => {
     console.log("recordInput called with", type, index);
     // Ignore wrong types
-    if (currentControl.type === 'axis' && type !== 'axis') return;
+    if (currentControlRef.current.type === 'axis' && type !== 'axis') return;
     
     // Check if input changed
     if (detectedControl && (detectedControl.type !== type || detectedControl.index !== index)) {
