@@ -290,8 +290,14 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   
   // Save the profile
   const saveProfile = () => {
+    const currentGamepad = navigator.getGamepads()[gamepadIndex];
+    if (!currentGamepad) {
+      console.error('Cannot save profile - no gamepad detected');
+      return;
+    }
+
     const profileData = {
-      id: gamepad.id,
+      id: currentGamepad.id,
       name: profileName,
       mapping: mapping
     };
