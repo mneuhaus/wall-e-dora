@@ -413,16 +413,27 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       <Stack spacing="lg">
         <Grid>
           <Grid.Col span={4}>
-            <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{ 
+            <div style={{ 
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              paddingTop: '0rem',
+              maxWidth: 'calc(17.5rem * var(--mantine-scale))',
               height: '500px',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden'
+              width: '100%'
             }}>
-              <Text fw={500} size="sm" mb="sm" pb="sm" style={{ borderBottom: '1px solid var(--mantine-color-gray-7)' }}>
-                Controls to Map
-              </Text>
-              <Stack spacing={0} style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
+              <Group gap="md" mb="md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--mantine-color-gray-5)' }}>
+                  <path d="M15 15m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path>
+                  <path d="M18.5 18.5l2.5 2.5"></path>
+                  <path d="M4 6h16"></path>
+                  <path d="M4 12h4"></path>
+                  <path d="M4 18h4"></path>
+                </svg>
+                <Text size="sm" c="dimmed">Controls to Map</Text>
+              </Group>
+              <Stack spacing={0} style={{ flex: 1, overflowY: 'auto' }}>
                 {controlsToMap.map((control, index) => {
                   const isMapped = !!mapping[control.id];
                   const isSkipped = step > index && !isMapped;
@@ -433,15 +444,16 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                       key={control.id} 
                       spacing="xs" 
                       p={8}
+                      pl={isCurrent ? 'md' : 'sm'}
                       style={{
                         cursor: 'pointer',
-                        background: isCurrent ? 'rgba(255, 179, 0, 0.1)' : 'transparent',
-                        borderRadius: 4,
-                        border: '1px solid var(--mantine-color-gray-7)',
-                        marginBottom: '4px',
-                        transition: 'background 0.2s ease',
+                        background: isCurrent ? 'var(--mantine-color-dark-6)' : 'transparent',
+                        borderRadius: 'var(--mantine-radius-sm)',
+                        transition: 'all 0.2s ease',
+                        borderLeft: isCurrent ? '2px solid var(--mantine-color-amber-6)' : 'none',
                         ':hover': {
-                          background: 'rgba(255, 179, 0, 0.05)'
+                          background: 'var(--mantine-color-dark-5)',
+                          paddingLeft: 'var(--mantine-spacing-md)'
                         }
                       }}
                       onClick={() => setStep(index)}
@@ -460,7 +472,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                   );
                 })}
               </Stack>
-            </Paper>
+            </div>
           </Grid.Col>
           
           <Grid.Col span={8}>
