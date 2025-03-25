@@ -442,8 +442,8 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                   return (
                     <Group 
                       key={control.id} 
-                      spacing="xs" 
-                      p={4}
+                      spacing="0" 
+                      p={2}
                       pl={isCurrent ? 'md' : 'sm'}
                       style={{
                         cursor: 'pointer',
@@ -451,7 +451,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                         borderRadius: 'var(--mantine-radius-sm)',
                         transition: 'all 0.2s ease',
                         borderLeft: isCurrent ? '2px solid var(--mantine-color-amber-6)' : 'none',
-                        marginBottom: '2px',
+                        marginBottom: '1px',
                         ':hover': {
                           background: 'var(--mantine-color-dark-5)',
                           paddingLeft: 'var(--mantine-spacing-md)'
@@ -459,7 +459,6 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                       }}
                       onClick={() => setStep(index)}
                     >
-                      <Box style={{width: 24}}>
                         {isMapped ? (
                           <i className="fa-solid fa-circle-check" style={{color: 'var(--mantine-color-green-6)'}} />
                         ) : isSkipped ? (
