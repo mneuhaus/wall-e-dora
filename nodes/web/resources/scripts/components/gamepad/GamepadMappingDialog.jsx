@@ -418,7 +418,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
               marginRight: 'auto',
               paddingTop: '0rem',
               maxWidth: 'calc(17.5rem * var(--mantine-scale))',
-              height: '500px',
+              height: '250px',
               display: 'flex',
               flexDirection: 'column',
               width: '100%'
@@ -443,7 +443,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                     <Group 
                       key={control.id} 
                       spacing="xs" 
-                      p={8}
+                      p={4}
                       pl={isCurrent ? 'md' : 'sm'}
                       style={{
                         cursor: 'pointer',
@@ -451,6 +451,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                         borderRadius: 'var(--mantine-radius-sm)',
                         transition: 'all 0.2s ease',
                         borderLeft: isCurrent ? '2px solid var(--mantine-color-amber-6)' : 'none',
+                        marginBottom: '2px',
                         ':hover': {
                           background: 'var(--mantine-color-dark-5)',
                           paddingLeft: 'var(--mantine-spacing-md)'
