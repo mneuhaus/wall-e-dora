@@ -423,7 +423,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
               maxWidth: 'calc(17.5rem * var(--mantine-scale))',
               height: '250px',
               display: 'flex',
-              gap: 6px,
+              gap: 'var(--mantine-spacing-xs)',
               flexDirection: 'column',
               width: '100%'
             }}>
