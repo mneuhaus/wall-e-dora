@@ -452,7 +452,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
           
           <Grid.Col span={8}>
             <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{height: '100%'}}>
-          <Stack align="center" spacing="sm">
+              <Stack align="center" spacing="sm">
             {currentControl && (
               <>
                 <Title order={4} align="center">
@@ -486,9 +486,11 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
               </>
             )}
           </Stack>
-        </Paper>
-        
-        <Box>
+              </Paper>
+            </Grid.Col>
+          </Grid>
+
+          <Box>
           <Text size="sm" c="dimmed" align="center" mb="md">
             {step + 1} of {controlsToMap.length} controls
           </Text>
