@@ -230,7 +230,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
         // Save mapping
         setMapping(prev => ({
           ...prev,
-          [currentControl.id]: { type, index }
+          [currentControlRef.current.id]: { type, index }
         }));
         
         // Schedule move to next
