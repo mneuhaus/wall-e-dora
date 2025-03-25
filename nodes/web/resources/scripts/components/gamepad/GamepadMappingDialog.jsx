@@ -420,19 +420,10 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
               maxWidth: 'calc(17.5rem * var(--mantine-scale))',
               height: '250px',
               display: 'flex',
+              gap: 6px,
               flexDirection: 'column',
               width: '100%'
             }}>
-              <Group gap="md" mb="md">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--mantine-color-gray-5)' }}>
-                  <path d="M15 15m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path>
-                  <path d="M18.5 18.5l2.5 2.5"></path>
-                  <path d="M4 6h16"></path>
-                  <path d="M4 12h4"></path>
-                  <path d="M4 18h4"></path>
-                </svg>
-                <Text size="sm" c="dimmed">Controls to Map</Text>
-              </Group>
               <Stack spacing={0} style={{ flex: 1, overflowY: 'auto' }}>
                 {controlsToMap.map((control, index) => {
                   const isMapped = !!mapping[control.id];
