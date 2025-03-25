@@ -215,6 +215,9 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     
     // Check if input changed
     if (detectedControl && (detectedControl.type !== type || detectedControl.index !== index)) {
+      console.log('Input changed - resetting counter');
+      setPressCount(0);
+      setDetectedControl(null);
       return;
     }
     
