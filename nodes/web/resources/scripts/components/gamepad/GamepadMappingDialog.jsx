@@ -254,7 +254,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       if (nextIndex >= controlsToMap.length) {
         setCurrentControl(null);
         console.log('Mapping complete, showing summary');
-        return prevStep;
+        return nextIndex;
       }
       
       const nextControl = controlsToMap[nextIndex];
@@ -330,7 +330,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     }
     
     // Mapping complete, show summary
-    if (!currentControl && step >= controlsToMap.length) {
+    if (step >= controlsToMap.length) {
       return (
         <Stack spacing="md">
           <Title order={5} align="center">Mapping Complete!</Title>
