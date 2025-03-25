@@ -245,22 +245,28 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   
   // Go to next control
   const goToNextControl = () => {
-    const nextIndex = step + 1;
-    if (nextIndex >= controlsToMap.length) {
-      setCurrentControl(null);
-      console.log('Mapping complete, showing summary');
-      return;
-    }
-    const nextControl = controlsToMap[nextIndex];
-    if (!nextControl) {
-      console.error(`No control found at index ${nextIndex}`);
-      return;
-    }
-    setStep(nextIndex);
-    setCurrentControl(nextControl);
-    setDetectedControl(null);
-    setPressCount(0);
-    console.log(`Moving to control ${nextIndex}: ${nextControl.id}`);
+    setStep(prevStep => {
+      const nextIndex = prevStep + 1;
+      
+      if (nextIndex >= controlsToMap.length) {
+        setCurrentControl(null);
+        console.log('Mapping complete, showing summary');
+        return prevStep;
+      }
+      
+      const nextControl = controlsToMap[nextIndex];
+      if (!nextControl) {
+        console.error(`No control found at index ${nextIndex}`);
+        return prevStep;
+      }
+      
+      setCurrentControl(nextControl);
+      setDetectedControl(null);
+      setPressCount(0);
+      console.log(`Moving to control ${nextIndex}: ${nextControl.id}`);
+      
+      return nextIndex;
+    });
   };
   
   // Skip current control
