@@ -202,6 +202,14 @@ const GamepadView = () => {
         <Table.Td style={{ color: 'var(--mantine-color-amber-filled)', textAlign: 'right' }}>
           {controlValue !== undefined ? controlValue : 'N/A'}
         </Table.Td>
+        <Table.Td style={{ textAlign: 'right' }}>
+          {gamepadInstance.customMapping?.mapping?.[controlName] ? (
+            <>
+              {gamepadInstance.customMapping.mapping[controlName].type === 'button' ? 'Button' : 'Axis'} 
+              #{gamepadInstance.customMapping.mapping[controlName].index}
+            </>
+          ) : 'Not mapped'}
+        </Table.Td>
       </Table.Tr>
     );
   };
@@ -285,6 +293,7 @@ const GamepadView = () => {
                       <Table.Tr>
                         <Table.Th>Control</Table.Th>
                         <Table.Th style={{ textAlign: 'right' }}>Value</Table.Th>
+                        <Table.Th style={{ textAlign: 'right' }}>Mapped To</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
