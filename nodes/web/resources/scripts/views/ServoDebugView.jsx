@@ -16,7 +16,9 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import node from '../Node';
+import gamepads from '../Gamepads';
 import { CircularSliderWithChildren } from 'react-circular-slider-svg';
+import { keyframes, css } from '@emotion/css';
 
 // Mantine imports
 import { 
@@ -45,10 +47,39 @@ import {
   Tooltip
 } from '@mantine/core';
 
+// We'll use a direct style object for the animation instead of CSS-in-JS
+const getFlashStyle = () => ({
+  animation: 'servo-flash 500ms ease-out',
+  position: 'relative',
+  zIndex: 10
+});
+
+// Add the keyframes to the document head
+const useFlashAnimation = () => {
+  useEffect(() => {
+    // Only add the keyframes if they don't already exist
+    if (!document.getElementById('servo-flash-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'servo-flash-keyframes';
+      style.innerHTML = `
+        @keyframes servo-flash {
+          0% { background-color: rgba(255, 179, 0, 0.5); }
+          50% { background-color: rgba(255, 179, 0, 0.3); }
+          100% { background-color: rgba(255, 179, 0, 0); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
+};
+
 const ServoDebugView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [servo, setServo] = useState(null);
+  
+  // Initialize the flash animation
+  useFlashAnimation();
   const [position, setPosition] = useState(0);
   const [displayPosition, setDisplayPosition] = useState(0); // For UI display (0-300 degrees)
   const [speed, setSpeed] = useState(null); // Start with null so we know when it's initialized from server
@@ -67,7 +98,14 @@ const ServoDebugView = () => {
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [isControlActive, setIsControlActive] = useState(false); // Track if attached control is active
+  const controlFlashTimeout = useRef(null);
   const positionUpdateTimeout = useRef(null);
+  
+  // Monitor isControlActive state changes
+  useEffect(() => {
+    console.log(`isControlActive changed to: ${isControlActive}`);
+  }, [isControlActive]);
 
   // Function to show toast notifications
   const showToast = (message, type = 'success') => {
@@ -94,17 +132,14 @@ const ServoDebugView = () => {
   const mapServoToUI = useCallback((servoPos, servoMin, servoMax) => {
     // Validate inputs to prevent NaN
     if (servoPos === null || servoPos === undefined || typeof servoPos !== 'number' || isNaN(servoPos)) {
-      console.warn('Invalid servoPos:', servoPos);
       return 0;
     }
     
     if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
-      console.warn('Invalid servoMin:', servoMin);
       servoMin = 0; // Default min
     }
     
     if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
-      console.warn('Invalid servoMax:', servoMax);
       servoMax = 1023; // Default max
     }
     
@@ -112,7 +147,6 @@ const ServoDebugView = () => {
     if (servoMin < 0) servoMin = 0;
     if (servoMax > 1023) servoMax = 1023;
     if (servoMax <= servoMin) {
-      console.warn('Invalid range: servoMax must be greater than servoMin', 'servoMin:', servoMin, 'servoMax:', servoMax);
       servoMin = 0;
       servoMax = 1023;
     }
@@ -132,7 +166,6 @@ const ServoDebugView = () => {
   const mapUIToServo = useCallback((uiPos, servoMin, servoMax) => {
     // Validate inputs to prevent NaN
     if (uiPos === null || uiPos === undefined || typeof uiPos !== 'number' || isNaN(uiPos)) {
-      console.warn('Invalid uiPos:', uiPos);
       return 0;
     }
     
@@ -166,10 +199,8 @@ const ServoDebugView = () => {
     }
   }, [displayPosition, sliderReady]);
   
-  // Debug modal state changes and initialize modal data
+  // Initialize modal data when opened
   useEffect(() => {
-    console.log('Modal state changed:', openedModal);
-    
     // If gamepad modal is opened, initialize with existing config if available
     if (openedModal === 'gamepad' && servo?.gamepad_config) {
       const config = servo.gamepad_config;
@@ -181,17 +212,64 @@ const ServoDebugView = () => {
       setInvertControl(config.invert || false);
       setMultiplier(config.multiplier || 1);
     }
-  }, [openedModal, servo]);
+  }, [openedModal]); // Remove servo dependency to prevent re-initialization when servo data updates
 
+  // Super simple gamepad control listener
   useEffect(() => {
-    console.log(`ServoDebugView initialized for servo ${id}`);
+    if (!servo?.attached_control) return;
     
+    const controlName = servo.attached_control;
+    console.log(`Setting up simple listener for GAMEPAD_${controlName}`);
+    
+    // Create a super simple, direct event handler
+    function handleGamepadButtonPress(event) {
+      // Log every event for debugging
+      console.log(`GAMEPAD EVENT: ${controlName}`, event);
+      
+      // Just flash for any event
+      setIsControlActive(true);
+      
+      // Set a timeout to turn it off
+      setTimeout(() => {
+        setIsControlActive(false);
+      }, 1000);
+    }
+    
+    // Add direct event listener
+    window.addEventListener(`GAMEPAD_${controlName}`, handleGamepadButtonPress);
+    
+    // Also listen via node for redundancy
+    const nodeListener = node.on(`GAMEPAD_${controlName}`, handleGamepadButtonPress);
+    
+    // Test the flashing right away (for debugging)
+    console.log("Testing control flash animation...");
+    setIsControlActive(true);
+    setTimeout(() => setIsControlActive(false), 1000);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener(`GAMEPAD_${controlName}`, handleGamepadButtonPress);
+      if (nodeListener) nodeListener();
+    };
+  }, [servo?.attached_control]);
+  
+  useEffect(() => {
     // Function to process servo data (reused for both event types)
     const processServoData = (servoInfo) => {
       if (!servoInfo) return;
       
-      console.log(`Processing servo data for ID ${id}:`, servoInfo);
-      setServo(servoInfo);
+      // Create a safe copy of the servo data that preserves gamepad_config when modal is open
+      const updatedServoData = { ...servoInfo };
+      
+      // If the gamepad modal is open, preserve the current gamepad config
+      // to prevent websocket updates from overwriting the unsaved changes
+      if (openedModal === 'gamepad' && servo?.gamepad_config) {
+        updatedServoData.gamepad_config = servo.gamepad_config;
+        updatedServoData.attached_control = servo.attached_control;
+      }
+      
+      // Update the servo state with our protected data
+      setServo(updatedServoData);
       
       // Get min/max pulse values from servo data or use defaults
       let servoMinPulse = 0;
@@ -237,7 +315,6 @@ const ServoDebugView = () => {
           setTimeout(() => setSliderReady(true), 50);
         }
       } else {
-        console.warn('Invalid UI position calculated:', uiPosition);
         setDisplayPosition(0); // Default to 0 if invalid
         // Even with invalid position, we should still render the slider
         if (!sliderReady) {
@@ -247,15 +324,14 @@ const ServoDebugView = () => {
       
       // Set speed - IMPORTANT: This needs to work on page load
       if (servoInfo.speed !== undefined && servoInfo.speed !== null) {
-        console.log(`Setting speed to ${servoInfo.speed} from servo data`);
         setSpeed(Number(servoInfo.speed));
       } else {
-        console.log("No speed in servo data, using default 1000");
-        setSpeed(1000);
+        setSpeed(1000); // Default speed
       }
       
       // Update alias input if it's empty and the servo has an alias
-      if (aliasInput === '' && servoInfo.alias) {
+      // and alias modal is not open to prevent overwriting unsaved changes
+      if (aliasInput === '' && servoInfo.alias && openedModal !== 'alias') {
         setAliasInput(servoInfo.alias);
       }
     };
@@ -276,10 +352,8 @@ const ServoDebugView = () => {
     // Listen for servos_list for full servo info
     const listUnsubscribe = node.on('servos_list', (event) => {
       const servosList = event.value || [];
-      console.log(`Received servos_list, looking for servo ID ${id}`, servosList);
       const currentServo = servosList.find(s => s.id === parseInt(id));
       if (currentServo) {
-        console.log(`Found servo ${id} in servos_list:`, currentServo);
         // Use the same processor function for consistency
         processServoData(currentServo);
       }
@@ -297,7 +371,6 @@ const ServoDebugView = () => {
     // Validate that newPosition is a valid number
     if (newPosition === null || newPosition === undefined || 
         typeof newPosition !== 'number' || isNaN(newPosition)) {
-      console.warn('Invalid position received in handlePositionChange:', newPosition);
       return;
     }
     
@@ -314,20 +387,17 @@ const ServoDebugView = () => {
     let servoMax = max;
     
     if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
-      console.warn('Invalid min value in handlePositionChange, using default 0:', servoMin);
-      servoMin = 0;
+      servoMin = 0; // Default min
     }
     
     if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
-      console.warn('Invalid max value in handlePositionChange, using default 1023:', servoMax);
-      servoMax = 1023;
+      servoMax = 1023; // Default max
     }
     
     // Ensure min/max are valid
     if (servoMin < 0) servoMin = 0;
     if (servoMax > 1023) servoMax = 1023;
     if (servoMax <= servoMin) {
-      console.warn('Invalid range in handlePositionChange: max <= min. Using defaults.', servoMin, servoMax);
       servoMin = 0;
       servoMax = 1023;
     }
@@ -338,7 +408,6 @@ const ServoDebugView = () => {
     // Validate servoPosition before setting it
     if (servoPosition === null || servoPosition === undefined || 
         typeof servoPosition !== 'number' || isNaN(servoPosition)) {
-      console.warn('Invalid servoPosition calculated:', servoPosition);
       return;
     }
     
@@ -410,15 +479,21 @@ const ServoDebugView = () => {
     if (aliasInput.trim() === '') return;
     
     const servoId = parseInt(id);
+    const trimmedAlias = aliasInput.trim();
     
-    // Use the new servo-specific setting update endpoint
+    // Update local state immediately to prevent UI flicker
+    const updatedServo = { ...servo };
+    updatedServo.alias = trimmedAlias;
+    setServo(updatedServo);
+    
+    // Use the servo-specific setting update endpoint
     node.emit('update_servo_setting', [{
       id: servoId,
       property: "alias",
-      value: aliasInput.trim()
+      value: trimmedAlias
     }]);
     
-    showToast(`Alias set to "${aliasInput}"`);
+    showToast(`Alias set to "${trimmedAlias}"`);
   };
   
   const handleAttachServo = () => {
@@ -433,7 +508,16 @@ const ServoDebugView = () => {
       multiplier: multiplier
     };
     
+    
+    // Also update the local servo state immediately to prevent UI flicker
+    // and ensure UI consistency even if websocket updates are delayed
+    const updatedServo = { ...servo };
+    updatedServo.gamepad_config = gamepadConfig;
+    updatedServo.attached_control = attachIndex;
+    setServo(updatedServo);
+    
     // Update the gamepad config (this will be merged with any existing data)
+    // Send both updates in quick succession
     node.emit('update_servo_setting', [{
       id: parseInt(id),
       property: "gamepad_config",
@@ -447,7 +531,6 @@ const ServoDebugView = () => {
       value: attachIndex
     }]);
     
-    console.log("Updating gamepad configuration:", gamepadConfig);
     showToast(`Attached to gamepad control: ${attachIndex} (${controlMode} mode)`);
   };
   
@@ -481,7 +564,7 @@ const ServoDebugView = () => {
   
   const loadingView = (
     <Container size="lg" py="md">
-      <Paper p="md" radius="md" withBorder>
+      <Paper p="md" radius="md" withBorder={true}>
         <Group justify="space-between" mb="md">
           <Group>
             <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
@@ -515,8 +598,8 @@ const ServoDebugView = () => {
     return loadingView;
   }
   
+  // Create custom servo status object to handle special rendering for attached control
   const servoStatus = {
-    'Attached Control': servo.attached_control || 'None',
     'Voltage': servo.voltage ? `${servo.voltage.toFixed(1)}V` : 'N/A',
     'Min Pulse': servo.min_pulse !== undefined ? servo.min_pulse : 'Not calibrated',
     'Max Pulse': servo.max_pulse !== undefined ? servo.max_pulse : 'Not calibrated'
@@ -531,7 +614,7 @@ const ServoDebugView = () => {
           title={toastType.charAt(0).toUpperCase() + toastType.slice(1)}
           onClose={() => setIsToastVisible(false)}
           withCloseButton
-          withBorder
+          withBorder={true}
           pos="fixed"
           style={{ 
             top: rem(16), 
@@ -551,7 +634,7 @@ const ServoDebugView = () => {
         </Notification>
       )}
       
-      <Paper radius="md" withBorder p={0}>
+      <Paper radius="md" withBorder={true} p={0}>
         {/* Header Section */}
         <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', height: '45px' }}>
           <Group justify="space-between">
@@ -592,11 +675,7 @@ const ServoDebugView = () => {
                   color="amber" 
                   variant="subtle" 
                   radius="xl" 
-                  onClick={() => {
-                    console.log('Opening alias modal');
-                    setOpenedModal('alias');
-                    console.log('Modal state after set:', 'alias');
-                  }}
+                  onClick={() => setOpenedModal('alias')}
                 >
                   <i className="fa-solid fa-tag"></i>
                 </ActionIcon>
@@ -757,8 +836,54 @@ const ServoDebugView = () => {
                 <Text c="dimmed" style={{ marginTop: 0, fontSize: '0.65rem' }}>Lower = faster</Text>
               </Box>
               <Box style={{ overflowY: 'auto', padding: '10px' }}>
-                <Table striped highlightOnHover withBorder>
+                <Table striped highlightOnHover withTableBorder>
                   <Table.Tbody>
+                    {/* Custom Attached Control row with animation */}
+                    <Table.Tr 
+                      style={isControlActive ? {
+                        backgroundColor: "rgba(255, 179, 0, 0.3)", 
+                        transition: "background-color 0.5s",
+                        position: "relative",
+                        zIndex: 10
+                      } : {}}
+                    >
+                      <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)', fontSize: '0.75rem', padding: '1px 6px' }}>
+                        Attached Control
+                      </Table.Td>
+                      <Table.Td style={{ 
+                        color: isControlActive ? 'var(--mantine-color-amber-9)' : 'var(--mantine-color-amber-filled)', 
+                        textAlign: 'right', 
+                        fontSize: '0.75rem', 
+                        padding: '1px 6px',
+                        fontWeight: isControlActive ? 600 : 400,
+                        transition: 'color 0.2s, font-weight 0.2s'
+                      }}>
+                        {servo.attached_control ? (
+                          <Group justify="right" spacing="xs" wrap="nowrap">
+                            <div
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: isControlActive ? '#4CAF50' : 'rgba(255, 179, 0, 0.5)',
+                                display: 'inline-block',
+                                marginRight: '4px',
+                                boxShadow: isControlActive ? '0 0 5px #4CAF50' : 'none',
+                                transition: 'background-color 0.2s, box-shadow 0.2s'
+                              }}
+                            />
+                            {servo.attached_control}
+                            {servo.gamepad_config?.mode && (
+                              <Text span size="xs" c="dimmed">({servo.gamepad_config.mode})</Text>
+                            )}
+                          </Group>
+                        ) : (
+                          'None'
+                        )}
+                      </Table.Td>
+                    </Table.Tr>
+                    
+                    {/* Standard rows for other properties */}
                     {Object.entries(servoStatus).map(([key, value]) => (
                       <Table.Tr key={key}>
                         <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)', fontSize: '0.75rem', padding: '1px 6px' }}>{key}</Table.Td>
@@ -789,7 +914,7 @@ const ServoDebugView = () => {
                 {servo.properties && Object.keys(servo.properties).length > 0 && (
                   <>
                     <Text fw={500} c="amber" mt="xs" mb="xs" size="xs">Advanced Properties</Text>
-                    <Table size="xs" striped highlightOnHover withBorder>
+                    <Table size="xs" striped highlightOnHover withTableBorder>
                       <Table.Tbody>
                         {Object.entries(servo.properties).map(([key, value]) => (
                           <Table.Tr key={key}>
@@ -821,7 +946,6 @@ const ServoDebugView = () => {
           blur: 3,
         }}
       >
-        {console.log('Modal render - opened state:', openedModal === 'alias', 'openedModal value:', openedModal)}
         <Stack spacing="md">
           <TextInput
             label="Servo Alias"
@@ -1020,7 +1144,7 @@ const ServoDebugView = () => {
               {/* Control mode selection */}
               <Box>
                 <Text fw={500} size="sm" mb="xs">Control Mode</Text>
-                <Paper withBorder p="md" radius="md">
+                <Paper withBorder={true} p="md" radius="md">
                   {controlType === 'button' ? (
                     /* Button modes */
                     <Radio.Group
@@ -1087,13 +1211,13 @@ const ServoDebugView = () => {
           
           {/* Status of gamepad control attachment */}
           {servo?.attached_control && (
-            <Paper p="md" withBorder radius="md" bg="rgba(76, 175, 80, 0.05)">
+            <Paper p="md" withBorder={true} radius="md" bg="rgba(76, 175, 80, 0.05)">
               <Stack spacing="xs">
                 <Group spacing={6}>
                   <i className="fa-solid fa-check-circle" style={{ color: '#4CAF50' }}></i>
                   <Text fw={500}>Current Configuration</Text>
                 </Group>
-                <Table striped withColumnBorders size="xs">
+                <Table striped withColumnBorders={true} size="xs">
                   <Table.Tbody>
                     <Table.Tr>
                       <Table.Td fw={500}>Control</Table.Td>
@@ -1133,6 +1257,20 @@ const ServoDebugView = () => {
                 variant="outline"
                 color="red"
                 onClick={() => {
+                  // Update the UI state first for a responsive feel
+                  const updatedServo = { ...servo };
+                  updatedServo.attached_control = "";
+                  updatedServo.gamepad_config = {};
+                  setServo(updatedServo);
+                  
+                  // Clear the form state as well
+                  setAttachIndex("");
+                  setControlType("");
+                  setControlMode("");
+                  setInvertControl(false);
+                  setMultiplier(1);
+                  
+                  // Then send the event to the server
                   node.emit('detach_servo', [parseInt(id)]);
                   showToast('Servo detached from gamepad control');
                   setOpenedModal(null);
@@ -1229,7 +1367,7 @@ const ServoDebugView = () => {
           
           <Divider my="md" label="Danger Zone" labelPosition="center" color="red" />
           
-          <Paper p="md" withBorder radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
+          <Paper p="md" withBorder={true} radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
             <Stack spacing="xs">
               <Text size="sm" c="red" fw={500} align="center">Reset Servo Configuration</Text>
               <Text size="xs" c="dimmed" align="center">

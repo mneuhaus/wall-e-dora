@@ -11,6 +11,7 @@ import logging
 import pyarrow as pa
 import subprocess
 import time
+from handlers.gamepad_profiles import GamepadProfileManager, handle_save_gamepad_profile, handle_get_gamepad_profile, handle_check_gamepad_profile, handle_delete_gamepad_profile, handle_list_gamepad_profiles
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -314,6 +315,9 @@ def main():
     start_background_webserver()
     node = Node()
     
+    # Initialize gamepad profile manager
+    profile_manager = GamepadProfileManager()
+    
     for event in node:
         try:
             if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick"):
@@ -321,6 +325,23 @@ def main():
             elif event["type"] == "INPUT":
                 logging.info(f"Received input event: {event['id']}")
                 event_value = event['value'].to_pylist()
+                
+                # Handle gamepad profile events
+                if event["id"] == "save_gamepad_profile":
+                    handle_save_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "get_gamepad_profile":
+                    handle_get_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "check_gamepad_profile":
+                    handle_check_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "delete_gamepad_profile":
+                    handle_delete_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "list_gamepad_profiles":
+                    handle_list_gamepad_profiles(event, node, profile_manager)
+                    continue
                 
                 # Add special handling for runtime values
                 if event["id"] == "power/runtime":

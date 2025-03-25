@@ -45,7 +45,8 @@ def main():
     for event in node:
         if event["type"] == "INPUT":
             if event["id"] == "tick":
-                print(ser.readline().decode('utf-8', errors='replace'))
+                pass
+                # print(ser.readline().decode('utf-8', errors='replace'))
                 # flush_serial_buffer()
             elif event["id"] == "heartbeat":
                 ser.write(("heartbeat\n").encode("utf-8"))
@@ -57,12 +58,12 @@ def main():
             if joystick_x is not None and joystick_y is not None:
                 # Convert joystick inputs to linear and angular velocities.
                 # Assuming the joystick values are normalized in [-1, 1]:
-                print(joystick_y, joystick_x)
+                # print(joystick_y, joystick_x)
                 linear = int(joystick_y * 100.0)
                 angular = int(joystick_x * 100.0)
                 cmd = f"move {linear} {angular}"
                 ser.write((cmd + "\n").encode("utf-8"))
-                print(cmd)
+                # print(cmd)
 
 
 if __name__ == "__main__":

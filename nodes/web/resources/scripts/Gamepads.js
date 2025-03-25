@@ -9,6 +9,7 @@ class Gamepad {
     this.emitter = mitt();
     this._forceUpdateHandlers = new Set();
     this.servoMapping = {};
+    this.customMapping = null;
 
     // Log gamepad details for debugging
     console.log('Gamepad connected:', {
@@ -57,6 +58,9 @@ class Gamepad {
       this[this.buttons[index]] = { value: 0 };
     });
 
+    // Load custom mapping if available
+    this.loadCustomMapping();
+
     // Start polling
     this.pollIntervalId = setInterval(() => {
       this.updateState();
@@ -69,18 +73,13 @@ class Gamepad {
 
     let hasChanges = false;
 
-    // Debug output for raw gamepad values 
-    if (Math.random() < 0.01) { // Only log occasionally to avoid console spam
-      console.log('Raw Gamepad Values:', {
-        axes: Array.from(gamepad.axes).map(v => parseFloat(v).toFixed(4)),
-        buttons: Array.from(gamepad.buttons).map((b, i) => ({
-          index: i,
-          value: parseFloat(b.value).toFixed(4),
-          pressed: b.pressed
-        })).filter(b => b.value > 0 || b.pressed)
-      });
+    // If using a custom mapping, apply it
+    if (this.customMapping) {
+      this.applyCustomMapping(gamepad);
+      return;
     }
 
+    // Default mapping logic
     // Update button values
     Object.keys(this.buttons).forEach((index) => {
       if (!this.buttons[index] || !gamepad.buttons[parseInt(index)]) return;
@@ -97,6 +96,17 @@ class Gamepad {
         // Regular buttons
         const newValue = gamepad.buttons[parseInt(index)].value ? 1 : 0;
         if (this[this.buttons[index]].value != newValue) {
+          // Log when buttons are pressed (but not released to avoid spam)
+          if (newValue === 1) {
+            console.log(`BUTTON PRESS DETECTED: ${this.buttons[index]} (raw value: ${gamepad.buttons[parseInt(index)].value})`);
+            
+            // Dispatch a DOM event for redundancy
+            const buttonPressEvent = new CustomEvent(`GAMEPAD_${this.buttons[index]}`, {
+              detail: { value: newValue }
+            });
+            window.dispatchEvent(buttonPressEvent);
+          }
+          
           this[this.buttons[index]].value = newValue;
           node.emit('GAMEPAD_' + this.buttons[index], [newValue]);
           hasChanges = true;
@@ -129,10 +139,90 @@ class Gamepad {
     }
   }
 
+  // Apply custom mapping to the gamepad
+  applyCustomMapping(gamepad) {
+    if (!this.customMapping || !gamepad) return;
+    
+    let hasChanges = false;
+    const mapping = this.customMapping.mapping;
+    
+    // Process each control in the standard mapping
+    Object.keys(mapping).forEach(controlName => {
+      const mappedInput = mapping[controlName];
+      if (!mappedInput) return;
+      
+      let newValue = 0;
+      
+      // Get the input value based on the mapped type (button or axis)
+      if (mappedInput.type === 'button' && gamepad.buttons[mappedInput.index]) {
+        // Special handling for analog triggers
+        if (controlName === 'LEFT_SHOULDER_BOTTOM' || controlName === 'RIGHT_SHOULDER_BOTTOM') {
+          newValue = parseFloat(gamepad.buttons[mappedInput.index].value).toFixed(4);
+        } else {
+          newValue = gamepad.buttons[mappedInput.index].value ? 1 : 0;
+        }
+      } else if (mappedInput.type === 'axis' && gamepad.axes[mappedInput.index] !== undefined) {
+        newValue = parseFloat(gamepad.axes[mappedInput.index]).toFixed(4);
+      } else {
+        return; // Skip if input not found
+      }
+      
+      // Update the control value if it changed
+      if (this[controlName] && this[controlName].value != newValue) {
+        // Track changes
+        this[controlName].value = newValue;
+        
+        // Emit event for button press (when pressed, not released)
+        if (mappedInput.type === 'button' && newValue === 1) {
+          console.log(`MAPPED BUTTON PRESS: ${controlName} (raw index: ${mappedInput.index})`);
+          
+          // Dispatch DOM event for redundancy
+          const buttonPressEvent = new CustomEvent(`GAMEPAD_${controlName}`, {
+            detail: { value: newValue }
+          });
+          window.dispatchEvent(buttonPressEvent);
+        }
+        
+        // Emit the control event to the system
+        node.emit('GAMEPAD_' + controlName, [newValue]);
+        hasChanges = true;
+      }
+    });
+    
+    // Notify subscribers of changes
+    if (hasChanges) {
+      this.emitter.emit('gamepad_update', this);
+      
+      // Call any registered force update handlers
+      this._forceUpdateHandlers.forEach(handler => {
+        if (typeof handler === 'function') {
+          handler();
+        }
+      });
+    }
+  }
+
+  // Load custom mapping profile from server
+  loadCustomMapping() {
+    node.emit('get_gamepad_profile', [{
+      gamepad_id: this.id
+    }]);
+    
+    // Set up listener for profile response
+    node.on('gamepad_profile', (event) => {
+      if (event && event.value && event.value.gamepad_id === this.id) {
+        this.customMapping = event.value;
+        console.log('Loaded custom gamepad mapping:', this.customMapping);
+      }
+    });
+  }
+
   // Register a function to be called when gamepad data changes
   registerForceUpdate(handler) {
     this._forceUpdateHandlers.add(handler);
-    return () => this._forceUpdateHandlers.delete(handler);
+    return () => {
+      this._forceUpdateHandlers.delete(handler);
+    };
   }
 
   on(eventName, callback) {

@@ -98,23 +98,6 @@ const GamepadStatus = () => {
                   : 'var(--mantine-color-gray-6)'
               }}
             ></i>
-            {gamepads.length > 0 && (
-              <Badge 
-                size="xs" 
-                color="amber" 
-                variant="filled"
-                style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: -6,
-                  padding: '0 4px',
-                  minWidth: '16px',
-                  height: '16px'
-                }}
-              >
-                {gamepads.length}
-              </Badge>
-            )}
           </Box>
         </ActionIcon>
       </Menu.Target>

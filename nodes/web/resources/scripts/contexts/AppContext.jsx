@@ -9,6 +9,7 @@ export function AppProvider({ children }) {
   const [availableServos, setAvailableServos] = useState([]);
   const [widgetsState, setWidgetsState] = useState({});
   const [isConnected, setIsConnected] = useState(false);
+  const [gamepadProfiles, setGamepadProfiles] = useState({});
   
   // Listen for connection status
   useEffect(() => {
@@ -60,7 +61,6 @@ export function AppProvider({ children }) {
     const unsubscribeList = node.on('servos_list', (event) => {
       if (event && event.value) {
         const servosList = event.value;
-        console.log("Received servos_list update:", servosList);
         
         if (Array.isArray(servosList)) {
           setAvailableServos(servosList);
@@ -78,10 +78,51 @@ export function AppProvider({ children }) {
       unsubscribeList();
     };
   }, []);
+
+  // Listen for gamepad profiles updates
+  useEffect(() => {
+    const unsubscribe = node.on('gamepad_profiles_list', (event) => {
+      if (event && event.value) {
+        const profiles = event.value;
+        setGamepadProfiles(profiles);
+      }
+    });
+    
+    // Request available gamepad profiles
+    node.emit('list_gamepad_profiles', []);
+    
+    return () => {
+      unsubscribe();
+    };
+  }, []);
   
   // Update widgets state
   const updateWidgetsState = (state) => {
     setWidgetsState(state);
+  };
+
+  // Save a gamepad profile
+  const saveGamepadProfile = (profile) => {
+    node.emit('save_gamepad_profile', [profile]);
+    
+    // Update local state
+    setGamepadProfiles(prev => {
+      const updated = { ...prev };
+      updated[profile.id] = profile;
+      return updated;
+    });
+  };
+
+  // Delete a gamepad profile
+  const deleteGamepadProfile = (gamepadId) => {
+    node.emit('delete_gamepad_profile', [{ gamepad_id: gamepadId }]);
+    
+    // Update local state
+    setGamepadProfiles(prev => {
+      const updated = { ...prev };
+      delete updated[gamepadId];
+      return updated;
+    });
   };
   
   // Context value
@@ -89,10 +130,13 @@ export function AppProvider({ children }) {
     availableServos,
     widgetsState,
     isConnected,
+    gamepadProfiles,
     setServos: setAvailableServos,
     getServos: () => availableServos,
     updateWidgetsState,
     getWidgetsState: () => widgetsState,
+    saveGamepadProfile,
+    deleteGamepadProfile,
     node // Provide the node instance directly
   };
   

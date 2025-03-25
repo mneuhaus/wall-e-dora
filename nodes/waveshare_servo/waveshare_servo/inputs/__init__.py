@@ -9,6 +9,8 @@ from .update_servo_setting import handle_update_servo_setting, update_servo_sett
 from .tick import handle_tick, scan_for_servos
 from .settings import handle_settings
 from .setting_updated import handle_setting_updated
+from .gamepad_event import handle_gamepad_event
+from .detach_servo import handle_detach_servo, detach_servo
 
 __all__ = [
     'handle_move_servo',
@@ -23,4 +25,7 @@ __all__ = [
     'scan_for_servos',
     'handle_settings',
     'handle_setting_updated',
+    'handle_gamepad_event',
+    'handle_detach_servo',
+    'detach_servo',
 ]

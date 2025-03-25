@@ -54,6 +54,7 @@ def process_event(event, node, scanner, config, servos, next_available_id):
             "wiggle_servo": lambda evt: handle_wiggle_servo(context, evt),
             "calibrate_servo": lambda evt: handle_calibrate_servo(context, evt),
             "update_servo_setting": lambda evt: handle_update_servo_setting(context, evt),
+            "detach_servo": lambda evt: handle_detach_servo(context, evt),
             "tick": lambda evt: handle_tick(context, evt),
             # We no longer need these handlers as we're handling settings directly
             # "settings": lambda evt: handle_settings(context, evt),
@@ -63,6 +64,13 @@ def process_event(event, node, scanner, config, servos, next_available_id):
         # Call the appropriate handler if available
         if event_id in handlers:
             handlers[event_id](event)
+        # Check for gamepad events (prefixed with GAMEPAD_)
+        elif event_id.startswith("GAMEPAD_"):
+            # Strip the prefix for internal processing
+            event_data = event.copy()
+            event_data["id"] = event_id.replace("GAMEPAD_", "")
+            from waveshare_servo.inputs.gamepad_event import handle_gamepad_event
+            handle_gamepad_event(event_data, context)
         
         # Return potentially updated next_available_id
         return context["next_available_id"]

@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import node from '../Node';
 import gamepads from '../Gamepads';
+import { keyframes, css } from '@emotion/css';
+import GamepadMappingDialog from '../components/gamepad/GamepadMappingDialog';
 
 // Mantine imports
 import {
@@ -15,8 +17,8 @@ import {
   Table,
   Box,
   ActionIcon,
-  rem,
-  keyframes
+  Button,
+  rem
 } from '@mantine/core';
 
 /**
@@ -24,6 +26,7 @@ import {
  * 
  * Displays detailed information about a connected gamepad.
  * Shows all buttons, axes, and control states for the selected gamepad.
+ * Provides mapping functionality to create custom control profiles.
  * 
  * @component
  */
@@ -33,34 +36,79 @@ const GamepadView = () => {
   const [gamepadInstance, setGamepadInstance] = useState(null);
   const [prevValues, setPrevValues] = useState({});
   const [flashingControls, setFlashingControls] = useState({});
+  const [isMapDialogOpen, setIsMapDialogOpen] = useState(false);
   
   // Force re-render function that we'll register with the gamepad
   const handleForceUpdate = useCallback(() => {
     forceUpdate({});
   }, []);
   
-  // Flash animation keyframes
-  const flashAnimation = keyframes({
-    '0%': { backgroundColor: 'rgba(255, 179, 0, 0.3)' },
-    '100%': { backgroundColor: 'transparent' }
+  // Define a direct animation style for flashing
+  const getFlashStyle = () => ({
+    animation: 'flash-animation 300ms ease',
+    position: 'relative',
+    animationName: 'flash-animation'
   });
+
+  // Add the keyframes rule to the document if it doesn't exist yet
+  useEffect(() => {
+    if (!document.getElementById('flash-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'flash-keyframes';
+      style.innerHTML = `
+        @keyframes flash-animation {
+          0% { background-color: rgba(255, 179, 0, 0.3); }
+          100% { background-color: transparent; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
   
   // Track previous values to detect changes
   useEffect(() => {
     if (!gamepadInstance) return;
     
+    // Add some debug logging occasionally
+    const shouldLog = Math.random() < 0.05;
+    if (shouldLog) {
+      console.log('GamepadView: Checking for control changes', gamepadInstance.id);
+    }
+    
     // Check each control for changes
     const newFlashingControls = {};
     const newPrevValues = { ...prevValues };
     
+    // Tolerance threshold for analog controls to prevent false positives
+    const ANALOG_THRESHOLD = 0.05;
+    const BUTTON_THRESHOLD = 0.1; // Lower threshold for buttons
+    
     // Check all gamepad controls for changes
     Object.keys(gamepadInstance).forEach(key => {
+      // Skip non-control properties
+      if (key === 'id' || key === 'index' || key === 'api' || 
+          key === 'emitter' || key === '_forceUpdateHandlers' || 
+          key === 'pollIntervalId' || key === 'servoMapping' || 
+          key === 'axes' || key === 'buttons') {
+        return;
+      }
+      
       const control = gamepadInstance[key];
       if (control && typeof control === 'object' && 'value' in control) {
-        const currentValue = control.value;
+        const currentValue = parseFloat(control.value);
+        const previousValue = parseFloat(prevValues[key] || 0);
         
-        // If the value changed, mark it for flashing
-        if (prevValues[key] !== undefined && prevValues[key] !== currentValue) {
+        // Check if the value has changed significantly
+        const isAnalog = key.includes('STICK') || key === 'LEFT_SHOULDER_BOTTOM' || key === 'RIGHT_SHOULDER_BOTTOM';
+        const threshold = isAnalog ? ANALOG_THRESHOLD : BUTTON_THRESHOLD;
+        
+        // For buttons, we just care if they're pressed at all (state change)
+        const isActive = isAnalog ? Math.abs(currentValue) > threshold : currentValue > threshold;
+        const wasActive = isAnalog ? Math.abs(previousValue) > threshold : previousValue > threshold;
+        
+        // Flash when a button is pressed or an axis moves past the threshold
+        if (isActive && !wasActive) {
+          console.log(`Control ${key} became active: ${currentValue}`);
           newFlashingControls[key] = true;
           
           // Schedule removal of flash after animation completes
@@ -79,9 +127,11 @@ const GamepadView = () => {
     });
     
     // Update state with new flashing controls and previous values
-    setFlashingControls(prev => ({ ...prev, ...newFlashingControls }));
+    if (Object.keys(newFlashingControls).length > 0) {
+      setFlashingControls(prev => ({ ...prev, ...newFlashingControls }));
+    }
     setPrevValues(newPrevValues);
-  }, [gamepadInstance]);
+  }, [gamepadInstance]); // Keep just gamepadInstance to avoid infinite loop
   
   useEffect(() => {
     // Set initial gamepad if available
@@ -144,10 +194,7 @@ const GamepadView = () => {
     return (
       <Table.Tr 
         key={controlName}
-        sx={isFlashing ? {
-          animation: `${flashAnimation} 300ms ease`,
-          position: 'relative'
-        } : {}}
+        style={isFlashing ? getFlashStyle() : {}}
       >
         <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)' }}>
           {controlName}
@@ -197,11 +244,21 @@ const GamepadView = () => {
       <Paper radius="md" withBorder p={0}>
         {/* Header Section */}
         <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <Group>
-            <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
-              <i className="fa-solid fa-arrow-left"></i>
-            </ActionIcon>
-            <Title order={5}>{gamepadInstance.id}</Title>
+          <Group position="apart">
+            <Group>
+              <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
+                <i className="fa-solid fa-arrow-left"></i>
+              </ActionIcon>
+              <Title order={5}>{gamepadInstance.id}</Title>
+            </Group>
+            <Button 
+              variant="outline" 
+              color="amber" 
+              leftIcon={<i className="fa-solid fa-gamepad"></i>}
+              onClick={() => setIsMapDialogOpen(true)}
+            >
+              Map Controls
+            </Button>
           </Group>
         </Box>
         
@@ -308,6 +365,14 @@ const GamepadView = () => {
           </Grid>
         </Box>
       </Paper>
+
+      {/* Mapping Dialog */}
+      <GamepadMappingDialog
+        isOpen={isMapDialogOpen}
+        onClose={() => setIsMapDialogOpen(false)}
+        gamepad={gamepadInstance}
+        gamepadIndex={parseInt(index)}
+      />
     </Container>
   );
 };
