@@ -464,7 +464,6 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                         ) : isSkipped ? (
                           <i className="fa-solid fa-circle-xmark" style={{color: 'var(--mantine-color-red-6)'}} />
                         ) : null}
-                      </Box>
                       <Text size="sm" style={{flex: 1}}>
                         {control.name}
                       </Text>
