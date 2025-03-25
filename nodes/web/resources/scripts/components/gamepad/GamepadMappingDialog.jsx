@@ -140,6 +140,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     console.log('Starting input polling...');
     
     pollingRef.current = setInterval(() => {
+      console.log('Polling iteration triggered');
       if (!isOpenRef.current || !currentControlRef.current) {
         console.log('Skipping poll (dialog closed or no control)');
         return;
@@ -157,7 +158,10 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   
   // Detect button/axis inputs
   const detectInput = (gamepad) => {
-    if (!gamepad || !currentControl) return;
+    if (!gamepad || !currentControl) {
+      console.log("detectInput: gamepad or currentControl is missing", gamepad, currentControl);
+      return;
+    }
     
     const isAxisMapping = currentControl.type === 'axis';
     const buttonThreshold = 0.2;
@@ -205,6 +209,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   
   // Record a detected input
   const recordInput = (type, index) => {
+    console.log("recordInput called with", type, index);
     // Ignore wrong types
     if (currentControl.type === 'axis' && type !== 'axis') return;
     
