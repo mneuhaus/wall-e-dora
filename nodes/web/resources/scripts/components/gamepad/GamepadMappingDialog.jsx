@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import node from '../../Node';
 import { useAppContext } from '../../contexts/AppContext';
-const currentControlRef = useRef(currentControl);
-const isOpenRef = useRef(isOpen);
 
 import {
   Modal,
@@ -35,6 +33,8 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   const { isConnected } = useAppContext();
   
   // References
+  const currentControlRef = useRef(currentControl);
+  const isOpenRef = useRef(isOpen);
   const pollingRef = useRef(null);
   const prevInputs = useRef({ buttons: [], axes: [] });
   
