@@ -11,7 +11,15 @@ import logging
 import pyarrow as pa
 import subprocess
 import time
-from handlers.gamepad_profiles import GamepadProfileManager, handle_save_gamepad_profile, handle_get_gamepad_profile, handle_check_gamepad_profile, handle_delete_gamepad_profile, handle_list_gamepad_profiles
+from handlers.gamepad_profiles import (
+    GamepadProfileManager, 
+    handle_save_gamepad_profile,
+    handle_get_gamepad_profile,
+    handle_check_gamepad_profile,
+    handle_delete_gamepad_profile, 
+    handle_list_gamepad_profiles,
+    emit_profiles_list
+)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -19,7 +27,7 @@ global_web_inputs = []
 ws_clients = set()
 web_loop = None
 
-def flush_web_inputs(node):
+def flush_web_inputs(node, profile_manager):
     global global_web_inputs
     if not global_web_inputs:
         return
@@ -323,7 +331,7 @@ def main():
     for event in node:
         try:
             if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick"):
-                flush_web_inputs(node)
+                flush_web_inputs(node, profile_manager)
             elif event["type"] == "INPUT":
                 logging.info(f"Received input event: {event['id']}")
                 event_value = event['value'].to_pylist()
