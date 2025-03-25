@@ -58,6 +58,17 @@ class Gamepad {
       this[this.buttons[index]] = { value: 0 };
     });
 
+    // Set up listener for profile responses
+    node.on('gamepad_profile', (event) => {
+      if (event && event.value && event.value.gamepad_id === this.id) {
+        this.customMapping = event.value;
+        console.log('Loaded custom gamepad mapping:', this.customMapping);
+        
+        // Force update all listeners to ensure UI refresh
+        this._forceUpdateHandlers.forEach(handler => handler());
+      }
+    });
+
     // Load custom mapping if available
     this.loadCustomMapping();
 
@@ -204,17 +215,7 @@ class Gamepad {
 
   // Load custom mapping profile from server
   loadCustomMapping() {
-    node.emit('get_gamepad_profile', [{
-      gamepad_id: this.id
-    }]);
-    
-    // Set up listener for profile response
-    node.on('gamepad_profile', (event) => {
-      if (event && event.value && event.value.gamepad_id === this.id) {
-        this.customMapping = event.value;
-        console.log('Loaded custom gamepad mapping:', this.customMapping);
-      }
-    });
+    node.emit('get_gamepad_profile', [{ gamepad_id: this.id }]);
   }
 
   // Register a function to be called when gamepad data changes
