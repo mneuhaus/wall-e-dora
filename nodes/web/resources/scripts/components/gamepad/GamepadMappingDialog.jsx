@@ -28,6 +28,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   const [profileName, setProfileName] = useState('');
   const [currentControl, setCurrentControl] = useState(null);
   const [detectedControl, setDetectedControl] = useState(null);
+  const detectedControlRef = useRef(null);
   const [pressCount, setPressCount] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
   const { isConnected } = useAppContext();
@@ -213,15 +214,20 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     // Ignore wrong types
     if (currentControlRef.current.type === 'axis' && type !== 'axis') return;
     
-    // Check if input changed
-    if (detectedControl && (detectedControl.type !== type || detectedControl.index !== index)) {
+    // Get current detected control from ref to avoid stale closures
+    const currentDetection = detectedControlRef.current;
+    
+    // Reset if different from initial detection
+    if (currentDetection && (currentDetection.type !== type || currentDetection.index !== index)) {
       console.log('Input changed - resetting counter');
       setPressCount(0);
+      detectedControlRef.current = null;
       setDetectedControl(null);
       return;
     }
     
-    // Record the input
+    // Record the input using both state and ref
+    detectedControlRef.current = { type, index };
     setDetectedControl({ type, index });
     
     // Increment press count
