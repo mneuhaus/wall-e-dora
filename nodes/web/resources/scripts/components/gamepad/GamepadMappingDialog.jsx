@@ -57,10 +57,10 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     { id: 'DPAD_LEFT', name: 'D-Pad Left', type: 'button' },
     { id: 'DPAD_RIGHT', name: 'D-Pad Right', type: 'button' },
     { id: 'HOME', name: 'Home Button (Guide/PS)', type: 'button' },
-    { id: 'LEFT_ANALOG_STICK_X', name: 'Left Analog Stick (X-Axis)', type: 'axis' },
-    { id: 'LEFT_ANALOG_STICK_Y', name: 'Left Analog Stick (Y-Axis)', type: 'axis' },
-    { id: 'RIGHT_ANALOG_STICK_X', name: 'Right Analog Stick (X-Axis)', type: 'axis' },
-    { id: 'RIGHT_ANALOG_STICK_Y', name: 'Right Analog Stick (Y-Axis)', type: 'axis' },
+    { id: 'LEFT_ANALOG_STICK_X', name: 'Left Analog Stick (X - Left/Right)', type: 'axis' },
+    { id: 'LEFT_ANALOG_STICK_Y', name: 'Left Analog Stick (Y - Up/Down)', type: 'axis' },
+    { id: 'RIGHT_ANALOG_STICK_X', name: 'Right Analog Stick (X - Left/Right)', type: 'axis' },
+    { id: 'RIGHT_ANALOG_STICK_Y', name: 'Right Analog Stick (Y - Up/Down)', type: 'axis' },
   ];
   
   // Generate profile name from gamepad ID
@@ -411,20 +411,47 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     // Show mapping UI
     return (
       <Stack spacing="lg">
-        <Stepper active={step} orientation="horizontal" color="amber">
-          {[0, 1, 2].map((stepIndex) => (
-            <Stepper.Step
-              key={stepIndex}
-              label={`Step ${stepIndex + 1}`}
-              description={
-                stepIndex === 0 ? "Buttons" :
-                stepIndex === 1 ? "D-Pad" : "Sticks"
-              }
-            />
-          ))}
-        </Stepper>
-        
-        <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)">
+        <Grid>
+          <Grid.Col span={4}>
+            <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{height: '100%'}}>
+              <Stack spacing="xs">
+                <Text fw={500} size="sm" mb="sm">Controls to Map</Text>
+                {controlsToMap.map((control, index) => {
+                  const isMapped = !!mapping[control.id];
+                  const isSkipped = step > index && !isMapped;
+                  const isCurrent = index === step;
+                  
+                  return (
+                    <Group 
+                      key={control.id} 
+                      spacing="xs" 
+                      p={4}
+                      style={{
+                        cursor: 'pointer',
+                        background: isCurrent ? 'rgba(255, 179, 0, 0.1)' : 'transparent',
+                        borderRadius: 4
+                      }}
+                      onClick={() => setStep(index)}
+                    >
+                      <Box style={{width: 24}}>
+                        {isMapped ? (
+                          <i className="fa-solid fa-circle-check" style={{color: 'var(--mantine-color-green-6)'}} />
+                        ) : isSkipped ? (
+                          <i className="fa-solid fa-circle-xmark" style={{color: 'var(--mantine-color-red-6)'}} />
+                        ) : null}
+                      </Box>
+                      <Text size="sm" style={{flex: 1}}>
+                        {control.name}
+                      </Text>
+                    </Group>
+                  );
+                })}
+              </Stack>
+            </Paper>
+          </Grid.Col>
+          
+          <Grid.Col span={8}>
+            <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{height: '100%'}}>
           <Stack align="center" spacing="sm">
             {currentControl && (
               <>
@@ -436,7 +463,11 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                   {currentControl.type === 'button' ? (
                     <>Press and release the button for <strong>{currentControl.name}</strong> three times</>
                   ) : (
-                    <>Move the <strong>{currentControl.name}</strong> left/right or up/down three times</>
+                    <>Move the <strong>{currentControl.name}</strong> {
+                      currentControl.id.endsWith('_X') ? 'left/right' : 
+                      currentControl.id.endsWith('_Y') ? 'up/down' : 
+                      'in both directions'
+                    } three times</>
                   )}
                 </Text>
                 
