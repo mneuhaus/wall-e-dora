@@ -413,9 +413,16 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       <Stack spacing="lg">
         <Grid>
           <Grid.Col span={4}>
-            <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{height: '100%'}}>
-              <Stack spacing="xs">
-                <Text fw={500} size="sm" mb="sm">Controls to Map</Text>
+            <Paper p="md" withBorder bg="rgba(255, 179, 0, 0.05)" style={{ 
+              height: '500px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}>
+              <Text fw={500} size="sm" mb="sm" pb="sm" style={{ borderBottom: '1px solid var(--mantine-color-gray-7)' }}>
+                Controls to Map
+              </Text>
+              <Stack spacing={0} style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
                 {controlsToMap.map((control, index) => {
                   const isMapped = !!mapping[control.id];
                   const isSkipped = step > index && !isMapped;
@@ -425,11 +432,17 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                     <Group 
                       key={control.id} 
                       spacing="xs" 
-                      p={4}
+                      p={8}
                       style={{
                         cursor: 'pointer',
                         background: isCurrent ? 'rgba(255, 179, 0, 0.1)' : 'transparent',
-                        borderRadius: 4
+                        borderRadius: 4,
+                        border: '1px solid var(--mantine-color-gray-7)',
+                        marginBottom: '4px',
+                        transition: 'background 0.2s ease',
+                        ':hover': {
+                          background: 'rgba(255, 179, 0, 0.05)'
+                        }
                       }}
                       onClick={() => setStep(index)}
                     >
