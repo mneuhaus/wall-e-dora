@@ -326,19 +326,58 @@ def main():
     # Initialize gamepad profile manager
     profile_manager = GamepadProfileManager()
     
+    # Periodic profile list broadcasting
+    last_profiles_broadcast = 0
+    
     for event in node:
         try:
             if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick"):
+                # Process all pending web inputs
                 flush_web_inputs(node, profile_manager)
+                
+                # Periodically broadcast gamepad profiles list 
+                current_time = time.time()
+                if current_time - last_profiles_broadcast > 5:  # Every 5 seconds
+                    try:
+                        # Emit the updated list of profiles to Dora
+                        emit_profiles_list(node, profile_manager)
+                        
+                        # Send full profiles directly to WebSocket clients (not simplified)
+                        full_profiles = profile_manager.list_profiles()
+                        
+                        response = {
+                            "id": "gamepad_profiles_list",
+                            "value": full_profiles,
+                            "type": "EVENT"
+                        }
+                        
+                        serialized = json.dumps(response, default=str).encode('utf-8')
+                        asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
+                        logging.info(f"Broadcasted profiles list to {len(ws_clients)} WebSocket clients")
+                        
+                        last_profiles_broadcast = current_time
+                    except Exception as e:
+                        logging.error(f"Error broadcasting profiles list: {e}")
             elif event["type"] == "INPUT":
                 logging.info(f"Received input event: {event['id']}")
                 event_value = event['value'].to_pylist()
                 
                 # Handle gamepad profile events
                 if event["id"] == "save_gamepad_profile":
+                    print(f"DEBUG - main.py: Received save_gamepad_profile event")
+                    print(f"DEBUG - main.py: Event data: {event}")
+                    print(f"DEBUG - main.py: Value type: {type(event['value'])}")
+                    
+                    if hasattr(event['value'], 'to_pylist'):
+                        value_list = event['value'].to_pylist()
+                        print(f"DEBUG - main.py: Value as pylist: {value_list}")
+                    else:
+                        print(f"DEBUG - main.py: Value doesn't have to_pylist method")
+                    
                     handle_save_gamepad_profile(event, node, profile_manager)
-                    print(f"Saved gamepad profile: {event['value'][0]}")
+                    print(f"Saved gamepad profile: {event['value'][0] if hasattr(event['value'], '__getitem__') else event['value']}")
                     print(f"Profiles storage directory: {profile_manager.profiles_dir}")
+                    print(f"DEBUG - main.py: Directory exists: {os.path.exists(profile_manager.profiles_dir)}")
                     # After saving, emit updated profiles list
                     emit_profiles_list(node, profile_manager)
                     continue

@@ -16,6 +16,7 @@ import {
   Badge,
   Stepper,
   Grid,
+  Notification,
 } from '@mantine/core';
 
 /**
@@ -30,7 +31,8 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   const [detectedControl, setDetectedControl] = useState(null);
   const detectedControlRef = useRef(null);
   const [pressCount, setPressCount] = useState(0);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [isToastVisible, setIsToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const { isConnected } = useAppContext();
   
   // References
@@ -93,13 +95,18 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       setMapping({});
       setPressCount(0);
       setDetectedControl(null);
-      setShowSuccess(false);
       
       // Set first control to map
       setCurrentControl(controlsToMap[0]);
       
       // Set profile name
       setProfileName(makeProfileName(gamepad));
+      
+      // Enable mapping mode to pause WebSocket events
+      if (gamepad) {
+        gamepad.isMapping = true;
+        console.log('Enabled mapping mode - pausing WebSocket event emission');
+      }
       
       // Start polling for inputs
       startPolling();
@@ -110,6 +117,12 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
         pollingRef.current = null;
+      }
+      
+      // Disable mapping mode when dialog closes
+      if (gamepad) {
+        gamepad.isMapping = false;
+        console.log('Disabled mapping mode - resuming WebSocket event emission');
       }
     }
   }, [isOpen, gamepad]);
@@ -168,12 +181,43 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     const buttonThreshold = 0.2;
     const axisThreshold = 0.3;
     
+    // Track axis changes that might be associated with button presses
+    // (particularly useful for triggers which can have both button and axis inputs)
+    const potentialAnalogAxes = [];
+    
     // Initialize previous values if needed
     if (prevInputs.current.buttons.length === 0) {
       prevInputs.current = {
         buttons: Array(gamepad.buttons.length).fill(0),
         axes: Array(gamepad.axes.length).fill(0)
       };
+    }
+    
+    // First check all axes for significant changes
+    for (let i = 0; i < gamepad.axes.length; i++) {
+      const axisValue = gamepad.axes[i];
+      const prevValue = prevInputs.current.axes[i];
+      const axisDelta = Math.abs(axisValue - prevValue);
+      
+      // For axis mapping, detect significant movements
+      if (isAxisMapping && 
+          (Math.abs(axisValue) > axisThreshold && Math.abs(prevValue) <= axisThreshold)) {
+        console.log(`Axis ${i} moved: ${axisValue}`);
+        recordInput('axis', i);
+      }
+      
+      // For potential trigger detection - track axes that might be associated with a button
+      // Record any axis with significant movement
+      if (!isAxisMapping && axisDelta > 0.1) {
+        potentialAnalogAxes.push({ 
+          index: i, 
+          value: axisValue, 
+          delta: axisDelta 
+        });
+      }
+      
+      // Update previous value
+      prevInputs.current.axes[i] = axisValue;
     }
     
     // Check all buttons
@@ -184,34 +228,48 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       // For button mapping, detect new presses
       if (!isAxisMapping && buttonValue > buttonThreshold && prevValue <= buttonThreshold) {
         console.log(`Button ${i} pressed: ${buttonValue}`);
-        recordInput('button', i);
+        
+        // Special handling for controls that might be analog (triggers, etc.)
+        // Check if any axes changed significantly along with this button press
+        let analogAxisFound = false;
+        
+        // Check controls that are likely to be analog
+        const isLikelyAnalog = (
+          currentControlRef.current.id === 'LEFT_SHOULDER_BOTTOM' || 
+          currentControlRef.current.id === 'RIGHT_SHOULDER_BOTTOM'
+        );
+        
+        if (isLikelyAnalog && potentialAnalogAxes.length > 0) {
+          // Sort by largest change first
+          potentialAnalogAxes.sort((a, b) => b.delta - a.delta);
+          
+          // If we found an axis that changed significantly at the same time as the button press
+          const bestMatch = potentialAnalogAxes[0];
+          if (bestMatch && bestMatch.delta > 0.15) {
+            console.log(`Found potential analog axis ${bestMatch.index} (delta: ${bestMatch.delta}) for button ${i}`);
+            
+            // Prefer the axis input for known analog controls like triggers
+            recordInput('axis', bestMatch.index, true);
+            analogAxisFound = true;
+          }
+        }
+        
+        // If no analog axis was found, fall back to button
+        if (!analogAxisFound) {
+          recordInput('button', i);
+        }
       }
       
       // Update previous value
       prevInputs.current.buttons[i] = buttonValue;
     }
-    
-    // Check all axes
-    for (let i = 0; i < gamepad.axes.length; i++) {
-      const axisValue = gamepad.axes[i];
-      const prevValue = prevInputs.current.axes[i];
-      
-      // For axis mapping, detect significant movements
-      if (isAxisMapping && 
-          (Math.abs(axisValue) > axisThreshold && Math.abs(prevValue) <= axisThreshold)) {
-        console.log(`Axis ${i} moved: ${axisValue}`);
-        recordInput('axis', i);
-      }
-      
-      // Update previous value
-      prevInputs.current.axes[i] = axisValue;
-    }
   };
   
   // Record a detected input
-  const recordInput = (type, index) => {
-    console.log("recordInput called with", type, index);
-    // Ignore wrong types
+  const recordInput = (type, index, forceAnalog = false) => {
+    console.log("recordInput called with", type, index, forceAnalog ? "(forced analog)" : "");
+    
+    // Ignore wrong types (unless we're forcing an axis for an analog control)
     if (currentControlRef.current.type === 'axis' && type !== 'axis') return;
     
     // Get current detected control from ref to avoid stale closures
@@ -226,9 +284,47 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       return;
     }
     
+    // Get gamepad to check if this is an analog input (for buttons)
+    const gamepad = navigator.getGamepads()[gamepadIndex];
+    
+    // Determine if this is an analog input
+    let isAnalogInput = forceAnalog; // Always set to true if forceAnalog is true
+    
+    if (!isAnalogInput) {
+      if (type === 'axis') {
+        // All axes are considered analog
+        isAnalogInput = true;
+      } else if (type === 'button' && gamepad?.buttons[index]) {
+        // Check if this button has non-binary values
+        const buttonValue = gamepad.buttons[index].value;
+        
+        // Many gamepads have analog triggers even though they're buttons
+        // We also check index values typical for triggers (6 and 7 in standard mapping)
+        const isPotentialTrigger = index === 6 || index === 7 || 
+                                  currentControlRef.current.id === 'LEFT_SHOULDER_BOTTOM' || 
+                                  currentControlRef.current.id === 'RIGHT_SHOULDER_BOTTOM';
+                                  
+        // Buttons with values between 0.1 and 0.9 are likely analog
+        isAnalogInput = (buttonValue > 0.1 && buttonValue < 0.9) || isPotentialTrigger;
+        
+        console.log(`Button ${index} value: ${buttonValue}, considered analog: ${isAnalogInput}`);
+      }
+    }
+    
     // Record the input using both state and ref
-    detectedControlRef.current = { type, index };
-    setDetectedControl({ type, index });
+    const inputData = { 
+      type, 
+      index,
+      isAnalog: isAnalogInput 
+    };
+    
+    // Add additional info for analog triggers detected via axis
+    if (forceAnalog) {
+      console.log(`Detected analog control (${currentControlRef.current.id}) mapped to ${type} ${index}`);
+    }
+    
+    detectedControlRef.current = inputData;
+    setDetectedControl(inputData);
     
     // Increment press count
     setPressCount(prev => {
@@ -239,7 +335,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
         // Save mapping
         setMapping(prev => ({
           ...prev,
-          [currentControlRef.current.id]: { type, index }
+          [currentControlRef.current.id]: inputData
         }));
         
         // Schedule move to next
@@ -304,6 +400,27 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
     }
   };
   
+  // Extract vendor and product IDs from gamepad ID
+  const extractVendorProductIds = (gamepadId) => {
+    const vendorMatch = gamepadId.match(/Vendor:\s*([0-9a-fA-F]+)/);
+    const productMatch = gamepadId.match(/Product:\s*([0-9a-fA-F]+)/);
+    
+    const vendorId = vendorMatch && vendorMatch[1] ? vendorMatch[1].trim() : null;
+    const productId = productMatch && productMatch[1] ? productMatch[1].trim() : null;
+    
+    return { vendorId, productId };
+  };
+  
+  // Function to show toast notifications
+  const showToast = (message) => {
+    setToastMessage(message);
+    setIsToastVisible(true);
+    
+    setTimeout(() => {
+      setIsToastVisible(false);
+    }, 3000);
+  };
+
   // Save the profile
   const saveProfile = () => {
     const currentGamepad = navigator.getGamepads()[gamepadIndex];
@@ -311,31 +428,50 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
       console.error('Cannot save profile - no gamepad detected');
       return;
     }
+    
+    // Extract vendor and product IDs
+    const { vendorId, productId } = extractVendorProductIds(currentGamepad.id);
+    
+    if (!vendorId || !productId) {
+      console.warn('Could not extract vendor or product IDs:', currentGamepad.id);
+      // Continue anyway, but log a warning
+    }
+    
+    console.log(`Extracted vendorId: ${vendorId}, productId: ${productId}`);
 
     const profileData = {
       id: currentGamepad.id,
+      vendorId: vendorId,
+      productId: productId,
       name: profileName,
       mapping: mapping
     };
     
     console.log('Saving profile:', profileData);
+    console.log('Profile stringified:', JSON.stringify(profileData));
+    
+    // Emit event to save profile
     node.emit('save_gamepad_profile', [profileData]);
     
-    setShowSuccess(true);
-    setTimeout(() => onClose(), 2000);
+    // Also add listener for profiles list updates
+    const handleProfilesList = (event) => {
+      if (event.id === 'gamepad_profiles_list') {
+        console.log('Received profiles list after save:', event.value);
+        node.off('gamepad_profiles_list', handleProfilesList);
+      }
+    };
+    
+    node.on('gamepad_profiles_list', handleProfilesList);
+    
+    // Show toast notification
+    showToast(`Profile '${profileName}' saved successfully`);
+    
+    // Close the dialog immediately
+    onClose();
   };
   
   // Render mapping UI or summary
   const renderContent = () => {
-    // Success message
-    if (showSuccess) {
-      return (
-        <Alert color="green" title="Profile Saved!">
-          Your gamepad mapping profile has been saved successfully.
-        </Alert>
-      );
-    }
-    
     // Mapping complete, show summary
     if (step >= controlsToMap.length) {
       return (
@@ -390,6 +526,7 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
                             {mappedInput ? (
                               <Badge color="amber">
                                 {mappedInput.type === 'button' ? 'Button' : 'Axis'} #{mappedInput.index}
+                                {mappedInput.isAnalog && ' (Analog)'}
                               </Badge>
                             ) : (
                               <Badge color="gray" variant="outline">
@@ -562,25 +699,53 @@ const GamepadMappingDialog = ({ isOpen, onClose, gamepad, gamepadIndex }) => {
   };
 
   return (
-    <Modal
-      opened={isOpen}
-      onClose={onClose}
-      title={
-        <Group>
-          <i className="fa-solid fa-gamepad" style={{ color: 'var(--mantine-color-amber-6)' }} />
-          <Text fw={600}>Gamepad Mapping</Text>
-        </Group>
-      }
-      centered
-      size="lg"
-      overlayProps={{
-        color: 'rgba(0, 0, 0, 0.7)',
-        opacity: 0.55,
-        blur: 3,
-      }}
-    >
-      {renderContent()}
-    </Modal>
+    <>
+      <Modal
+        opened={isOpen}
+        onClose={onClose}
+        title={
+          <Group>
+            <i className="fa-solid fa-gamepad" style={{ color: 'var(--mantine-color-amber-6)' }} />
+            <Text fw={600}>Gamepad Mapping</Text>
+          </Group>
+        }
+        centered
+        size="lg"
+        overlayProps={{
+          color: 'rgba(0, 0, 0, 0.7)',
+          opacity: 0.55,
+          blur: 3,
+        }}
+      >
+        {renderContent()}
+      </Modal>
+      
+      {/* Toast notification */}
+      {isToastVisible && (
+        <Notification
+          color="green"
+          title="Success"
+          onClose={() => setIsToastVisible(false)}
+          withCloseButton
+          withBorder={true}
+          pos="fixed"
+          style={{ 
+            top: '16px', 
+            right: '16px', 
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s'
+          }}
+          sx={{
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 }
+            }
+          }}
+        >
+          {toastMessage}
+        </Notification>
+      )}
+    </>
   );
 };
 
