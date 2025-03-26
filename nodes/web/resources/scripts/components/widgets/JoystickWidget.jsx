@@ -71,6 +71,26 @@ const JoystickWidget = ({
   }, [i, initialXServoId, initialYServoId]);  // Run when these props change
   
   // Find the servo data from available servos
+  // Add listener for gamepad button flashing
+  useEffect(() => {
+    const handleButtonFlash = (event) => {
+      // Check if this is a flashable control that affects our joystick
+      const joystickElement = document.querySelector(`.joystick-control-container`);
+      if (joystickElement) {
+        joystickElement.classList.add('button-flash');
+        setTimeout(() => {
+          joystickElement.classList.remove('button-flash');
+        }, 300);
+      }
+    };
+    
+    window.addEventListener('gamepad_button_flash', handleButtonFlash);
+    
+    return () => {
+      window.removeEventListener('gamepad_button_flash', handleButtonFlash);
+    };
+  }, []);
+  
   useEffect(() => {
     if (availableServos && availableServos.length > 0) {
       console.log("Updating servo info with available servos", { 

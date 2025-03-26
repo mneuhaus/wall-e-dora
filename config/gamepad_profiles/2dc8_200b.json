@@ -1,0 +1,93 @@
+{
+  "id": "8BitDo Ultimate MG (Vendor: 2dc8 Product: 200b)",
+  "mapping": {
+    "FACE_1": {
+      "index": 0,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_2": {
+      "index": 1,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_3": {
+      "index": 3,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_4": {
+      "index": 4,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "HOME": {
+      "index": 12,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "LEFT_ANALOG_BUTTON": {
+      "index": 13,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "LEFT_ANALOG_STICK_X": {
+      "index": 0,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "LEFT_ANALOG_STICK_Y": {
+      "index": 1,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "LEFT_SHOULDER": {
+      "index": 6,
+      "isAnalog": true,
+      "type": "button"
+    },
+    "LEFT_SHOULDER_BOTTOM": {
+      "index": 4,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "RIGHT_ANALOG_BUTTON": {
+      "index": 14,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "RIGHT_ANALOG_STICK_X": {
+      "index": 2,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "RIGHT_ANALOG_STICK_Y": {
+      "index": 5,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "RIGHT_SHOULDER": {
+      "index": 7,
+      "isAnalog": true,
+      "type": "button"
+    },
+    "RIGHT_SHOULDER_BOTTOM": {
+      "index": 3,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "SELECT": {
+      "index": 10,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "START": {
+      "index": 11,
+      "isAnalog": false,
+      "type": "button"
+    }
+  },
+  "name": "2dc8 Product: 200b) 200b)",
+  "productId": "200b",
+  "vendorId": "2dc8"
+}
