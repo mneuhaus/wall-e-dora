@@ -18,67 +18,33 @@ def handle_gamepad_event(event: Dict[str, Any], context: Dict[str, Any]) -> None
     control_name = event.get("id")
     raw_value = event.get("value")
     
-    print(f"[GAMEPAD:DEBUG] Raw value type: {type(raw_value)}, value: {raw_value}")
-    
-    # Handle PyArrow Int64Array specifically
-    if str(type(raw_value)).find('pyarrow.lib.Int64Array') >= 0:
-        try:
-            # Extract the value directly from the array
-            import pyarrow as pa
-            value = raw_value[0].as_py() if len(raw_value) > 0 else 0
-            print(f"[GAMEPAD] Extracted value {value} from PyArrow Int64Array")
-        except Exception as e:
-            print(f"[GAMEPAD] Error extracting from PyArrow Int64Array: {e}")
-            try:
-                # Alternative extraction method
-                value = int(str(raw_value).split('[')[1].split(']')[0].strip())
-                print(f"[GAMEPAD] Extracted value {value} using string parsing")
-            except Exception as e2:
-                print(f"[GAMEPAD] Error with string parsing: {e2}")
-                value = 0
-    # Handle Apache Arrow arrays by converting to Python values
-    elif hasattr(raw_value, "as_py"):
-        try:
-            # This is an Arrow scalar
-            value = raw_value.as_py()
-            print(f"[GAMEPAD] Converted Arrow scalar to Python value: {value}")
-        except Exception as e:
-            print(f"[GAMEPAD] Error converting Arrow scalar: {e}")
-            value = 0
-    elif isinstance(raw_value, list) and len(raw_value) > 0:
-        # This might be an Arrow array
-        if hasattr(raw_value[0], "as_py"):
-            try:
+    # Simple extraction of the value using PyArrow's as_py method
+    try:
+        if hasattr(raw_value, "__getitem__") and len(raw_value) > 0:
+            if hasattr(raw_value[0], "as_py"):
                 value = raw_value[0].as_py()
-                print(f"[GAMEPAD] Converted Arrow array element to Python value: {value}")
-            except Exception as e:
-                print(f"[GAMEPAD] Error converting Arrow array element: {e}")
-                value = 0
-        else:
-            # Regular Python list
-            value = raw_value[0]
-            print(f"[GAMEPAD] Using first element of Python list: {value}")
-    elif isinstance(raw_value, str) and raw_value.strip().startswith("["):
-        # This handles the case where the value might be formatted as a string representation of an array
-        try:
-            # Try to find a digit in the string
-            import re
-            digit_match = re.search(r'-?\d+(\.\d+)?', raw_value)
-            if digit_match:
-                value = float(digit_match.group())
-                print(f"[GAMEPAD] Extracted value {value} from string array: {raw_value}")
             else:
-                print(f"[GAMEPAD] No number found in string array: {raw_value}")
-                value = 0
-        except Exception as e:
-            print(f"[GAMEPAD] Error extracting value from string array: {e}")
-            value = 0
-    else:
-        value = raw_value
-        print(f"[GAMEPAD] Using value as is: {value}")
+                # If it's a string, try to convert to float
+                try:
+                    value = float(str(raw_value[0]).strip('"'))
+                except (ValueError, TypeError):
+                    print(f"[GAMEPAD] Could not convert {raw_value[0]} to float")
+                    return
+        else:
+            print(f"[GAMEPAD] Invalid value format: {raw_value}")
+            return
+    except Exception as e:
+        print(f"[GAMEPAD] Error extracting value: {e}")
+        return
     
-    if control_name is None or value is None:
-        print(f"[GAMEPAD] Invalid gamepad event: {event}")
+    # Normalize negative values for triggers
+    if value < 0:
+        value = abs(value)
+    
+    print(f"[GAMEPAD] Control: {control_name}, Value: {value}")
+    
+    if control_name is None:
+        print(f"[GAMEPAD] Invalid gamepad event (no control name): {event}")
         return
     
     # Find servos mapped to this control
@@ -199,140 +165,51 @@ def handle_button_control(servo, value, mode, context: Dict[str, Any]) -> Option
     Returns:
         The calculated position (0-1023) or None if no position change
     """
-    # Handle PyArrow Int64Array
-    if str(type(value)).find('pyarrow.lib.Int64Array') >= 0:
-        try:
-            # Extract the value directly from the array
-            value_int = value[0].as_py() if len(value) > 0 else 0
-            print(f"[GAMEPAD:BUTTON] Extracted button value {value_int} from PyArrow Int64Array")
-            value = value_int
-        except Exception as e:
-            print(f"[GAMEPAD:BUTTON] Error extracting from PyArrow Int64Array: {e}")
-            try:
-                # Alternative extraction method
-                value = int(str(value).split('[')[1].split(']')[0].strip())
-                print(f"[GAMEPAD:BUTTON] Extracted button value {value} using string parsing")
-            except Exception as e2:
-                print(f"[GAMEPAD:BUTTON] Error with string parsing: {e2}")
-                return None
-    # Handle other Apache Arrow values
-    elif hasattr(value, "as_py"):
-        try:
-            value = value.as_py()
-            print(f"[GAMEPAD:BUTTON] Converted Arrow value to {value}")
-        except Exception as e:
-            print(f"[GAMEPAD:BUTTON] Error converting Arrow value: {e}")
-            return None
-    
-    # Handle list values including Arrow arrays
-    elif isinstance(value, list) and len(value) > 0:
-        if hasattr(value[0], "as_py"):
-            try:
-                value = value[0].as_py()
-                print(f"[GAMEPAD:BUTTON] Converted Arrow array element to {value}")
-            except Exception as e:
-                print(f"[GAMEPAD:BUTTON] Error converting Arrow array element: {e}")
-                return None
-        else:
-            value = value[0]
-            print(f"[GAMEPAD:BUTTON] Using first value from list: {value}")
-    elif isinstance(value, str) and value.strip().startswith("["):
-        # This handles the case where the value might be formatted as a string representation of an array
-        try:
-            # Try to find a floating point number in the string (including negative values)
-            import re
-            float_match = re.search(r'-?\d+(\.\d+)?', value)
-            if float_match:
-                value = float(float_match.group())
-                print(f"[GAMEPAD:BUTTON] Extracted value {value} from string")
-            else:
-                print(f"[GAMEPAD:BUTTON] No number found in string value: {value}")
-                return None
-        except Exception as e:
-            print(f"[GAMEPAD:BUTTON] Error extracting value from string array: {e}")
-            return None
-    
-    # For analog buttons (especially negative values), we need special handling
-    try:
-        # First try to convert to float to preserve decimals
-        float_val = float(value)
-        
-        # If this is likely a trigger/analog value (between -1 and 1), normalize to 0-1 range
-        if float_val <= -0.5:  # Strongly negative values are likely fully pressed triggers
-            print(f"[GAMEPAD:BUTTON] Normalized negative analog value from {float_val} to 1.0")
-            value = 1.0  # Fully pressed
-        elif float_val < 0:  # Partially pressed negative values
-            print(f"[GAMEPAD:BUTTON] Normalized negative analog value from {float_val} to {abs(float_val)}")
-            value = abs(float_val)  # Convert to positive equivalent
-        else:
-            # For values already between 0-1, keep as-is
-            value = float_val
-            
-        # For standard button handling, we'll round to int
-        if mode in ["toggle", "momentary"]:
-            value = 1 if value > 0.5 else 0
-            
-        print(f"[GAMEPAD:BUTTON] Final button value: {value}")
-    except (ValueError, TypeError):
-        print(f"[GAMEPAD:BUTTON] Cannot convert to number: {value}")
+    # For standard button handling, we'll convert to 0/1
+    if isinstance(value, (int, float)):
+        is_pressed = value > 0.5
+        button_value = 1 if is_pressed else 0
+    else:
+        print(f"[GAMEPAD:BUTTON] Invalid button value: {value}")
         return None
-    
+        
     # Get button state tracking dict
     button_states = context.setdefault("gamepad_button_states", {})
     servo_id = servo.id
     
-    # Debug the button_states dict
-    print(f"[GAMEPAD:BUTTON:DEBUG] All button states: {button_states}")
-    
     # Get previous state or set default
     state_key = f"{servo_id}"
     prev_state = button_states.get(state_key, 0)
-    print(f"[GAMEPAD:BUTTON] Servo {servo_id}, mode={mode}, value={value}, prev_state={prev_state}, state_key={state_key}")
     
     if mode == "toggle":
         # Toggle mode: Change position only on button press (0->1)
-        # For analog values, consider anything >0.5 as pressed
-        button_pressed = False
-        if isinstance(value, float):
-            button_pressed = value > 0.5 and float(prev_state) <= 0.5
-        else:
-            button_pressed = int(value) == 1 and int(prev_state) == 0
-            
-        print(f"[GAMEPAD:BUTTON] TOGGLE MODE DEBUG: value={value}, prev_state={prev_state}, button_pressed={button_pressed}")
-        
-        if button_pressed:
+        if button_value == 1 and prev_state == 0:
             # Toggle between min and max position from the servo settings
             current_pos = servo.settings.position
             min_pulse = servo.settings.min_pulse
             max_pulse = servo.settings.max_pulse
             middle_point = min_pulse + (max_pulse - min_pulse) / 2
             
-            print(f"[GAMEPAD:BUTTON] Toggle mode, current position: {current_pos}, min: {min_pulse}, max: {max_pulse}, mid: {middle_point}")
-            
             # Toggle between min_pulse and max_pulse
             if current_pos > middle_point:  # If in upper half of range
                 new_position = min_pulse  # Go to min_pulse
-                print(f"[GAMEPAD:BUTTON] Toggling to MIN position ({min_pulse})")
             else:
                 new_position = max_pulse  # Go to max_pulse
-                print(f"[GAMEPAD:BUTTON] Toggling to MAX position ({max_pulse})")
             
             # Update state
-            button_states[f"{servo_id}"] = value
+            button_states[state_key] = button_value
             return new_position
     
     elif mode == "momentary":
         # Momentary mode: Position follows button state
         min_pulse = servo.settings.min_pulse
         max_pulse = servo.settings.max_pulse
-        new_position = max_pulse if value == 1 else min_pulse
-        print(f"[GAMEPAD:BUTTON] Momentary mode, setting to {new_position} (using min: {min_pulse}, max: {max_pulse})")
-        button_states[f"{servo_id}"] = value
+        new_position = max_pulse if button_value == 1 else min_pulse
+        button_states[state_key] = button_value
         return new_position
     
     # Update state even if we didn't change position
-    button_states[f"{servo_id}"] = value
-    print(f"[GAMEPAD:BUTTON] No position change")
+    button_states[state_key] = button_value
     return None
 
 
@@ -350,63 +227,9 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
     Returns:
         The calculated position (0-1023) or None if no position change
     """
-    # Handle PyArrow Int64Array or Float64Array
-    if str(type(value)).find('pyarrow.lib') >= 0:
-        try:
-            # Extract the value directly from the array
-            value_float = float(value[0].as_py()) if len(value) > 0 else 0.0
-            print(f"[GAMEPAD:AXIS] Extracted axis value {value_float} from PyArrow array")
-            value = value_float
-        except Exception as e:
-            print(f"[GAMEPAD:AXIS] Error extracting from PyArrow array: {e}")
-            try:
-                # Alternative extraction method
-                value = float(str(value).split('[')[1].split(']')[0].strip())
-                print(f"[GAMEPAD:AXIS] Extracted axis value {value} using string parsing")
-            except Exception as e2:
-                print(f"[GAMEPAD:AXIS] Error with string parsing: {e2}")
-                return None
-    # Handle other Apache Arrow values
-    elif hasattr(value, "as_py"):
-        try:
-            value = value.as_py()
-            print(f"[GAMEPAD:AXIS] Converted Arrow value to {value}")
-        except Exception as e:
-            print(f"[GAMEPAD:AXIS] Error converting Arrow value: {e}")
-            return None
-    
-    # Handle list values including Arrow arrays
-    elif isinstance(value, list) and len(value) > 0:
-        if hasattr(value[0], "as_py"):
-            try:
-                value = value[0].as_py()
-                print(f"[GAMEPAD:AXIS] Converted Arrow array element to {value}")
-            except Exception as e:
-                print(f"[GAMEPAD:AXIS] Error converting Arrow array element: {e}")
-                return None
-        else:
-            value = value[0]
-            print(f"[GAMEPAD:AXIS] Using first value from list: {value}")
-    elif isinstance(value, str) and value.strip().startswith("["):
-        # This handles the case where the value might be formatted as a string representation of an array
-        try:
-            # Try to find a float in the string
-            import re
-            float_match = re.search(r'-?\d+(\.\d+)?', value)
-            if float_match:
-                value = float(float_match.group())
-                print(f"[GAMEPAD:AXIS] Extracted value {value} from string array")
-            else:
-                print(f"[GAMEPAD:AXIS] No number found in string value: {value}")
-                return None
-        except Exception as e:
-            print(f"[GAMEPAD:AXIS] Error extracting value from string array: {e}")
-            return None
-    
     # Ensure value is treated as a float
     try:
-        value = float(value)
-        print(f"[GAMEPAD:AXIS] Final axis value: {value:.2f}")
+        float_value = float(value)
     except (ValueError, TypeError):
         print(f"[GAMEPAD:AXIS] Cannot convert to number: {value}")
         return None
@@ -417,36 +240,29 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
     
     # Store current state
     prev_value = axis_states.get(f"{servo_id}", 0)
-    axis_states[f"{servo_id}"] = value
-    
-    print(f"[GAMEPAD:AXIS] Servo {servo_id}, mode={mode}, value={value:.2f}, multiplier={multiplier}")
+    axis_states[f"{servo_id}"] = float_value
     
     if mode == "absolute":
-        # Absolute mode: Map -1.0 to 1.0 to servo range 0-1023
-        # Apply multiplier to adjust sensitivity (lower value = less sensitive)
-        scaled_value = value * multiplier
-        # Clamp to -1.0 to 1.0 range
-        scaled_value = max(min(scaled_value, 1.0), -1.0)
+        # Absolute mode: Map 0.0 to 1.0 to servo range 0-1023
+        # Apply multiplier to adjust sensitivity
+        scaled_value = float_value * multiplier
+        # Clamp to 0.0 to 1.0 range
+        scaled_value = max(min(scaled_value, 1.0), 0.0)
         # Map to servo range
-        new_position = int(((scaled_value + 1.0) / 2.0) * 1023)
-        print(f"[GAMEPAD:AXIS] Absolute mode: value={value:.2f} → scaled={scaled_value:.2f} → position={new_position}")
+        new_position = int(scaled_value * 1023)
         return new_position
     
     elif mode == "relative":
         # Relative mode: Change position based on axis movement
         # Only apply change if value is significantly different from zero
-        if abs(value) > 0.1:
+        if abs(float_value) > 0.1:
             # Calculate change amount (apply multiplier for sensitivity)
-            change = value * multiplier * 10  # Adjust for reasonable speed
+            change = float_value * multiplier * 10  # Adjust for reasonable speed
             # Update position
             current_pos = servo.settings.position
             new_pos = current_pos + change
             # Clamp to valid range
             new_position = int(max(min(new_pos, 1023), 0))
-            print(f"[GAMEPAD:AXIS] Relative mode: current={current_pos} → change={change:.2f} → new={new_position}")
             return new_position
-        else:
-            print(f"[GAMEPAD:AXIS] Value too small ({value:.2f}), ignoring")
     
-    print(f"[GAMEPAD:AXIS] No position change")
     return None
