@@ -175,7 +175,11 @@ def calculate_position(servo, value, context: Dict[str, Any]) -> Optional[int]:
     
     # Handle different control types and modes
     if control_type == "button":
-        return handle_button_control(servo, value, control_mode, context)
+        # If the button is in an analog mode, use the axis handler
+        if control_mode in ["absolute", "relative"]:
+            return handle_axis_control(servo, value, control_mode, multiplier, context)
+        else:
+            return handle_button_control(servo, value, control_mode, context)
     elif control_type == "axis":
         return handle_axis_control(servo, value, control_mode, multiplier, context)
     
