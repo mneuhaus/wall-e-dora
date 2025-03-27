@@ -84,25 +84,23 @@ const EyesWidget = (props) => {
       flex-direction: column;
       align-items: center;
       transition: transform 0.2s;
-      background-color: rgba(255, 191, 0, 0.1);
-      border: 1px solid rgba(255, 191, 0, 0.2);
     }
     
     .gif-item:hover {
       transform: scale(1.05);
-      border-color: rgba(255, 191, 0, 0.5);
     }
     
     .gif-item.selected {
-      border-color: rgba(255, 191, 0, 1);
       box-shadow: 0 0 8px rgba(255, 191, 0, 0.8);
     }
     
     .gif-thumbnail {
       width: 100%;
-      height: 90%;
+      height: 100%;
       object-fit: cover;
       object-position: center;
+      border-radius: 50%;
+      overflow: hidden;
     }
     
     .gif-thumbnail img {
@@ -111,16 +109,6 @@ const EyesWidget = (props) => {
       object-fit: contain;
     }
     
-    .gif-name {
-      font-size: 0.8rem;
-      margin-top: 5px;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      width: 100%;
-      padding: 0 5px;
-    }
     
     .empty-state {
       width: 100%;
@@ -159,7 +147,6 @@ const EyesWidget = (props) => {
   return (
     <div className="gif-gallery-container">
       <style>{styles}</style>
-      <h4 style={{ margin: '0 0 10px 0' }}>WALL-E Eyes</h4>
       
       {images.length > 0 ? (
         <div className="gif-grid">
@@ -183,7 +170,6 @@ const EyesWidget = (props) => {
                   loading="lazy"
                 />
               </div>
-              <span className="gif-name">{formatImageName(image.filename)}</span>
             </div>
           ))}
         </div>
