@@ -8,6 +8,7 @@ import sys
 import os
 
 # Add the parent directory to the path for imports if needed
+# (Assuming these imports are correct for your project structure)
 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 parent_dir = os.path.dirname(os.path.dirname(current_dir))
 if parent_dir not in sys.path:
@@ -25,82 +26,166 @@ def handle_tick(context, event: Dict[str, Any]) -> bool:
         scan_for_servos(context)
         return True
     except Exception as e:
+        # Use traceback for more detailed error logging
         print(f"Error processing tick event: {e}")
+        traceback.print_exc()
         return False
 
 
 def scan_for_servos(context):
-    """Scan for servos and initialize them."""
+    """Scan for servos, assign new IDs if necessary, and initialize them."""
     try:
         node = context["node"]
         scanner = context["scanner"]
         config = context["config"]
-        servos = context["servos"]
-        next_available_id = context["next_available_id"]
-        
+        servos = context["servos"] # Dictionary of active Servo objects {id: Servo}
+
+        # --- Initialization of next_available_id ---
+        # This should ideally happen *once* when the application starts,
+        # not on every tick, unless context is reset.
+        # Ensure it's initialized correctly based on existing config/scan.
+        # Example (might need adjustment based on your app structure):
+        if "next_available_id" not in context:
+             all_known_ids = set(config.get_all_servo_ids()) # Assuming config has this method
+             # Scan once at start? Depends on your app lifecycle.
+             # discovered_at_start = scanner.discover_servos()
+             # all_known_ids.update(discovered_at_start)
+             start_id = 2 # Default starting point, avoiding 1
+             if all_known_ids:
+                 # Ensure start_id is higher than any known ID
+                 start_id = max(max(all_known_ids) + 1, start_id)
+             context["next_available_id"] = start_id
+             print(f"Initialized next_available_id to: {context['next_available_id']}")
+        # --- End Initialization ---
+
+        next_available_id = context["next_available_id"] # Get current value
+
         # Track previously known servos to detect disconnections
         previously_known_servos = set(servos.keys())
-        discovered_ids = scanner.discover_servos()
-        
-        # Add newly discovered servos
-        for servo_id in discovered_ids:
-            if servo_id not in servos:
-                # Get settings from config or use defaults
-                settings_dict = config.get_servo_settings(servo_id)
-                
-                # Create default settings if not found
-                if not settings_dict:
-                    settings = ServoSettings(id=servo_id)
-                    
-                    # If this is the default ID (1), assign a new unique ID
-                    if servo_id == 1:
-                        new_id = next_available_id
-                        next_available_id += 1
-                        context["next_available_id"] = next_available_id
-                        
-                        # Create servo temporarily with ID 1
-                        temp_servo = Servo(scanner.serial_conn, settings)
-                        
-                        # Attempt to change the ID
+        discovered_ids = set() # Use a set for efficient checking
+        try:
+            discovered_ids = scanner.discover_servos()
+            if discovered_ids:
+                 print(f"Discovered servo IDs: {discovered_ids}")
+        except Exception as scan_error:
+             print(f"Error during servo discovery: {scan_error}")
+             # Decide if you want to proceed or return based on the error
+             # return # Optionally exit if discovery fails critically
+
+        current_servos = set(servos.keys()) # IDs of servos currently in our active dictionary
+
+        # --- Process Newly Discovered Servos ---
+        newly_discovered_ids = discovered_ids - current_servos
+        if newly_discovered_ids:
+             print(f"New servos detected: {newly_discovered_ids}")
+
+        for discovered_id in newly_discovered_ids:
+            servo_to_add_id = discovered_id # This might change if ID=1 is reassigned
+            settings = None
+            is_newly_assigned = False
+
+            # Check config first
+            settings_dict = config.get_servo_settings(discovered_id)
+
+            if settings_dict:
+                print(f"Found existing settings for ID {discovered_id} in config.")
+                settings = ServoSettings(**settings_dict)
+                # Ensure ID in settings matches discovered ID, might be redundant
+                settings.id = discovered_id
+                servo_to_add_id = discovered_id
+            else:
+                # No config found, treat as potentially new or default ID=1
+                print(f"No settings found for ID {discovered_id}. Creating defaults.")
+                settings = ServoSettings(id=discovered_id) # Start with the discovered ID
+
+                # --- Handle Default ID Assignment ---
+                if discovered_id == 1:
+                    # Check if the target ID is already in use by another active servo
+                    while next_available_id in current_servos or next_available_id in discovered_ids:
+                         print(f"Warning: Proposed next_available_id {next_available_id} is already discovered or active. Incrementing.")
+                         next_available_id += 1
+
+                    new_id = next_available_id
+                    print(f"Servo with default ID 1 detected. Attempting to assign new ID: {new_id}")
+
+                    # Use temporary settings with ID 1 for the command
+                    temp_settings_for_id_change = ServoSettings(id=1)
+                    temp_servo = Servo(scanner.serial_conn, temp_settings_for_id_change)
+
+                    try:
                         if temp_servo.set_id(new_id):
-                            # Update the settings with the new ID
-                            settings.id = new_id
-                            servo_id = new_id
+                            print(f"Successfully changed servo ID from 1 to {new_id}")
+                            settings.id = new_id         # Update settings object with the new ID
+                            servo_to_add_id = new_id     # Use the new ID as the key/identifier
+                            next_available_id += 1       # Increment for the *next* servo
+                            context["next_available_id"] = next_available_id # Store updated value back
+                            is_newly_assigned = True
                         else:
-                            print(f"Failed to assign new ID to servo {servo_id}")
-                    
-                    # Save the settings to config
-                    config.update_servo_settings(settings)
-                else:
-                    # Convert dict to ServoSettings
-                    settings = ServoSettings(**settings_dict)
-                
-                # Create and store the servo
-                servos[servo_id] = Servo(scanner.serial_conn, settings)
-                
-                # Read voltage for the new servo
-                servos[servo_id].read_voltage()
-                
-                # Broadcast the servo's addition
-                broadcast_servo_status(node, servo_id, servos)
-        
-        # Check for servos that were previously connected but now disconnected
+                            print(f"ERROR: Failed to set new ID {new_id} for servo detected with ID 1. Skipping this servo.")
+                            # Don't add this servo, don't save config for it
+                            continue # Move to the next discovered_id
+                    except Exception as id_set_error:
+                         print(f"ERROR: Exception during set_id for servo 1 to {new_id}: {id_set_error}")
+                         traceback.print_exc()
+                         # Don't add this servo
+                         continue # Move to the next discovered_id
+                # --- End Handle Default ID Assignment ---
+
+                # Save settings *only* if it's not ID 1 that failed, or if it's a non-1 ID
+                print(f"Saving settings for servo ID {settings.id} to config.")
+                config.update_servo_settings(settings)
+
+            # --- Add the Servo to Active Dictionary ---
+            # Check if the ID (potentially new) is already in the active servos dict
+            # This is a safeguard, shouldn't happen if logic above is correct
+            if servo_to_add_id in servos:
+                 print(f"Warning: Servo ID {servo_to_add_id} already exists in the active servos dictionary. Skipping addition.")
+                 continue
+
+            print(f"Adding servo {servo_to_add_id} to active list.")
+            servos[servo_to_add_id] = Servo(scanner.serial_conn, settings)
+
+            # Read initial voltage for the new servo
+            try:
+                 servos[servo_to_add_id].read_voltage()
+            except Exception as voltage_error:
+                 print(f"Warning: Failed to read initial voltage for servo {servo_to_add_id}: {voltage_error}")
+
+            # Broadcast the servo's addition or status update
+            broadcast_servo_status(node, servo_to_add_id, servos)
+            # We'll broadcast the full list at the end
+
+
+        # --- Check for Disconnected Servos ---
+        # Servos previously known but not in the latest discovery scan
         disconnected_ids = previously_known_servos - discovered_ids
         if disconnected_ids:
-            print(f"Servos disconnected: {disconnected_ids}")
-            
-            # Remove disconnected servos from the active servos dictionary
-            # but keep their settings in the config
+            print(f"Servos disconnected or no longer responding: {disconnected_ids}")
             for servo_id in disconnected_ids:
                 if servo_id in servos:
+                    print(f"Removing servo {servo_id} from active list.")
                     del servos[servo_id]
-        
-        # Update voltage readings for all connected servos
-        for servo_id in servos:
-            servos[servo_id].read_voltage()
-        
-        # Broadcast a complete list of servos (the servos_list function will filter for responsive ones)
+                    # Optionally broadcast a removal message here if needed
+                    # broadcast_servo_removed(node, servo_id)
+
+        # --- Update Voltage for All Currently Connected Servos ---
+        # Iterate over a copy of keys in case of errors during read causing removal elsewhere
+        active_servo_ids = list(servos.keys())
+        for servo_id in active_servo_ids:
+             if servo_id in servos: # Check if still present
+                 try:
+                     servos[servo_id].read_voltage()
+                 except Exception as voltage_error:
+                     print(f"Warning: Failed to read voltage for servo {servo_id}: {voltage_error}")
+                     # Consider removing the servo if voltage read fails consistently
+                     # del servos[servo_id]
+                     # print(f"Removed servo {servo_id} due to voltage read failure.")
+
+        # --- Broadcast the final list of *currently responsive* servos ---
+        # Assuming broadcast_servos_list handles the dictionary correctly
+        print(f"Broadcasting final active servos list: {list(servos.keys())}")
         broadcast_servos_list(node, servos)
-        
+
     except Exception as e:
-        print(f"Error scanning for servos: {e}")
+        print(f"Error during scan_for_servos: {e}")
+        traceback.print_exc()
