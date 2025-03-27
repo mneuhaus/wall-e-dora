@@ -77,12 +77,12 @@
       "type": "axis"
     },
     "SELECT": {
-      "index": 10,
+      "index": 11,
       "isAnalog": false,
       "type": "button"
     },
     "START": {
-      "index": 11,
+      "index": 10,
       "isAnalog": false,
       "type": "button"
     }
