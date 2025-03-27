@@ -140,7 +140,7 @@ class Gamepad {
     // Start polling
     this.pollIntervalId = setInterval(() => {
       this.updateState();
-    }, 50); // 50ms for responsive updates
+    }, 16); // 16ms for 60Hz polling (more responsive updates)
   }
 
   updateState() {

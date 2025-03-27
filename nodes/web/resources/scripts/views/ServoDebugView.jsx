@@ -1100,8 +1100,8 @@ const ServoDebugView = () => {
                   </Box>
                 </Grid.Col>
                 
-                {/* Axis-specific controls */}
-                {controlType === 'axis' && (
+                {/* Axis and Analog-button specific controls */}
+                {(controlType === 'axis' || controlMode === 'absolute' || controlMode === 'relative') && (
                   <Grid.Col span={6}>
                     <Box 
                       py="xs"
@@ -1134,7 +1134,7 @@ const ServoDebugView = () => {
                         <i className="fa-solid fa-rabbit" style={{ color: 'var(--mantine-color-dimmed)' }}></i>
                       </Group>
                       <Text size="xs" c="dimmed" mt="xs">
-                        Higher values = more sensitive joystick response
+                        Higher values = more sensitive {controlType === 'axis' ? 'joystick' : 'button'} response
                       </Text>
                     </Box>
                   </Grid.Col>
@@ -1149,30 +1149,59 @@ const ServoDebugView = () => {
                     /* Button modes */
                     <Radio.Group
                       value={controlMode}
-                      onChange={setControlMode}
+                      onChange={(value) => {
+                        setControlMode(value);
+                        // If switching to an analog mode, ensure the control type is axis
+                        if (value === 'absolute' || value === 'relative') {
+                          setControlType('axis');
+                        }
+                      }}
                       name="controlMode"
                       withAsterisk
                     >
-                      <Group mt="xs">
-                        <Radio
-                          value="toggle"
-                          label={
-                            <Box>
-                              <Text>Toggle (Solid State)</Text>
-                              <Text size="xs" c="dimmed">Button press toggles between min and max position</Text>
-                            </Box>
-                          }
-                        />
-                        <Radio
-                          value="momentary"
-                          label={
-                            <Box>
-                              <Text>Momentary</Text>
-                              <Text size="xs" c="dimmed">Button held = min position, released = max position (or inverted)</Text>
-                            </Box>
-                          }
-                        />
-                      </Group>
+                      <Stack spacing="xs">
+                        <Group mt="xs">
+                          <Radio
+                            value="toggle"
+                            label={
+                              <Box>
+                                <Text>Toggle (Solid State)</Text>
+                                <Text size="xs" c="dimmed">Button press toggles between min and max position</Text>
+                              </Box>
+                            }
+                          />
+                          <Radio
+                            value="momentary"
+                            label={
+                              <Box>
+                                <Text>Momentary</Text>
+                                <Text size="xs" c="dimmed">Button held = min position, released = max position (or inverted)</Text>
+                              </Box>
+                            }
+                          />
+                        </Group>
+                        <Divider label="Analog Button Modes" labelPosition="center" size="xs" />
+                        <Group mt="xs">
+                          <Radio
+                            value="absolute"
+                            label={
+                              <Box>
+                                <Text>Absolute (Analog)</Text>
+                                <Text size="xs" c="dimmed">Button pressure directly maps to servo position</Text>
+                              </Box>
+                            }
+                          />
+                          <Radio
+                            value="relative"
+                            label={
+                              <Box>
+                                <Text>Relative (Analog)</Text>
+                                <Text size="xs" c="dimmed">Button changes position gradually based on pressure</Text>
+                              </Box>
+                            }
+                          />
+                        </Group>
+                      </Stack>
                     </Radio.Group>
                   ) : (
                     /* Axis modes */
@@ -1237,7 +1266,9 @@ const ServoDebugView = () => {
                           <Table.Td fw={500}>Inverted</Table.Td>
                           <Table.Td>{servo.gamepad_config.invert ? 'Yes' : 'No'}</Table.Td>
                         </Table.Tr>
-                        {servo.gamepad_config.type === 'axis' && (
+                        {(servo.gamepad_config.type === 'axis' || 
+                         servo.gamepad_config.mode === 'absolute' || 
+                         servo.gamepad_config.mode === 'relative') && (
                           <Table.Tr>
                             <Table.Td fw={500}>Multiplier</Table.Td>
                             <Table.Td>{servo.gamepad_config.multiplier || 1}</Table.Td>

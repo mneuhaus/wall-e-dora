@@ -25,7 +25,7 @@ nodes:
   - id: web
     path: nodes/web/web/main.py
     inputs:
-      tick: dora/timer/millis/100
+      tick: dora/timer/millis/33
       voltage: power/voltage
       current: power/current
       power: power/power
@@ -102,7 +102,7 @@ nodes:
   - id: tracks
     path: nodes/tracks/tracks/main.py
     inputs:
-      tick: dora/timer/millis/100
+      tick: dora/timer/millis/33
       heartbeat: dora/timer/secs/1
       LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
       LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
