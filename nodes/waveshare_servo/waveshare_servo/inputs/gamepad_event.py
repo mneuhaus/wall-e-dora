@@ -239,22 +239,39 @@ def handle_button_control(servo, value, mode, context: Dict[str, Any]) -> Option
     elif isinstance(value, str) and value.strip().startswith("["):
         # This handles the case where the value might be formatted as a string representation of an array
         try:
-            # Try to find a digit in the string
+            # Try to find a floating point number in the string (including negative values)
             import re
-            digit_match = re.search(r'\d+', value)
-            if digit_match:
-                value = int(digit_match.group())
+            float_match = re.search(r'-?\d+(\.\d+)?', value)
+            if float_match:
+                value = float(float_match.group())
                 print(f"[GAMEPAD:BUTTON] Extracted value {value} from string")
             else:
-                print(f"[GAMEPAD:BUTTON] No digit found in string value: {value}")
+                print(f"[GAMEPAD:BUTTON] No number found in string value: {value}")
                 return None
         except Exception as e:
             print(f"[GAMEPAD:BUTTON] Error extracting value from string array: {e}")
             return None
     
-    # Ensure value is treated as a number
+    # For analog buttons (especially negative values), we need special handling
     try:
-        value = int(float(value))
+        # First try to convert to float to preserve decimals
+        float_val = float(value)
+        
+        # If this is likely a trigger/analog value (between -1 and 1), normalize to 0-1 range
+        if float_val <= -0.5:  # Strongly negative values are likely fully pressed triggers
+            print(f"[GAMEPAD:BUTTON] Normalized negative analog value from {float_val} to 1.0")
+            value = 1.0  # Fully pressed
+        elif float_val < 0:  # Partially pressed negative values
+            print(f"[GAMEPAD:BUTTON] Normalized negative analog value from {float_val} to {abs(float_val)}")
+            value = abs(float_val)  # Convert to positive equivalent
+        else:
+            # For values already between 0-1, keep as-is
+            value = float_val
+            
+        # For standard button handling, we'll round to int
+        if mode in ["toggle", "momentary"]:
+            value = 1 if value > 0.5 else 0
+            
         print(f"[GAMEPAD:BUTTON] Final button value: {value}")
     except (ValueError, TypeError):
         print(f"[GAMEPAD:BUTTON] Cannot convert to number: {value}")
@@ -274,8 +291,16 @@ def handle_button_control(servo, value, mode, context: Dict[str, Any]) -> Option
     
     if mode == "toggle":
         # Toggle mode: Change position only on button press (0->1)
-        print(f"[GAMEPAD:BUTTON] TOGGLE MODE DEBUG: value={value}, prev_state={prev_state}, values equal: {value == prev_state}")
-        if int(value) == 1 and int(prev_state) == 0:
+        # For analog values, consider anything >0.5 as pressed
+        button_pressed = False
+        if isinstance(value, float):
+            button_pressed = value > 0.5 and float(prev_state) <= 0.5
+        else:
+            button_pressed = int(value) == 1 and int(prev_state) == 0
+            
+        print(f"[GAMEPAD:BUTTON] TOGGLE MODE DEBUG: value={value}, prev_state={prev_state}, button_pressed={button_pressed}")
+        
+        if button_pressed:
             # Toggle between min and max position from the servo settings
             current_pos = servo.settings.position
             min_pulse = servo.settings.min_pulse
