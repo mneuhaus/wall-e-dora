@@ -499,15 +499,21 @@ const ServoDebugView = () => {
   const handleAttachServo = () => {
     if (!attachIndex || !controlType || !controlMode) return;
     
+    // Determine if this control should be handled as an analog value
+    const isAnalogControl = controlMode === 'absolute' || controlMode === 'relative';
+    
     // Build gamepad configuration object with all needed parameters
     const gamepadConfig = {
       control: attachIndex,
       type: controlType, // 'button' or 'axis'
       mode: controlMode, // 'toggle'/'momentary' for buttons, 'absolute'/'relative' for axes
       invert: invertControl,
-      multiplier: multiplier
+      multiplier: multiplier,
+      isAnalog: isAnalogControl // Explicitly tag analog controls
     };
     
+    // Log the configuration for debugging
+    console.log(`Setting gamepad config for ${attachIndex}:`, gamepadConfig);
     
     // Also update the local servo state immediately to prevent UI flicker
     // and ensure UI consistency even if websocket updates are delayed
@@ -1256,7 +1262,10 @@ const ServoDebugView = () => {
                       <>
                         <Table.Tr>
                           <Table.Td fw={500}>Type</Table.Td>
-                          <Table.Td style={{ textTransform: 'capitalize' }}>{servo.gamepad_config.type || 'Button'}</Table.Td>
+                          <Table.Td style={{ textTransform: 'capitalize' }}>
+                            {servo.gamepad_config.isAnalog ? 'Analog ' : ''}
+                            {servo.gamepad_config.type || 'Button'}
+                          </Table.Td>
                         </Table.Tr>
                         <Table.Tr>
                           <Table.Td fw={500}>Mode</Table.Td>

@@ -157,10 +157,14 @@ def calculate_position(servo, value, context: Dict[str, Any]) -> Optional[int]:
         elif control_type == "button":
             value = 1 - value
     
+    # Check if this control should be handled as an analog value
+    is_analog = config.get("isAnalog", False)
+    
     # Handle different control types and modes
     if control_type == "button":
-        # If the button is in an analog mode, use the axis handler
-        if control_mode in ["absolute", "relative"]:
+        # If the button is in an analog mode, or has the isAnalog flag, use the axis handler
+        if control_mode in ["absolute", "relative"] or is_analog:
+            print(f"[GAMEPAD] Handling button {control_name} as analog control")
             return handle_axis_control(servo, value, control_mode, multiplier, context)
         else:
             return handle_button_control(servo, value, control_mode, context)
