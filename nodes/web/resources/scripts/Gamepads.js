@@ -197,7 +197,28 @@ class Gamepad {
         if (this[this.buttons[index]].value != newValue) {
           this[this.buttons[index]].value = newValue;
           
-          node.emit('GAMEPAD_' + this.buttons[index], [gamepadButton.value]);
+          // Always emit node event for any trigger value change
+          if (!this.isMapping) {
+            node.emit('GAMEPAD_' + this.buttons[index], [gamepadButton.value]);
+          }
+          
+          // Always dispatch DOM event for any trigger value change
+          const buttonEvent = new CustomEvent(`GAMEPAD_${this.buttons[index]}`, {
+            detail: { value: gamepadButton.value }
+          });
+          window.dispatchEvent(buttonEvent);
+          
+          // Only log and show visual effect when the trigger is pressed
+          if (gamepadButton.value > 0.1 && this[this.buttons[index]].value <= 0.1) {
+            console.log(`TRIGGER ${this.buttons[index]} PRESSED: ${newValue}`);
+            
+            // Flash visual effect for trigger press
+            const flashEvent = new CustomEvent('gamepad_button_flash', {
+              detail: { control: this.buttons[index], type: 'button', index: parseInt(index) }
+            });
+            window.dispatchEvent(flashEvent);
+          }
+          
           hasChanges = true;
         }
       } else {
@@ -206,29 +227,33 @@ class Gamepad {
         const hasDecimalValue = gamepadButton.value > 0 && gamepadButton.value < 1;
         
         if (hasDecimalValue) {
-          // No longer logging analog button detection
           // Process as an analog button
           const newValue = parseFloat(gamepadButton.value).toFixed(4);
           if (this[this.buttons[index]].value != newValue) {
             this[this.buttons[index]].value = newValue;
-            node.emit('GAMEPAD_' + this.buttons[index], [gamepadButton.value]);
+            
+            // Always send events for analog buttons, whether pressed or released
+            if (!this.isMapping) {
+              node.emit('GAMEPAD_' + this.buttons[index], [gamepadButton.value]);
+            }
+            
+            // Always dispatch DOM event for any analog state change
+            const buttonEvent = new CustomEvent(`GAMEPAD_${this.buttons[index]}`, {
+              detail: { value: gamepadButton.value }
+            });
+            window.dispatchEvent(buttonEvent);
+            
             hasChanges = true;
           }
         } else {
           // Process as a digital button (0 or 1)
           const newValue = gamepadButton.value ? 1 : 0;
           if (this[this.buttons[index]].value != newValue) {
-            // Log when buttons are pressed (but not released to avoid spam)
+            // Only log when buttons are pressed (not released, to avoid spam)
             if (newValue === 1) {
               console.log(`BUTTON PRESS DETECTED: ${this.buttons[index]} (raw value: ${gamepadButton.value})`);
-            
-              // Dispatch a DOM event for redundancy
-              const buttonPressEvent = new CustomEvent(`GAMEPAD_${this.buttons[index]}`, {
-                detail: { value: newValue }
-              });
-              window.dispatchEvent(buttonPressEvent);
               
-              // Flash visual effect for UI elements
+              // Flash visual effect for UI elements on press
               const flashEvent = new CustomEvent('gamepad_button_flash', {
                 detail: { control: this.buttons[index], type: 'button', index: parseInt(index) }
               });
@@ -237,7 +262,13 @@ class Gamepad {
             
             this[this.buttons[index]].value = newValue;
             
-            // Only emit events if not in mapping mode
+            // Always dispatch DOM event for any button state change
+            const buttonEvent = new CustomEvent(`GAMEPAD_${this.buttons[index]}`, {
+              detail: { value: newValue }
+            });
+            window.dispatchEvent(buttonEvent);
+            
+            // Always emit events for any button state change if not in mapping mode
             if (!this.isMapping) {
               node.emit('GAMEPAD_' + this.buttons[index], [newValue]);
             }
@@ -321,15 +352,9 @@ class Gamepad {
         // Track changes
         this[controlName].value = newValue;
         
-        // Emit event for button press (when pressed, not released)
+        // Emit event and log for button press (not for release to avoid spam)
         if (mappedInput.type === 'button' && newValue === 1) {
           console.log(`MAPPED BUTTON PRESS: ${controlName} (raw index: ${mappedInput.index})`);
-          
-          // Dispatch DOM event for redundancy (even during mapping for UI updates)
-          const buttonPressEvent = new CustomEvent(`GAMEPAD_${controlName}`, {
-            detail: { value: newValue }
-          });
-          window.dispatchEvent(buttonPressEvent);
           
           // Flash visual effect for UI elements (even during mapping)
           const flashEvent = new CustomEvent('gamepad_button_flash', {
@@ -338,9 +363,15 @@ class Gamepad {
           window.dispatchEvent(flashEvent);
         }
         
+        // Always dispatch DOM event for any state change (pressed or released)
+        const buttonEvent = new CustomEvent(`GAMEPAD_${controlName}`, {
+          detail: { value: newValue }
+        });
+        window.dispatchEvent(buttonEvent);
+        
         // Only emit system events if not in mapping mode
         if (!this.isMapping) {
-          // Emit the control event to the system
+          // Always emit the control event to the system for any state change
           node.emit('GAMEPAD_' + controlName, [newValue]);
         }
         
