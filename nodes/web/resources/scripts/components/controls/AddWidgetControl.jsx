@@ -26,6 +26,8 @@ import { useGridContext } from '../../contexts/GridContext';
 import { useAppContext } from '../../contexts/AppContext';
 import { WIDGET_TYPES } from '../../constants/widgetTypes';
 
+console.log("Available widget types:", WIDGET_TYPES);
+
 const AddWidgetControl = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addWidget } = useGridContext();
@@ -36,6 +38,7 @@ const AddWidgetControl = () => {
   const handleCloseModal = () => setIsModalOpen(false);
   
   const handleAddWidget = (type, config = {}) => {
+    console.log("Adding widget:", type, config);
     addWidget(type, config);
     handleCloseModal();
   };
@@ -73,7 +76,7 @@ const AddWidgetControl = () => {
         <ScrollArea h={400} offsetScrollbars>
           <Stack spacing="md">
             <Box>
-              <Title order={5} c="amber" mb="xs">Basic Widgets</Title>
+              <Title order={5} c="amber" mb="xs">!!! WALL-E Widgets !!!</Title>
               <List spacing="xs">
                 <List.Item
                   icon={
@@ -135,6 +138,27 @@ const AddWidgetControl = () => {
                     }}
                   >
                     <Text>Joystick Control</Text>
+                  </UnstyledButton>
+                </List.Item>
+                
+                <List.Item
+                  icon={
+                    <i className="fas fa-eye" style={{ color: 'var(--mantine-color-amber-6)' }}></i>
+                  }
+                >
+                  <UnstyledButton 
+                    onClick={() => handleAddWidget(WIDGET_TYPES.EYES)}
+                    w="100%"
+                    style={{
+                      padding: '8px',
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      '&:hover': {
+                        backgroundColor: 'var(--mantine-color-dark-6)'
+                      }
+                    }}
+                  >
+                    <Text>WALL-E Eyes</Text>
                   </UnstyledButton>
                 </List.Item>
               </List>

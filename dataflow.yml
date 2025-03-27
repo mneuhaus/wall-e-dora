@@ -41,12 +41,14 @@ nodes:
       settings: config/settings
       save_gamepad_profile: web/save_gamepad_profile
       delete_gamepad_profile: web/delete_gamepad_profile
+      available_images: eyes/available_images
       # camera_feed: opencv-video-capture/image
     outputs:
       - slider_input
       - play_sound
       - set_volume
       - stop
+      - play_gif
       - GAMEPAD_LEFT_ANALOG_STICK_X
       - GAMEPAD_LEFT_ANALOG_STICK_Y
       - GAMEPAD_RIGHT_ANALOG_STICK_X
@@ -155,3 +157,12 @@ nodes:
   #   build: pip install /home/mneuhaus/dora/node-hub/dora-rerun
   #   inputs:
   #     image: opencv-video-capture/image
+
+  - id: eyes
+    path: nodes/eyes/entrypoint.py
+    inputs:
+      TICK: dora/timer/secs/60
+      list_images: dora/timer/secs/10
+      play_gif: web/play_gif
+    outputs:
+      - available_images

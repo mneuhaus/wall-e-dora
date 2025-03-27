@@ -188,6 +188,30 @@ const GridLockControl = () => {
                     <Text>Joystick Control</Text>
                   </UnstyledButton>
                 </List.Item>
+                
+                <List.Item
+                  icon={
+                    <i className="fas fa-eye" style={{ color: 'var(--mantine-color-amber-6)' }}></i>
+                  }
+                >
+                  <UnstyledButton 
+                    onClick={() => {
+                      console.log("Adding Eyes widget with type:", WIDGET_TYPES.EYES);
+                      handleAddWidget("eyes-widget", { w: 4, h: 4 });
+                    }}
+                    w="100%"
+                    style={{
+                      padding: '8px',
+                      borderRadius: '4px',
+                      transition: 'background-color 0.2s',
+                      '&:hover': {
+                        backgroundColor: 'var(--mantine-color-dark-6)'
+                      }
+                    }}
+                  >
+                    <Text>WALL-E Eyes</Text>
+                  </UnstyledButton>
+                </List.Item>
               </List>
             </Box>
             

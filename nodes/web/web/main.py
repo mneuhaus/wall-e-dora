@@ -277,6 +277,86 @@ def start_background_webserver():
             show_index=True,
             append_version=True
         )
+        
+        # Handler for serving images from arbitrary paths
+        async def get_image(request):
+            """Serve images from arbitrary file paths."""
+            path = request.query.get('path')
+            
+            if not path:
+                return web.Response(text="Missing 'path' parameter", status=400)
+            
+            # Basic security check to only allow image files
+            if not path.lower().endswith(('.jpg', '.jpeg', '.gif', '.png')):
+                return web.Response(text="Only image files are allowed", status=403)
+            
+            # Check if file exists
+            if not os.path.exists(path):
+                return web.Response(text=f"Image not found: {path}", status=404)
+            
+            try:
+                # Determine content type based on file extension
+                extension = os.path.splitext(path)[1].lower()
+                content_type = {
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.png': 'image/png'
+                }.get(extension, 'application/octet-stream')
+                
+                # Create a file response
+                return web.FileResponse(
+                    path=path,
+                    headers={
+                        'Content-Type': content_type,
+                        'Cache-Control': 'max-age=3600',  # Cache for 1 hour
+                        'Access-Control-Allow-Origin': '*'  # Allow cross-origin access
+                    }
+                )
+            except Exception as e:
+                logging.error(f"Error serving image {path}: {str(e)}")
+                return web.Response(text=f"Error serving image: {str(e)}", status=500)
+        
+        # Add route for image serving
+        app.router.add_get('/get-image', get_image)
+        
+        # Proxy endpoint for communicating with eye displays
+        async def eye_proxy(request):
+            """Proxy requests to eye displays."""
+            ip = request.query.get('ip')
+            filename = request.query.get('filename')
+            
+            if not ip or not filename:
+                return web.Response(text="Missing 'ip' or 'filename' parameter", status=400)
+            
+            try:
+                # Construct the request URL to the eye display
+                url = f"http://{ip}/playgif?name={filename}"
+                
+                # Use aiohttp.ClientSession to make the request
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                        status = response.status
+                        response_text = await response.text()
+                        
+                        return web.Response(
+                            text=response_text,
+                            status=status,
+                            headers={
+                                'Content-Type': 'text/plain',
+                                'Access-Control-Allow-Origin': '*'
+                            }
+                        )
+            except Exception as e:
+                logging.error(f"Error proxying request to eye display {ip}: {str(e)}")
+                return web.Response(
+                    text=f"Error communicating with eye display: {str(e)}", 
+                    status=500,
+                    headers={'Access-Control-Allow-Origin': '*'}
+                )
+        
+        # Add route for eye display proxy
+        app.router.add_get('/eye-proxy', eye_proxy)
 
         import ssl
         import os

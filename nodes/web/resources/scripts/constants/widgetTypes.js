@@ -6,5 +6,6 @@ export const WIDGET_TYPES = {
   SOUND: 'sound-widget',
   JOYSTICK: 'joystick-widget',
   TEST: 'test-widget',
-  SEPARATOR: 'separator'
+  SEPARATOR: 'separator',
+  EYES: 'eyes-widget'
 };
