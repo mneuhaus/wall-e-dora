@@ -104,8 +104,8 @@ nodes:
     inputs:
       tick: dora/timer/millis/33
       heartbeat: dora/timer/secs/1
-      LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
-      LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
+      GAMEPAD_LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
+      GAMEPAD_LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
       setting_updated: config/setting_updated
 
   - id: waveshare_servo
