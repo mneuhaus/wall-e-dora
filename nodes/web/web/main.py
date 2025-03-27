@@ -1,3 +1,4 @@
+from dora import Node
 import threading
 import asyncio
 import os
@@ -10,233 +11,146 @@ import logging
 import pyarrow as pa
 import subprocess
 import time
-import queue  # Import the queue module
-import aiofiles # Import aiofiles for async file operations
-import ssl # Import ssl
-
-# Assuming these handlers exist in the specified location relative to this file
-# If they are elsewhere, adjust the import path accordingly
-script_dir = os.path.dirname(os.path.abspath(__file__))
-handlers_dir = os.path.join(script_dir, 'handlers') # Assuming handlers is a subfolder
-if handlers_dir not in os.sys.path:
-     os.sys.path.insert(0, handlers_dir)
-
-try:
-    # Make sure dora is available in the environment
-    from dora import Node
-except ImportError:
-    print("ERROR: Could not import 'dora'. Make sure it's installed and accessible.")
-    # Depending on the use case, you might exit here or handle it differently
-    # sys.exit(1)
-    # For now, define a dummy Node for testing without dora
-    class Node:
-        def __init__(self):
-            print("WARNING: Using dummy Dora Node class.")
-        def __iter__(self):
-            print("Dummy Node: Starting event iteration (will yield nothing).")
-            # Yield a dummy tick event periodically for testing loops
-            count = 0
-            while count < 5: # Limit dummy ticks
-                yield {"type": "INPUT", "id": "tick"}
-                time.sleep(1)
-                count += 1
-            yield {"type": "STOP"} # Simulate stop after a while
-        def send_output(self, output_id, data, metadata):
-            print(f"Dummy Node: Sending output '{output_id}' (ignored)")
-
-# Import handlers after adjusting path and defining Node
-try:
-    from gamepad_profiles import (
-        GamepadProfileManager,
-        handle_save_gamepad_profile,
-        handle_get_gamepad_profile,
-        handle_check_gamepad_profile,
-        handle_delete_gamepad_profile,
-        handle_list_gamepad_profiles,
-        emit_profiles_list
-    )
-except ImportError as e:
-    print(f"ERROR: Could not import gamepad profile handlers: {e}")
-    # Define dummy handlers if needed for testing without them
-    class GamepadProfileManager: pass
-    def handle_save_gamepad_profile(*args): pass
-    def handle_get_gamepad_profile(*args): pass
-    def handle_check_gamepad_profile(*args): pass
-    def handle_delete_gamepad_profile(*args): pass
-    def handle_list_gamepad_profiles(*args): pass
-    def emit_profiles_list(*args): pass
-
-
-# --- Configuration ---
-GRID_STATE_FILENAME = "grid_state.json"
-GRID_STATE_SAVE_INTERVAL = 15 # Seconds between automatic saves if dirty
-LOG_LEVEL = logging.INFO # Default log level raised to INFO
-WEBSERVER_PORT_HTTPS = 8443
-WEBSERVER_PORT_HTTP = 8080
-# --- End Configuration ---
-
-# Configure logging format
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+from handlers.gamepad_profiles import (
+    GamepadProfileManager,
+    handle_save_gamepad_profile,
+    handle_get_gamepad_profile,
+    handle_check_gamepad_profile,
+    handle_delete_gamepad_profile,
+    handle_list_gamepad_profiles,
+    emit_profiles_list
 )
-logger = logging.getLogger(__name__) # Use a specific logger for this module
 
-# --- Global State (Thread Safety Considerations) ---
-global_web_input_queue = queue.Queue()
+logging.basicConfig(level=logging.INFO)
+
+global_web_inputs = []
 ws_clients = set()
-ws_clients_lock = threading.Lock()
 web_loop = None
 
-current_grid_state = {}
-grid_state_dirty = False
-last_grid_state_save_time = time.time()
-# --- End Global State ---
-
-def get_grid_state_path():
-    """Gets the absolute path to the grid state file."""
-    return os.path.join(os.path.dirname(__file__), "..", GRID_STATE_FILENAME)
-
-def load_grid_state_from_file():
-    """Loads the grid state from the JSON file into memory. Blocking."""
-    global current_grid_state
-    grid_state_path = get_grid_state_path()
-    if os.path.exists(grid_state_path):
-        try:
-            with open(grid_state_path, "r", encoding="utf-8") as f:
-                current_grid_state = json.load(f)
-                logger.info(f"Loaded grid state from {grid_state_path}")
-        except json.JSONDecodeError as e:
-            logger.error(f"Error decoding JSON from {grid_state_path}: {e}. Using empty default.")
-            current_grid_state = {}
-        except Exception as e:
-            logger.error(f"Error loading grid state from {grid_state_path}: {e}. Using empty default.")
-            current_grid_state = {}
-    else:
-        logger.warning(f"Grid state file not found at {grid_state_path}. Starting with empty state.")
-        current_grid_state = {}
-
-def save_grid_state_to_file():
-    """Saves the current in-memory grid state to the JSON file. Blocking."""
-    global grid_state_dirty, last_grid_state_save_time
-    if not grid_state_dirty: # Avoid saving if nothing changed
-         return
-    grid_state_path = get_grid_state_path()
-    try:
-        temp_path = grid_state_path + ".tmp"
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(current_grid_state, f, indent=2)
-        os.replace(temp_path, grid_state_path)
-        grid_state_dirty = False
-        last_grid_state_save_time = time.time()
-        logger.info(f"Saved grid state to {grid_state_path}")
-    except Exception as e:
-        logger.error(f"Error saving grid state to {grid_state_path}: {e}")
-
-async def broadcast_grid_state_to_ws():
-    """Broadcasts the current grid state to all WebSocket clients."""
-    global current_grid_state
-    response = {
-        "id": "grid_state",
-        "value": current_grid_state,
-        "type": "EVENT"
-    }
-    serialized = json.dumps(response, default=str).encode('utf-8')
-    if web_loop:
-        asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
-    else:
-         logger.warning("Web loop not available for broadcasting grid state.")
-
-
 def flush_web_inputs(node, profile_manager):
-    """Processes events received from the web thread via the queue."""
-    global current_grid_state, grid_state_dirty
+    global global_web_inputs
+    if not global_web_inputs:
+        return
+    import os, json
+    logging.info(f"Processing {len(global_web_inputs)} web events")
+    for web_event in global_web_inputs:
+        if web_event.get("output_id") == "save_grid_state":
+            grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+            with open(grid_state_path, "w", encoding="utf-8") as f:
+                json.dump(web_event["data"], f)
 
-    processed_count = 0
-    try:
-        while True:
-            try:
-                web_event = global_web_input_queue.get_nowait()
-                processed_count += 1
-
-                output_id = web_event.get("output_id")
-                event_data = web_event.get("data")
-                metadata = web_event.get("metadata", {})
-
-                logger.debug(f"Processing web event: {output_id}")
-
-                if output_id == "save_grid_state":
-                    if isinstance(event_data, dict):
-                        current_grid_state = event_data
-                        grid_state_dirty = True
-                        logger.debug("In-memory grid state updated. Marked as dirty.")
-                        asyncio.run_coroutine_threadsafe(broadcast_grid_state_to_ws(), web_loop)
-                    else:
-                        logger.warning(f"Received 'save_grid_state' with invalid data type: {type(event_data)}")
-
-                elif output_id == "save_joystick_servo":
-                    widget_id = event_data.get("id")
-                    axis = event_data.get("axis")
-                    servo_id = event_data.get("servoId")
-
-                    if widget_id and axis in ['x', 'y']:
-                        if widget_id in current_grid_state:
-                            servo_prop = f"{axis}ServoId"
-                            if current_grid_state[widget_id].get(servo_prop) != servo_id:
-                                current_grid_state[widget_id][servo_prop] = servo_id
-                                grid_state_dirty = True
-                                logger.info(f"Joystick {widget_id} {axis}-axis assigned to servo {servo_id}. Grid marked dirty.")
-                                asyncio.run_coroutine_threadsafe(broadcast_grid_state_to_ws(), web_loop)
-                            else:
-                                logger.debug(f"Joystick {widget_id} {axis}-axis already set to servo {servo_id}. No change.")
-                        else:
-                            logger.warning(f"Cannot update joystick {widget_id}: widget not found in current grid state")
-                    else:
-                         logger.warning(f"Invalid 'save_joystick_servo' data: {event_data}")
-
-                elif output_id == "get_grid_state":
-                    logger.debug("Processing 'get_grid_state' request")
-                    asyncio.run_coroutine_threadsafe(broadcast_grid_state_to_ws(), web_loop)
-
-                elif output_id:
+            # Broadcast the updated grid state to all connected clients
+            for ws in ws_clients.copy():
+                if not ws.closed:
                     try:
-                        node.send_output(
-                            output_id=output_id,
-                            data=pa.array(event_data if isinstance(event_data, list) else [event_data]),
-                            metadata=metadata
+                        response = {
+                            "id": "grid_state",
+                            "value": web_event["data"],
+                            "type": "EVENT"
+                        }
+                        asyncio.run_coroutine_threadsafe(
+                            ws.send_str(json.dumps(response)),
+                            web_loop
                         )
                     except Exception as e:
-                        logger.error(f"Error sending output '{output_id}' to Dora node: {e}")
-
+                        print(f"Error broadcasting grid state: {e}")
                 else:
-                     logger.warning(f"Received web event with no 'output_id': {web_event}")
+                    ws_clients.discard(ws)
 
-            except queue.Empty:
-                break
-            except Exception as e:
-                 logger.error(f"Error processing web event {web_event}: {e}", exc_info=True)
+        elif web_event.get("output_id") == "save_joystick_servo":
+            # Handle joystick servo selection persistence
+            widget_id = web_event.get("data", {}).get("id")
+            axis = web_event.get("data", {}).get("axis")
+            servo_id = web_event.get("data", {}).get("servoId")
 
-    finally:
-        if processed_count > 0:
-            logger.debug(f"Processed {processed_count} web events from queue")
+            if widget_id and axis in ['x', 'y']:
+                # Load current grid state
+                grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+                grid_state = {}
+                if os.path.exists(grid_state_path):
+                    try:
+                        with open(grid_state_path, "r", encoding="utf-8") as f:
+                            grid_state = json.load(f)
+                    except Exception as e:
+                        print(f"Error loading grid state: {e}")
+
+                # Update the widget with the new servo ID
+                if widget_id in grid_state:
+                    # Update the appropriate servo ID property
+                    servo_prop = f"{axis}ServoId"
+                    grid_state[widget_id][servo_prop] = servo_id
+
+                    # Save the updated grid state
+                    with open(grid_state_path, "w", encoding="utf-8") as f:
+                        json.dump(grid_state, f)
+
+                    # Broadcast the updated grid state
+                    for ws in ws_clients.copy():
+                        if not ws.closed:
+                            try:
+                                response = {
+                                    "id": "grid_state",
+                                    "value": grid_state,
+                                    "type": "EVENT"
+                                }
+                                asyncio.run_coroutine_threadsafe(
+                                    ws.send_str(json.dumps(response)),
+                                    web_loop
+                                )
+                            except Exception as e:
+                                print(f"Error broadcasting updated joystick state: {e}")
+                        else:
+                            ws_clients.discard(ws)
+
+                    print(f"Updated joystick {widget_id} {axis}-axis to servo {servo_id}")
+                else:
+                    print(f"Cannot update joystick {widget_id}: widget not found in grid state")
+
+        elif web_event.get("output_id") == "get_grid_state":
+            # Load and send grid state to the requesting client
+            grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+            grid_state = {}
+
+            if os.path.exists(grid_state_path):
+                try:
+                    with open(grid_state_path, "r", encoding="utf-8") as f:
+                        grid_state = json.load(f)
+                except Exception as e:
+                    print(f"Error loading grid state: {e}")
+
+            # Send to the client that requested it
+            for ws in ws_clients.copy():
+                if not ws.closed:
+                    try:
+                        response = {
+                            "id": "grid_state",
+                            "value": grid_state,
+                            "type": "EVENT"
+                        }
+                        asyncio.run_coroutine_threadsafe(
+                            ws.send_str(json.dumps(response)),
+                            web_loop
+                        )
+                    except Exception as e:
+                        print(f"Error sending grid state: {e}")
+                else:
+                    ws_clients.discard(ws)
+        else:
+            node.send_output(
+                output_id=web_event["output_id"], data=pa.array(web_event["data"]), metadata=web_event["metadata"]
+            )
+    global_web_inputs = []
 
 async def websocket_handler(request):
-    """Handles WebSocket connections and messages."""
-    global ws_clients, ws_clients_lock, global_web_input_queue
-
-    logger.debug("New WebSocket connection request received")
+    logging.info("New WebSocket connection request received")
     ws = web.WebSocketResponse()
-    try:
-        await ws.prepare(request)
-    except Exception as e:
-        logger.error(f"WebSocket prepare failed: {e}")
-        return ws
+    await ws.prepare(request)
 
-    with ws_clients_lock:
-        ws_clients.add(ws)
-    logger.info(f"WebSocket client connected - {len(ws_clients)} active")
+    # Add to clients
+    ws_clients.add(ws)
+    logging.info(f"WebSocket connection established - {len(ws_clients)} active connections")
 
+    # Send connection confirmation
     try:
         welcome_msg = {
             "id": "connection_status",
@@ -244,428 +158,441 @@ async def websocket_handler(request):
             "type": "EVENT"
         }
         await ws.send_str(json.dumps(welcome_msg))
-        logger.debug("Sent welcome message to client")
 
-        initial_grid_state_msg = {
-             "id": "grid_state",
-             "value": current_grid_state,
-             "type": "EVENT"
-        }
-        await ws.send_str(json.dumps(initial_grid_state_msg))
-        logger.debug("Sent initial grid state to newly connected client.")
-
+        # Process incoming messages
         async for msg in ws:
             if msg.type == web.WSMsgType.TEXT:
                 try:
                     event = json.loads(msg.data)
                     output_id = event.get('output_id')
-                    logger.debug(f"Received WS event, output_id: {output_id}")
+                    logging.debug(f"Processed event with output_id: {output_id}")
 
-                    if output_id in ['save_joystick_servo', 'save_grid_state', 'update_setting']:
-                         log_data = str(event.get('data'))
-                         if len(log_data) > 100: log_data = log_data[:100] + "..."
-                         logger.debug(f"WS Event Details: ID={output_id}, Data={log_data}")
+                    # More detailed logging only for important configuration changes
+                    if output_id in ['save_joystick_servo']:
+                        logging.info(f"Joystick servo assignment: {event.get('data')}")
 
-                    global_web_input_queue.put(event)
-
-                except json.JSONDecodeError as e:
-                    logger.error(f"Error decoding WebSocket JSON message: {e}. Raw data: {msg.data[:200]}...")
+                    global_web_inputs.append(event)
                 except Exception as e:
-                    logger.error(f"Error processing WebSocket text message: {e}", exc_info=True)
-
+                    logging.error(f"Error processing WebSocket text message: {e}")
+                    global_web_inputs.append({"raw": msg.data})
             elif msg.type == web.WSMsgType.BINARY:
-                logger.warning("Received unexpected binary WebSocket message, ignoring.")
-
+                try:
+                    import pyarrow as pa
+                    buf = pa.BufferReader(msg.data)
+                    batch = pa.ipc.read_record_batch(buf)
+                    row = {k: v[0] for k, v in batch.to_pydict().items()}
+                    global_web_inputs.append(row)
+                except Exception as e:
+                    logging.error(f"Error processing binary websocket message: {e}")
             elif msg.type == web.WSMsgType.ERROR:
-                logger.error(f"WebSocket connection closed with exception {ws.exception()}")
-                break
-
-            elif msg.type == web.WSMsgType.CLOSE:
-                 logger.debug("WebSocket client initiated close")
-                 break
-
-    except asyncio.CancelledError:
-         logger.info("WebSocket handler task cancelled.")
+                logging.error(f"WebSocket connection closed with exception {ws.exception()}")
     except Exception as e:
-        logger.error(f"WebSocket handler error: {e}", exc_info=True)
+        logging.error(f"WebSocket handler error: {e}")
     finally:
-        with ws_clients_lock:
-            ws_clients.discard(ws)
-        logger.info(f"WebSocket client disconnected - {len(ws_clients)} active remain")
+        ws_clients.discard(ws)
+        logging.info(f"WebSocket connection closed - {len(ws_clients)} active connections remain")
 
     return ws
 
 async def index(request):
-    """Serves the main HTML template."""
-    logger.debug("Serving index page request.")
+    import os, json
     template = request.app['jinja_env'].get_template('template.html')
-    rendered = template.render(gridState=json.dumps(current_grid_state))
+    # Load grid state from file if it exists
+    grid_state = {}
+    grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
+
+    if os.path.exists(grid_state_path):
+        try:
+            with open(grid_state_path, "r", encoding="utf-8") as f:
+                grid_state = json.load(f)
+        except Exception as e:
+            print(f"Error loading grid state for template: {e}")
+
+    # We set this as a JSON string in the template to initialize the frontend immediately
+    rendered = template.render(gridState=json.dumps(grid_state))
     return web.Response(text=rendered, content_type='text/html')
 
-
 async def broadcast_bytes(data_bytes):
-    """Broadcast data (bytes) to all connected WebSocket clients. Runs in web_loop."""
-    global ws_clients, ws_clients_lock
-    if not web_loop or web_loop != asyncio.get_running_loop():
-         logger.error("broadcast_bytes called outside the web server's event loop!")
-         return
-
+    """Broadcast data to all connected WebSocket clients"""
     try:
         data_str = data_bytes.decode("utf-8")
-        #logger.debug(f"Attempting to broadcast: {data_str[:100]}...")
 
-        clients_to_send = set()
-        with ws_clients_lock:
-            clients_to_send = ws_clients.copy()
-
-        if not clients_to_send:
-            #logger.debug("No clients connected, skipping broadcast.")
-            return
+        # Reduce logging for common events
+        if '"id":"servo_status"' in data_str or '"id":"servos_list"' in data_str:
+            logging.debug(f"Broadcasting servo data to {len(ws_clients)} clients")
+        else:
+            logging.debug(f"Broadcasting to {len(ws_clients)} clients: {data_str[:50]}...")
 
         active_clients = 0
-        disconnected_clients = set()
 
-        for ws in clients_to_send:
+        for ws in ws_clients.copy():
             try:
                 if not ws.closed:
                     await ws.send_str(data_str)
                     active_clients += 1
                 else:
-                    disconnected_clients.add(ws)
-            except asyncio.CancelledError:
-                 logger.warning("Send operation cancelled for a client.")
-                 disconnected_clients.add(ws)
+                    ws_clients.discard(ws)
             except Exception as e:
-                # This can get noisy if a client disconnects uncleanly
-                logger.debug(f"Error sending to client during broadcast (likely disconnected): {e}")
-                disconnected_clients.add(ws)
+                logging.error(f"Error sending to client: {e}")
+                ws_clients.discard(ws)
 
-        if disconnected_clients:
-             with ws_clients_lock:
-                  for ws in disconnected_clients:
-                       ws_clients.discard(ws)
-             logger.info(f"Removed {len(disconnected_clients)} disconnected clients after broadcast.")
-
-        #logger.debug(f"Broadcast complete to {active_clients} active clients")
-
-    except UnicodeDecodeError:
-         logger.error("Error decoding bytes to UTF-8 in broadcast_bytes. Data not sent.")
+        # Minimal logging for broadcasts
+        logging.debug(f"Broadcast complete to {active_clients} active clients")
     except Exception as e:
-        logger.error(f"Unexpected error in broadcast_bytes: {e}", exc_info=True)
-
+        logging.error(f"Error in broadcast_bytes: {e}")
 
 def asset_url(asset):
-    """Placeholder for asset URL generation."""
-    return f"/resources/{asset}"
+    return asset
 
 def start_background_webserver():
-    """Initializes and starts the aiohttp web server in a separate thread."""
     async def init_app():
-        load_grid_state_from_file() # Load state before server starts
+        import os
+        import jinja2
+        import json
 
         app = web.Application()
-        # Uncomment for debugging if needed, otherwise keep it off
-        # aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
-
+        aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
         template_path = os.path.join(os.path.dirname(__file__), "..", "resources")
-        app['jinja_env'] = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(template_path),
-            autoescape=True
-        )
-        app['jinja_env'].globals['asset_url'] = asset_url
-
+        app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
+
         app.router.add_static('/build/',
             path=os.path.join(os.path.dirname(__file__), "..", "resources/build"),
-            name='build', show_index=False, append_version=True) # show_index=False recommended
+            name='build',
+            show_index=True,
+            append_version=True
+        )
 
-        ALLOWED_IMAGE_BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "nodes", "eyes", "gif_sync"))
-        logger.info(f"Configured allowed image base directory: {ALLOWED_IMAGE_BASE_DIR}")
-
+        # Handler for serving images from arbitrary paths
         async def get_image(request):
-            """Serve images ONLY from within the ALLOWED_IMAGE_BASE_DIR."""
-            path_param = request.query.get('path')
+            """Serve images from arbitrary file paths."""
+            path = request.query.get('path')
 
-            if not path_param:
+            if not path:
                 return web.Response(text="Missing 'path' parameter", status=400)
 
-            # Basic check for obviously malicious characters (optional but good)
-            if '..' in path_param:
-                 logger.warning(f"Rejected image path containing '..': {path_param}")
-                 return web.Response(text="Invalid path component", status=403)
+            # Basic security check to only allow image files
+            if not path.lower().endswith(('.jpg', '.jpeg', '.gif', '.png')):
+                return web.Response(text="Only image files are allowed", status=403)
 
-            # Normalize the input path and make it absolute *relative to the current working directory*
-            # This is often NOT what we want if the input is already absolute or relative to a different base
-            # Instead, let's try to resolve it safely relative to our base dir, or just use the input if absolute
-            # A safer approach combines the base dir with the filename part of the input path
+            # Check if file exists
+            if not os.path.exists(path):
+                return web.Response(text=f"Image not found: {path}", status=404)
 
             try:
-                # Method 1: Assume path_param MIGHT be relative to base_dir OR absolute but intended to be inside base_dir
-                # Resolve the input path absolutely
-                requested_abs_path = os.path.abspath(path_param)
+                # Determine content type based on file extension
+                extension = os.path.splitext(path)[1].lower()
+                content_type = {
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.png': 'image/png'
+                }.get(extension, 'application/octet-stream')
 
-                # *** CRUCIAL SECURITY CHECK ***
-                # Check if the resolved absolute path starts with the allowed base directory path
-                # os.path.commonpath is safer for symbolic links etc. but startswith is often sufficient
-                if not requested_abs_path.startswith(ALLOWED_IMAGE_BASE_DIR):
-                    logger.error(f"Forbidden access attempt: Resolved path '{requested_abs_path}' is outside allowed base '{ALLOWED_IMAGE_BASE_DIR}'")
-                    return web.Response(text="Access denied", status=403)
-
-                # Secondary check: Ensure it's an actual file (prevents requesting directories)
-                if not os.path.isfile(requested_abs_path):
-                     logger.warning(f"Attempt to access non-file path: {requested_abs_path}")
-                     return web.Response(text="Path is not a file", status=404) # Or 403
-
-                # Check file extension *after* verifying path safety
-                if not requested_abs_path.lower().endswith(('.jpg', '.jpeg', '.gif', '.png')):
-                    logger.warning(f"Attempt to access non-image file type: {requested_abs_path}")
-                    return web.Response(text="Only image files are allowed", status=403)
-
-                # If all checks pass, serve the file
-                logger.debug(f"Serving image: {requested_abs_path}") # Log only at debug level
-                extension = os.path.splitext(requested_abs_path)[1].lower()
-                content_type = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.png': 'image/png'}.get(extension, 'application/octet-stream')
-
+                # Create a file response
                 return web.FileResponse(
-                    path=requested_abs_path,
+                    path=path,
                     headers={
                         'Content-Type': content_type,
-                        'Cache-Control': 'max-age=3600',
-                        'Access-Control-Allow-Origin': '*' # Consider if '*' is too permissive
-                        }
-                    )
-
-            except ValueError as e: # Handles potential issues with path normalization on Windows with invalid chars
-                 logger.error(f"Invalid character in path parameter '{path_param}': {e}")
-                 return web.Response(text="Invalid path parameter", status=400)
+                        'Cache-Control': 'max-age=3600',  # Cache for 1 hour
+                        'Access-Control-Allow-Origin': '*'  # Allow cross-origin access
+                    }
+                )
             except Exception as e:
-                logger.error(f"Error serving image '{path_param}': {str(e)}", exc_info=True)
-                return web.Response(text="Error serving image", status=500)
-            app.router.add_get('/get-image', get_image)
-            # --- End Security Warning ---
+                logging.error(f"Error serving image {path}: {str(e)}")
+                return web.Response(text=f"Error serving image: {str(e)}", status=500)
 
+        # Add route for image serving
+        app.router.add_get('/get-image', get_image)
+
+        # Proxy endpoint for communicating with eye displays
         async def eye_proxy(request):
-             # (Keep eye_proxy logic as is, logging errors is sufficient)
+            """Proxy requests to eye displays."""
             ip = request.query.get('ip')
             filename = request.query.get('filename')
-            if not ip or not filename: return web.Response(text="Missing 'ip' or 'filename' parameter", status=400)
-            url = f"http://{ip}/playgif?name={filename}"
+
+            if not ip or not filename:
+                return web.Response(text="Missing 'ip' or 'filename' parameter", status=400)
+
             try:
+                # Construct the request URL to the eye display
+                url = f"http://{ip}/playgif?name={filename}"
+
+                # Use aiohttp.ClientSession to make the request
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                        return web.Response(text=await response.text(), status=response.status, headers={'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*'})
+                        status = response.status
+                        response_text = await response.text()
+
+                        return web.Response(
+                            text=response_text,
+                            status=status,
+                            headers={
+                                'Content-Type': 'text/plain',
+                                'Access-Control-Allow-Origin': '*'
+                            }
+                        )
             except Exception as e:
-                logger.error(f"Error proxying request to eye display {ip}: {str(e)}")
-                return web.Response(text=f"Error communicating with eye display: {str(e)}", status=500, headers={'Access-Control-Allow-Origin': '*'})
+                logging.error(f"Error proxying request to eye display {ip}: {str(e)}")
+                return web.Response(
+                    text=f"Error communicating with eye display: {str(e)}",
+                    status=500,
+                    headers={'Access-Control-Allow-Origin': '*'}
+                )
+
+        # Add route for eye display proxy
         app.router.add_get('/eye-proxy', eye_proxy)
 
+        import ssl
+        import os
+        import subprocess
+        # Set the paths for the self-signed certificate and key
         cert_file = os.path.join(os.path.dirname(__file__), "..", "cert.pem")
         key_file = os.path.join(os.path.dirname(__file__), "..", "key.pem")
-        ssl_context = None
+        # Generate self-signed certs if they do not exist
         if not (os.path.exists(cert_file) and os.path.exists(key_file)):
-            logger.info("Generating self-signed certificates...")
-            try:
-                subprocess.run([
-                    "openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
-                    "-keyout", key_file, "-out", cert_file, "-days", "365", "-subj", "/CN=localhost"
-                ], check=True, capture_output=True)
-                logger.info("Self-signed certificates generated.")
-            except Exception as e:
-                 logger.error(f"Failed to generate self-signed certificates: {e}. Proceeding without HTTPS.", exc_info=True)
-
-        if os.path.exists(cert_file) and os.path.exists(key_file):
-             try:
-                 ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                 ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-                 logger.debug("SSL context loaded.")
-             except Exception as e:
-                 logger.error(f"Failed to load SSL certificates: {e}. Proceeding without HTTPS.", exc_info=True)
-                 ssl_context = None
-        else:
-             logger.warning("Certificate files not found. Proceeding without HTTPS.")
-
+            print("Generating self-signed certificates")
+            subprocess.run([
+                "openssl", "req", "-x509", "-nodes", "-newkey", "rsa:2048",
+                "-keyout", key_file, "-out", cert_file, "-days", "365", "-subj", "/CN=localhost"
+            ], check=True)
+        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
         runner = web.AppRunner(app)
         await runner.setup()
-        port = WEBSERVER_PORT_HTTPS if ssl_context else WEBSERVER_PORT_HTTP
-        site = web.TCPSite(runner, '0.0.0.0', port, ssl_context=ssl_context)
+        site = web.TCPSite(runner, '0.0.0.0', 8443, ssl_context=ssl_context)
         await site.start()
-        protocol = "https" if ssl_context else "http"
-        logger.info(f"Web server started on {protocol}://0.0.0.0:{port}")
-        return runner
 
     def run_loop():
         global web_loop
-        runner = None
         loop = asyncio.new_event_loop()
         web_loop = loop
         asyncio.set_event_loop(loop)
-        try:
-             runner = loop.run_until_complete(init_app())
-             if runner: loop.run_forever()
-        except KeyboardInterrupt: pass # Allow clean shutdown
-        finally:
-             if runner:
-                  logger.info("Cleaning up web server...")
-                  loop.run_until_complete(runner.cleanup())
-             loop.close()
-             logger.info("Web server event loop closed.")
+        loop.run_until_complete(init_app())
+        print("DEBUG: Web server started on port 8443")
+        loop.run_forever()
 
-    thread = threading.Thread(target=run_loop, name="WebServerThread", daemon=True)
+    thread = threading.Thread(target=run_loop, daemon=True)
     thread.start()
-    return thread
+
+def start_asset_compilation():
+    cmd = ['nodes/web/resources/node_modules/.bin/encore', 'dev', '--watch']
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    def print_output():
+        for line in iter(proc.stdout.readline, ""):
+            print("[ASSET COMPILER]", line, end="")
+    threading.Thread(target=print_output, daemon=True).start()
 
 def main():
-    global grid_state_dirty, last_grid_state_save_time
+    # start_asset_compilation()
+    start_background_webserver()
+    node = Node()
 
-    logger.info("Starting main application node...")
-    web_thread = start_background_webserver()
-    try:
-        node = Node()
-    except NameError:
-         logger.critical("Dora Node class not defined. Exiting.")
-         return # Exit if Node couldn't be imported or defined
-
+    # Initialize gamepad profile manager
     profile_manager = GamepadProfileManager()
+
+    # Periodic profile list broadcasting
     last_profiles_broadcast = 0
 
-    logger.info("Entering main event loop...")
-    try:
-        for event in node:
-            try:
-                event_type = event.get("type")
-                event_id = event.get("id")
+    for event in node:
+        try:
+            if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick"):
+                # Process all pending web inputs
+                flush_web_inputs(node, profile_manager)
 
-                if event_type == "INPUT" and event_id == "tick":
-                    flush_web_inputs(node, profile_manager)
-                    current_time = time.time()
-
-                    if grid_state_dirty and (current_time - last_grid_state_save_time > GRID_STATE_SAVE_INTERVAL):
-                        logger.debug("Periodic save triggered for dirty grid state.")
-                        save_grid_state_to_file()
-
-                    if current_time - last_profiles_broadcast > 5:
-                        try:
-                            emit_profiles_list(node, profile_manager)
-                            full_profiles = profile_manager.list_profiles()
-                            response = {"id": "gamepad_profiles_list", "value": full_profiles, "type": "EVENT"}
-                            serialized = json.dumps(response, default=str).encode('utf-8')
-                            if web_loop: asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
-                            logger.debug(f"Broadcasted profiles list ({len(full_profiles)} profiles)")
-                            last_profiles_broadcast = current_time
-                        except Exception as e:
-                            logger.error(f"Error broadcasting profiles list: {e}", exc_info=True)
-
-                elif event_type == "INPUT":
-                    logger.debug(f"Received input event: ID={event_id}")
-                    event_value_pa = event.get('value')
-                    event_value = None
-                    if event_value_pa is not None:
-                         try:
-                             if hasattr(event_value_pa, 'to_pylist'): event_value = event_value_pa.to_pylist()
-                             elif hasattr(event_value_pa, 'as_py'): event_value = event_value_pa.as_py()
-                             else: event_value = event_value_pa
-                         except Exception as e:
-                              logger.error(f"Error converting PyArrow value for event '{event_id}': {e}")
-                              continue
-
-                    # --- Handle Specific Handlers ---
-                    handler_map = {
-                        "save_gamepad_profile": handle_save_gamepad_profile,
-                        "get_gamepad_profile": handle_get_gamepad_profile,
-                        "check_gamepad_profile": handle_check_gamepad_profile,
-                        "delete_gamepad_profile": handle_delete_gamepad_profile,
-                        "list_gamepad_profiles": handle_list_gamepad_profiles,
-                    }
-                    if event_id in handler_map:
-                        logger.debug(f"Handling specific event: '{event_id}'")
-                        handler_map[event_id](event, node, profile_manager)
-                        if event_id in ["save_gamepad_profile", "delete_gamepad_profile"]:
-                            emit_profiles_list(node, profile_manager) # Update lists after change
-                        continue # Skip generic broadcast
-
-                    # --- Generic Input Event Broadcasting ---
-                    if event_id == "power/runtime":
-                        # (Runtime sanitization logic kept as is)
-                        if event_value and isinstance(event_value, list) and len(event_value) > 0:
-                            try:
-                                runtime_val = float(event_value[0])
-                                if runtime_val < 0 or math.isinf(runtime_val) or math.isnan(runtime_val): event_value[0] = 0
-                            except (ValueError, TypeError) as e:
-                                logger.warning(f"Error processing runtime value '{event_value[0]}': {e}. Resetting to 0.")
-                                event_value[0] = 0
-                        else: event_value = [0]
-
-                    ws_event_id = event_id
-                    if ws_event_id and ws_event_id.startswith("waveshare_servo/"):
-                        ws_event_id = ws_event_id.replace("waveshare_servo/", "")
-
-                    ws_event_value = event_value
-
-                    # Attempt to fix JSON-in-string for servo events
-                    is_servo_list = event_id in ["waveshare_servo/servos_list", "servos_list"]
-                    is_servo_status = event_id in ["waveshare_servo/servo_status", "servo_status"]
-                    if is_servo_list or is_servo_status:
-                         if ws_event_value and len(ws_event_value) == 1 and isinstance(ws_event_value[0], str):
-                              maybe_json_string = ws_event_value[0]
-                              try:
-                                   if maybe_json_string.strip().startswith(('[', '{')):
-                                        parsed_value = json.loads(maybe_json_string)
-                                        ws_event_value = parsed_value
-                                        logger.debug(f"Parsed JSON-in-string for event '{event_id}'.")
-                              except json.JSONDecodeError:
-                                   logger.warning(f"Value for '{event_id}' looked like JSON but failed to parse: {maybe_json_string[:100]}...")
-                              except Exception as e:
-                                   logger.error(f"Unexpected error parsing potential JSON string for '{event_id}': {e}")
-
-                         # Log servo count for list, suppress individual status logs at INFO
-                         if is_servo_list:
-                              count = 0
-                              if isinstance(ws_event_value, list):
-                                   count = len(ws_event_value)
-                              logger.info(f"Broadcasting servos list: {count} servos found.")
-                         # elif is_servo_status:
-                         #      logger.debug(f"Broadcasting servo status update.") # Only log status at DEBUG
-
-
-                    event_data_for_ws = {"id": ws_event_id, "value": ws_event_value, "type": "EVENT"}
-
+                # Periodically broadcast gamepad profiles list
+                current_time = time.time()
+                if current_time - last_profiles_broadcast > 5:  # Every 5 seconds
                     try:
-                        serialized = json.dumps(event_data_for_ws, default=str).encode('utf-8')
-                        if web_loop: asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
-                    except TypeError as e:
-                         logger.error(f"Failed to serialize event data for WS broadcast (ID: {ws_event_id}): {e}. Value sample: {str(ws_event_value)[:100]}")
+                        # Emit the updated list of profiles to Dora
+                        emit_profiles_list(node, profile_manager)
+
+                        # Send full profiles directly to WebSocket clients (not simplified)
+                        full_profiles = profile_manager.list_profiles()
+
+                        response = {
+                            "id": "gamepad_profiles_list",
+                            "value": full_profiles,
+                            "type": "EVENT"
+                        }
+
+                        serialized = json.dumps(response, default=str).encode('utf-8')
+                        asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
+                        logging.info(f"Broadcasted profiles list to {len(ws_clients)} WebSocket clients")
+
+                        last_profiles_broadcast = current_time
                     except Exception as e:
-                         logger.error(f"Error scheduling broadcast for event (ID: {ws_event_id}): {e}")
+                        logging.error(f"Error broadcasting profiles list: {e}")
+            elif event["type"] == "INPUT":
+                logging.info(f"Received input event: {event['id']}")
+                event_value = event['value'].to_pylist()
+
+                # Handle gamepad profile events
+                if event["id"] == "save_gamepad_profile":
+                    print(f"DEBUG - main.py: Received save_gamepad_profile event")
+                    print(f"DEBUG - main.py: Event data: {event}")
+                    print(f"DEBUG - main.py: Value type: {type(event['value'])}")
+
+                    if hasattr(event['value'], 'to_pylist'):
+                        value_list = event['value'].to_pylist()
+                        print(f"DEBUG - main.py: Value as pylist: {value_list}")
+                    else:
+                        print(f"DEBUG - main.py: Value doesn't have to_pylist method")
+
+                    handle_save_gamepad_profile(event, node, profile_manager)
+                    print(f"Saved gamepad profile: {event['value'][0] if hasattr(event['value'], '__getitem__') else event['value']}")
+                    print(f"Profiles storage directory: {profile_manager.profiles_dir}")
+                    print(f"DEBUG - main.py: Directory exists: {os.path.exists(profile_manager.profiles_dir)}")
+                    # After saving, emit updated profiles list
+                    emit_profiles_list(node, profile_manager)
+                    continue
+                elif event["id"] == "get_gamepad_profile":
+                    handle_get_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "check_gamepad_profile":
+                    handle_check_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "delete_gamepad_profile":
+                    handle_delete_gamepad_profile(event, node, profile_manager)
+                    continue
+                elif event["id"] == "list_gamepad_profiles":
+                    handle_list_gamepad_profiles(event, node, profile_manager)
+                    continue
+
+                # Add special handling for runtime values
+                if event["id"] == "power/runtime":
+                    logging.info(f"Runtime value received: {event_value} (type: {type(event_value)})")
+                    # Ensure runtime value is a valid number
+                    if event_value and isinstance(event_value, list):
+                        try:
+                            runtime_val = float(event_value[0])
+                            if runtime_val <= 0 or math.isinf(runtime_val) or math.isnan(runtime_val):
+                                event_value[0] = 0
+                            logging.info(f"Processed runtime: {event_value[0]}")
+                        except Exception as e:
+                            logging.error(f"Error processing runtime value: {e}")
+                            event_value[0] = 0
+
+                # Create the event data with potentially modified ID
+                event_id = event["id"]
+
+                # Transform event IDs to match what the frontend expects
+                if event_id.startswith("waveshare_servo/"):
+                    event_id = event_id.replace("waveshare_servo/", "")
+                    logging.info(f"Transformed event ID from {event['id']} to {event_id}")
+
+                event_data = {
+                    "id": event_id,
+                    "value": event_value,
+                    "type": "EVENT"
+                }
+
+                # Handle servo-related events
+                if event["id"] == "waveshare_servo/servo_status" or event["id"] == "servo_status":
+                    # Fix for json-in-string format for servo status updates
+                    if event_value and len(event_value) == 1 and isinstance(event_value[0], str):
+                        try:
+                            # Check if it's a JSON string
+                            if event_value[0].startswith('[{') or event_value[0].startswith('{'):
+                                parsed_value = json.loads(event_value[0])
+                                # Update the event_data with properly parsed value
+                                event_value = parsed_value
+                                event_data["value"] = parsed_value
+                                logging.info(f"Fixed JSON-in-string format for servo_status")
+                        except json.JSONDecodeError as e:
+                            logging.error(f"Failed to parse servo_status JSON string: {e}")
+
+                    # Log info about single servo update
+                    if event_value:
+                        if isinstance(event_value, list):
+                            try:
+                                servo_ids = [s.get('id') for s in event_value]
+                                logging.info(f"Servo status update: {len(event_value)} servos {servo_ids}")
+                            except (TypeError, AttributeError) as e:
+                                logging.error(f"Error processing servo IDs in list: {e}, value: {event_value[:100]}")
+                        else:
+                            try:
+                                # Single servo update
+                                servo_id = event_value.get('id')
+                                logging.info(f"Servo status update: servo {servo_id}")
+                            except (TypeError, AttributeError) as e:
+                                logging.error(f"Error processing single servo: {e}, value type: {type(event_value)}")
+                    else:
+                        logging.warning("Received empty servo status update")
+
+                elif event["id"] == "waveshare_servo/servos_list" or event["id"] == "servos_list":
+                    # Log info about servos list
+                    if event_value:
+                        # Detailed logging of raw event value for troubleshooting
+                        logging.info(f"Raw servos_list event value type: {type(event_value)}, length: {len(event_value)}")
+                        if len(event_value) > 0:
+                            logging.info(f"First element type: {type(event_value[0])}")
+                            if isinstance(event_value[0], str):
+                                logging.info(f"First element content sample: {event_value[0][:100]}...")
+
+                        # Fix for json-in-string format: if the first item is a string containing JSON
+                        if len(event_value) == 1 and isinstance(event_value[0], str):
+                            try:
+                                # Case 1: String starts with an array of objects marker
+                                if event_value[0].startswith('[{') or event_value[0].startswith('[{'):
+                                    # Log the raw string for debugging
+                                    logging.info(f"Raw servos_list JSON array string: {event_value[0][:200]}...")
+
+                                    # Parse the JSON string into a proper list of objects
+                                    parsed_value = json.loads(event_value[0])
+                                    if isinstance(parsed_value, list):
+                                        # Update the event data with properly parsed value
+                                        event_value = parsed_value
+                                        event_data["value"] = parsed_value
+                                        logging.info(f"Successfully parsed servos_list array. Now contains {len(parsed_value)} servos.")
+                                    else:
+                                        logging.error(f"Parsed servos_list JSON is not a list. Got type: {type(parsed_value)}")
+
+                                # Case 2: String starts with a single object marker (handle single servo case)
+                                elif event_value[0].startswith('{'):
+                                    logging.info(f"Raw servos_list single JSON object: {event_value[0][:200]}...")
+
+                                    # Parse the JSON string into a single object
+                                    parsed_value = json.loads(event_value[0])
+                                    if isinstance(parsed_value, dict):
+                                        # Create a list with this single servo
+                                        event_value = [parsed_value]
+                                        event_data["value"] = [parsed_value]
+                                        logging.info(f"Successfully parsed single servo JSON into a list. ID: {parsed_value.get('id')}")
+                                    else:
+                                        logging.error(f"Parsed servos_list JSON object is not a dict. Got type: {type(parsed_value)}")
+                            except json.JSONDecodeError as e:
+                                logging.error(f"Failed to parse servos_list JSON string: {e}, string was: {event_value[0][:100]}...")
+
+                        # Log the servo IDs
+                        try:
+                            # Check if event_value is a list of dicts or list of something else
+                            if all(isinstance(item, dict) for item in event_value):
+                                servo_ids = [s.get('id') for s in event_value]
+                                logging.info(f"Servos list update: {len(event_value)} servos {servo_ids}")
+                            else:
+                                logging.error(f"event_value contains non-dict items: {event_value[:5]}")
+                        except (TypeError, AttributeError) as e:
+                            logging.error(f"Error processing servo IDs: {e}, value type: {type(event_value)}, value: {event_value}")
+                    else:
+                        logging.warning("Received empty servos list")
 
 
-                elif event_type == "STOP":
-                    logger.info("Received STOP event. Exiting main loop.")
-                    break
-                elif event_type == "ERROR":
-                    logger.error(f"Received ERROR event from Dora: {event.get('error')}")
+                # Handle config-related events
+                elif event["id"] in ["config/setting_updated", "config/settings"]:
+                    event_name = event["id"].replace("config/", "")
+                    if event_name == "settings":
+                        logging.info(f"Received complete settings")
+                    else:
+                        logging.info(f"Received config event: {event_name} with value: {event_value[:100] if len(str(event_value)) > 100 else event_value}")
 
-            except Exception as e:
-                logger.error(f"Error handling Dora event: {e}", exc_info=True)
-                logger.error(f"Problematic event data sample: {str(event)[:200]}")
-
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received. Shutting down.")
-    finally:
-        logger.info("Exiting main function.")
-        if grid_state_dirty:
-            logger.info("Performing final save of grid state before exiting...")
-            save_grid_state_to_file()
-
-        if web_loop and web_loop.is_running():
-            logger.info("Requesting web server event loop to stop...")
-            web_loop.call_soon_threadsafe(web_loop.stop)
-            if web_thread:
-                 web_thread.join(timeout=2.0)
-                 if web_thread.is_alive(): logger.warning("Web server thread did not exit cleanly.")
-
-        logger.info("Application finished.")
+                serialized = json.dumps(event_data, default=str).encode('utf-8')
+                if web_loop is not None:
+                    asyncio.run_coroutine_threadsafe(broadcast_bytes(serialized), web_loop)
+        except Exception as e:
+            logging.error(f"Error handling event: {e}")
 
 
 if __name__ == "__main__":
