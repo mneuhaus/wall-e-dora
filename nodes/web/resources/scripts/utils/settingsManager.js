@@ -54,7 +54,7 @@ export const updateWidgetSettings = (widgetId, newSettings, updateWidgetProps, b
     return;
   }
   
-  console.log(`Updating settings for widget ${widgetId}:`, newSettings);
+  // console.log(`Updating settings for widget ${widgetId}:`, newSettings);
   
   // Update the widget through GridContext
   updateWidgetProps(widgetId, newSettings);

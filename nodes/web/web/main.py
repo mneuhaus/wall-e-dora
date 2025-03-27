@@ -21,7 +21,7 @@ from handlers.gamepad_profiles import (
     emit_profiles_list
 )
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 global_web_inputs = []
 ws_clients = set()
@@ -158,28 +158,18 @@ async def websocket_handler(request):
             "type": "EVENT"
         }
         await ws.send_str(json.dumps(welcome_msg))
-        logging.info("Sent welcome message to client")
         
         # Process incoming messages
         async for msg in ws:
             if msg.type == web.WSMsgType.TEXT:
                 try:
-                    logging.debug(f"Received text message: {msg.data[:200]}...")
                     event = json.loads(msg.data)
                     output_id = event.get('output_id')
-                    logging.info(f"Processed event with output_id: {output_id}")
+                    logging.debug(f"Processed event with output_id: {output_id}")
                     
-                    # Log additional details for joystick-related and config-related events
-                    if output_id in ['save_joystick_servo', 'save_grid_state', 'update_setting']:
-                        if output_id == 'save_joystick_servo':
-                            logging.info(f"Joystick servo assignment: {event.get('data')}")
-                        elif output_id == 'save_grid_state':
-                            # Find and log joystick widgets in the grid state
-                            for widget_id, widget_data in event.get('data', {}).items():
-                                if widget_data.get('type') == 'joystick-control':
-                                    logging.info(f"Grid state update for joystick {widget_id}: x={widget_data.get('xServoId')}, y={widget_data.get('yServoId')}")
-                        elif output_id == 'update_setting':
-                            logging.info(f"Config update: {event.get('data')}")
+                    # More detailed logging only for important configuration changes
+                    if output_id in ['save_joystick_servo']:
+                        logging.info(f"Joystick servo assignment: {event.get('data')}")
                     
                     global_web_inputs.append(event)
                 except Exception as e:
@@ -227,11 +217,11 @@ async def broadcast_bytes(data_bytes):
     try:
         data_str = data_bytes.decode("utf-8")
         
-        # Enhance logging for servo-related events
+        # Reduce logging for common events
         if '"id":"servo_status"' in data_str or '"id":"servos_list"' in data_str:
-            logging.info(f"Broadcasting servo data to {len(ws_clients)} clients: {data_str[:200]}...")
+            logging.debug(f"Broadcasting servo data to {len(ws_clients)} clients")
         else:
-            logging.debug(f"Broadcasting to {len(ws_clients)} clients: {data_str[:100]}...")
+            logging.debug(f"Broadcasting to {len(ws_clients)} clients: {data_str[:50]}...")
             
         active_clients = 0
         
@@ -246,11 +236,8 @@ async def broadcast_bytes(data_bytes):
                 logging.error(f"Error sending to client: {e}")
                 ws_clients.discard(ws)
                 
-        # Enhanced logging for servo data
-        if '"id":"servo_status"' in data_str or '"id":"servos_list"' in data_str:
-            logging.info(f"Servo data broadcast complete to {active_clients} active clients")
-        else:
-            logging.debug(f"Broadcast complete to {active_clients} active clients")
+        # Minimal logging for broadcasts
+        logging.debug(f"Broadcast complete to {active_clients} active clients")
     except Exception as e:
         logging.error(f"Error in broadcast_bytes: {e}")
 

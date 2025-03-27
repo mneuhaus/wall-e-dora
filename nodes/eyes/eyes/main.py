@@ -23,7 +23,7 @@ def main():
         "node": node
     }
     
-    print("Eyes node started - will sync GIF images to eye displays every 60 seconds")
+    print("Eyes node started - will sync GIF images to eye displays every 5 minutes")
     
     # Broadcast available images at startup
     broadcast_available_images(context)

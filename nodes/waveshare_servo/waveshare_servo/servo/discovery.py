@@ -11,8 +11,7 @@ def discover_servos(serial_conn) -> Set[int]:
     if not serial_conn or not serial_conn.is_open:
         return set()
 
-    # Checking for connected servos
-    print(f"Scanning for servos...")
+    # Scanning with minimal logging
     discovered_servos = set()
     
     # Only try SCS protocol format as it was used in previous implementation
@@ -35,10 +34,7 @@ def discover_servos(serial_conn) -> Set[int]:
         except Exception as e:
             print(f"Error while pinging servo {id}: {e}")
 
-    # Only print results at the end
-    if discovered_servos:
-        print(f"Found servos with IDs: {discovered_servos}")
-    else:
-        print("No servos found")
+    # Only print results when explicitly needed
+    # Logging now happens at the caller level with change detection
         
     return discovered_servos

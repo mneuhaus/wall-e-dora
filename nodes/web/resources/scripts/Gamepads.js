@@ -12,13 +12,13 @@ class Gamepad {
     this.customMapping = null;
     this.isMapping = false; // Flag to indicate mapping is in progress
 
-    // Log gamepad details for debugging
-    console.log('Gamepad connected:', {
-      id: gamepadApi.id,
-      index: gamepadApi.index,
-      axes: gamepadApi.axes.length,
-      buttons: gamepadApi.buttons.length
-    });
+    // Disable logging to improve performance
+    // console.log('Gamepad connected:', {
+    //   id: gamepadApi.id,
+    //   index: gamepadApi.index,
+    //   axes: gamepadApi.axes.length,
+    //   buttons: gamepadApi.buttons.length
+    // });
 
     // Default mappings
     this.axes = {
@@ -69,7 +69,7 @@ class Gamepad {
       // Try to find matching profile by ID first
       if (profiles[this.id]) {
         const profile = profiles[this.id];
-        console.log('Found profile for this gamepad by ID:', profile.name);
+        //console.log('Found profile for this gamepad by ID:', profile.name);
         
         if (profile.mapping) {
           // Apply mapping from profile
@@ -79,7 +79,7 @@ class Gamepad {
             name: profile.name,
             mapping: profile.mapping
           };
-          console.log('Applied mapping from profile:', profile.name);
+          //console.log('Applied mapping from profile:', profile.name);
           
           // Force update all listeners to ensure UI refresh
           this._forceUpdateHandlers.forEach(handler => handler());
@@ -103,14 +103,14 @@ class Gamepad {
                 profile.productId.toLowerCase() === productId &&
                 profile.mapping) {
               
-              console.log(`Found profile by vendor:${vendorId}/product:${productId} - ${profile.name}`);
+              //console.log(`Found profile by vendor:${vendorId}/product:${productId} - ${profile.name}`);
               
               this.customMapping = {
                 gamepad_id: this.id,
                 name: profile.name,
                 mapping: profile.mapping
               };
-              console.log('Applied mapping from profile:', profile.name);
+              //console.log('Applied mapping from profile:', profile.name);
               
               // Force update all listeners to ensure UI refresh
               this._forceUpdateHandlers.forEach(handler => handler());
@@ -119,7 +119,7 @@ class Gamepad {
           }
         }
       } catch (e) {
-        console.error('Error checking for profile match by vendor/product:', e);
+        //console.error('Error checking for profile match by vendor/product:', e);
       }
     });
     
@@ -127,7 +127,7 @@ class Gamepad {
     node.on('gamepad_profile', (event) => {
       if (event && event.value && event.value.gamepad_id === this.id) {
         this.customMapping = event.value;
-        console.log('Loaded custom gamepad mapping via direct response:', this.customMapping);
+        //console.log('Loaded custom gamepad mapping via direct response:', this.customMapping);
         
         // Force update all listeners to ensure UI refresh
         this._forceUpdateHandlers.forEach(handler => handler());
@@ -140,7 +140,7 @@ class Gamepad {
     // Start polling
     this.pollIntervalId = setInterval(() => {
       this.updateState();
-    }, 16); // 16ms for 60Hz polling (more responsive updates)
+    }, 8); // 8ms for 120Hz polling (more responsive updates)
   }
 
   updateState() {
@@ -158,45 +158,13 @@ class Gamepad {
       const button9Value = gamepad.buttons[9].value;
       const button9Changed = this._prevButtonState.button9 !== button9Value;
       
-      // Always log button 9 value when it changes
-      if (button9Changed) {
-        console.log(`BUTTON 9 CHANGED: ${this._prevButtonState.button9} → ${button9Value}`);
-        
-        // Check for specific axes commonly associated with triggers (5 is common for right trigger)
-        const potentialTriggerAxes = [4, 5, 6, 7]; // Common axes for triggers
-        
-        potentialTriggerAxes.forEach(axisIndex => {
-          if (gamepad.axes && gamepad.axes[axisIndex] !== undefined) {
-            console.log(`  Potential trigger axis ${axisIndex}: ${gamepad.axes[axisIndex]}`);
-          }
+      // Store axis state for correlations without logging
+      if (gamepad.axes) {
+        gamepad.axes.forEach((value, index) => {
+          const prevValue = this._prevAxesState[`axis${index}`] || 0;
+          // Update previous value
+          this._prevAxesState[`axis${index}`] = value;
         });
-      }
-      
-      // Only do detailed logging when button is pressed or changing
-      if (button9Value > 0 || button9Changed) {
-        // Log all axes with non-trivial values
-        if (gamepad.axes) {
-          let significantChanges = [];
-          
-          gamepad.axes.forEach((value, index) => {
-            const prevValue = this._prevAxesState[`axis${index}`] || 0;
-            const change = Math.abs(value - prevValue);
-            
-            // Detect axes that change in correlation with button 9
-            if (button9Changed && change > 0.01) {
-              significantChanges.push(`Axis ${index} changed by ${change.toFixed(4)} when button 9 changed by ${Math.abs(button9Value - (this._prevButtonState.button9 || 0)).toFixed(4)}`);
-            }
-            
-            // Update previous value
-            this._prevAxesState[`axis${index}`] = value;
-          });
-          
-          // Log any axes that changed in correlation with button 9
-          if (significantChanges.length > 0) {
-            console.log(`CORRELATED CHANGES WITH BUTTON 9:`);
-            significantChanges.forEach(msg => console.log(`  ${msg}`));
-          }
-        }
       }
       
       // Save the current button 9 state for next comparison
@@ -238,7 +206,7 @@ class Gamepad {
         const hasDecimalValue = gamepadButton.value > 0 && gamepadButton.value < 1;
         
         if (hasDecimalValue) {
-          console.log(`FOUND ANALOG BUTTON: ${this.buttons[index]} (index: ${index}) value: ${gamepadButton.value}`);
+          // No longer logging analog button detection
           // Process as an analog button
           const newValue = parseFloat(gamepadButton.value).toFixed(4);
           if (this[this.buttons[index]].value != newValue) {
@@ -395,9 +363,8 @@ class Gamepad {
 
   // Get custom mapping from the profiles list
   loadCustomMapping() {
-    // Just log that we're waiting for the mapping
+    // No longer logging while waiting for the mapping
     // The mapping will come automatically from the tick event
-    console.log('Waiting for profiles list to include mapping for:', this.id);
     // No request needed - tick will send the profiles
   }
 
@@ -430,25 +397,7 @@ class Gamepads {
     this.emitter = mitt();
 
     window.addEventListener("gamepadconnected", (event) => {
-      console.log("Gamepad connected:", event);
-      // Debug log for finding proper gamepad mapping
-      console.log("Gamepad details for mapping:", {
-        id: event.gamepad.id,
-        index: event.gamepad.index, 
-        mapping: event.gamepad.mapping,
-        axes: {
-          count: event.gamepad.axes.length,
-          values: Array.from(event.gamepad.axes).map(v => parseFloat(v).toFixed(4))
-        },
-        buttons: {
-          count: event.gamepad.buttons.length,
-          values: Array.from(event.gamepad.buttons).map((b, i) => ({
-            index: i,
-            value: parseFloat(b.value).toFixed(4),
-            pressed: b.pressed
-          }))
-        }
-      });
+      // No longer logging gamepad connections for better performance
       
       if (this.gamepads[event.gamepad.index]) {
         // Clean up existing gamepad instance if there was one
@@ -459,7 +408,7 @@ class Gamepads {
     });
 
     window.addEventListener("gamepaddisconnected", (event) => {
-      console.log("Lost connection with the gamepad.", event);
+      // No longer logging gamepad disconnections
       if (this.gamepads[event.gamepad.index]) {
         this.gamepads[event.gamepad.index].dispose();
       }
@@ -478,7 +427,7 @@ class Gamepads {
 
   attachServo(servoId, controlType, controlIndex) {
     this.servoMapping[`${controlType}_${controlIndex}`] = servoId;
-    console.log(`Attached servo ${servoId} to ${controlType} ${controlIndex}`);
+    // No longer logging servo attachments
   }
 }
 
