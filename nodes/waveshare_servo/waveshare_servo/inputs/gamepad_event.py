@@ -305,26 +305,62 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
     axis_states[f"{servo_id}"] = float_value
     
     if mode == "absolute":
-        # Absolute mode: Map 0.0 to 1.0 to servo range 0-1023
+        # Get servo min/max range
+        min_pulse = servo.settings.min_pulse
+        max_pulse = servo.settings.max_pulse
+        
+        # First, handle potential -1 to 1 range from joysticks
+        # If value is between -1 and 1, we need to map it to 0 to 1
+        if float_value >= -1.0 and float_value <= 1.0:
+            # Map from -1,1 to 0,1 range
+            normalized_value = (float_value + 1.0) / 2.0
+        else:
+            # Already in 0 to 1 range (or outside, will be clamped)
+            normalized_value = float_value
+            
         # Apply multiplier to adjust sensitivity
-        scaled_value = float_value * multiplier
+        scaled_value = normalized_value * multiplier
+        
         # Clamp to 0.0 to 1.0 range
         scaled_value = max(min(scaled_value, 1.0), 0.0)
-        # Map to servo range
-        new_position = int(scaled_value * 1023)
+        
+        # Map to servo range (min_pulse to max_pulse)
+        servo_range = max_pulse - min_pulse
+        new_position = int(min_pulse + (scaled_value * servo_range))
+        
+        print(f"[GAMEPAD:AXIS] Absolute mode: value={float_value:.2f} → normalized={normalized_value:.2f} → position={new_position} (min={min_pulse}, max={max_pulse})")
         return new_position
     
     elif mode == "relative":
+        # Get servo min/max range
+        min_pulse = servo.settings.min_pulse
+        max_pulse = servo.settings.max_pulse
+        
         # Relative mode: Change position based on axis movement
         # Only apply change if value is significantly different from zero
         if abs(float_value) > 0.1:
+            # Normalize input value if it's in -1 to 1 range
+            if float_value >= -1.0 and float_value <= 1.0:
+                # For relative mode, we keep the sign but normalize magnitude
+                normalized_value = float_value
+            else:
+                # Already normalized or will be clamped
+                normalized_value = float_value
+            
             # Calculate change amount (apply multiplier for sensitivity)
-            change = float_value * multiplier * 10  # Adjust for reasonable speed
+            # Scale the speed based on the servo range to make it more intuitive
+            servo_range = max_pulse - min_pulse
+            step_size = servo_range / 100.0  # 1% of range per step at multiplier=1
+            change = normalized_value * multiplier * step_size
+            
             # Update position
             current_pos = servo.settings.position
             new_pos = current_pos + change
-            # Clamp to valid range
-            new_position = int(max(min(new_pos, 1023), 0))
+            
+            # Clamp to valid range (between min and max pulse)
+            new_position = int(max(min(new_pos, max_pulse), min_pulse))
+            
+            print(f"[GAMEPAD:AXIS] Relative mode: current={current_pos} → change={change:.2f} → new={new_position} (min={min_pulse}, max={max_pulse})")
             return new_position
     
     return None
