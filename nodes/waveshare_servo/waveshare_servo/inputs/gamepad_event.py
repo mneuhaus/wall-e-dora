@@ -150,12 +150,41 @@ def calculate_position(servo, value, context: Dict[str, Any]) -> Optional[int]:
     invert = config.get("invert", False)
     multiplier = config.get("multiplier", 1.0)
     
-    # Apply inversion if needed
+    # Apply inversion if needed for special handling of different input types
     if invert:
-        if control_type == "axis":
-            value = -value
-        elif control_type == "button":
-            value = 1 - value
+        # For all numeric values that could be in -1 to 1 range
+        if isinstance(value, (int, float)):
+            # If it's likely an axis value in -1 to 1 range
+            if value >= -1.0 and value <= 1.0:
+                # For axis values, inversion means flip the sign
+                value = -value
+                print(f"[GAMEPAD] Inverted axis value to: {value}")
+            # If it's likely a 0-1 button value
+            elif value >= 0.0 and value <= 1.0:
+                # For button/binary values, inversion means 1-value
+                value = 1.0 - value
+                print(f"[GAMEPAD] Inverted button value to: {value}")
+            # Handle any other ranges by flipping around midpoint
+            else:
+                # Generic inversion - be careful with unusual ranges
+                value = -value
+                print(f"[GAMEPAD] Applied generic inversion to: {value}")
+        # String or other values - try to handle conservatively
+        elif isinstance(value, str):
+            try:
+                val = float(value)
+                if val >= 0.0 and val <= 1.0:
+                    # Likely a button
+                    value = str(1.0 - val)
+                else:
+                    # Likely an axis
+                    value = str(-val)
+                print(f"[GAMEPAD] Inverted string value to: {value}")
+            except (ValueError, TypeError):
+                # Can't safely invert
+                print(f"[GAMEPAD] Warning: Cannot invert non-numeric value: {value}")
+        else:
+            print(f"[GAMEPAD] Warning: Cannot invert value of type {type(value)}")
     
     # Check if this control should be handled as an analog value
     is_analog = config.get("isAnalog", False)
@@ -309,14 +338,19 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
         min_pulse = servo.settings.min_pulse
         max_pulse = servo.settings.max_pulse
         
-        # First, handle potential -1 to 1 range from joysticks
-        # If value is between -1 and 1, we need to map it to 0 to 1
+        # Handle -1 to 1 range from joysticks
+        # Map so that -1 = 0%, 0 = 50%, 1 = 100% of the servo range
         if float_value >= -1.0 and float_value <= 1.0:
             # Map from -1,1 to 0,1 range
             normalized_value = (float_value + 1.0) / 2.0
+            print(f"[GAMEPAD:AXIS] Mapping from -1,1 range: {float_value:.2f} → {normalized_value:.2f}")
         else:
-            # Already in 0 to 1 range (or outside, will be clamped)
-            normalized_value = float_value
+            # If it's outside -1 to 1, we'll clamp appropriately
+            if float_value < 0:
+                normalized_value = 0.0
+            else:
+                normalized_value = min(float_value, 1.0)
+            print(f"[GAMEPAD:AXIS] Value outside -1,1 range: {float_value:.2f} → {normalized_value:.2f}")
             
         # Apply multiplier to adjust sensitivity
         scaled_value = normalized_value * multiplier
@@ -339,13 +373,16 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
         # Relative mode: Change position based on axis movement
         # Only apply change if value is significantly different from zero
         if abs(float_value) > 0.1:
-            # Normalize input value if it's in -1 to 1 range
+            # For relative mode, we want to keep the sign 
+            # -1 should move toward min position, +1 toward max position
+            # For values between -1 and 1, we use them directly
             if float_value >= -1.0 and float_value <= 1.0:
-                # For relative mode, we keep the sign but normalize magnitude
                 normalized_value = float_value
+                print(f"[GAMEPAD:AXIS] Relative mode using value: {float_value:.2f}")
             else:
-                # Already normalized or will be clamped
-                normalized_value = float_value
+                # Clamp values outside -1 to 1
+                normalized_value = max(min(float_value, 1.0), -1.0)
+                print(f"[GAMEPAD:AXIS] Clamping relative value to -1,1: {float_value:.2f} → {normalized_value:.2f}")
             
             # Calculate change amount (apply multiplier for sensitivity)
             # Scale the speed based on the servo range to make it more intuitive
