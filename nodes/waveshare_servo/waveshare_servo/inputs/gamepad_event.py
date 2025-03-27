@@ -18,30 +18,48 @@ def handle_gamepad_event(event: Dict[str, Any], context: Dict[str, Any]) -> None
     control_name = event.get("id")
     raw_value = event.get("value")
     
-    # Simple extraction of the value using PyArrow's as_py method
+    # The safest and simplest extraction method that won't fail
     try:
+        # Handle PyArrow arrays (most common case)
         if hasattr(raw_value, "__getitem__") and len(raw_value) > 0:
+            # If it has as_py method, use it
             if hasattr(raw_value[0], "as_py"):
                 value = raw_value[0].as_py()
+            # Otherwise try string conversion as fallback
             else:
-                # If it's a string, try to convert to float
+                raw_str = str(raw_value[0]).strip('"\'')
                 try:
-                    value = float(str(raw_value[0]).strip('"'))
+                    value = float(raw_str)
                 except (ValueError, TypeError):
-                    print(f"[GAMEPAD] Could not convert {raw_value[0]} to float")
-                    return
+                    print(f"[GAMEPAD] Warning: Could not convert '{raw_str}' to number")
+                    value = 0
+        # Handle simple values
+        elif isinstance(raw_value, (int, float)):
+            value = float(raw_value)
+        # Handle string values
+        elif isinstance(raw_value, str):
+            try:
+                value = float(raw_value)
+            except (ValueError, TypeError):
+                print(f"[GAMEPAD] Warning: Could not convert string '{raw_value}' to number")
+                value = 0
+        # Fallback for any other type
         else:
-            print(f"[GAMEPAD] Invalid value format: {raw_value}")
-            return
+            print(f"[GAMEPAD] Warning: Unsupported value type: {type(raw_value)}")
+            value = 0
     except Exception as e:
         print(f"[GAMEPAD] Error extracting value: {e}")
-        return
+        value = 0  # Default to 0 so we don't break later comparisons
     
-    # Normalize negative values for triggers
-    if value < 0:
-        value = abs(value)
-    
-    print(f"[GAMEPAD] Control: {control_name}, Value: {value}")
+    # Convert value to float and normalize negative values
+    try:
+        if isinstance(value, str):
+            value = float(value)
+        if value < 0:
+            value = abs(value)
+    except (ValueError, TypeError):
+        # If conversion fails, use 0 as default
+        value = 0
     
     if control_name is None:
         print(f"[GAMEPAD] Invalid gamepad event (no control name): {event}")
@@ -165,12 +183,25 @@ def handle_button_control(servo, value, mode, context: Dict[str, Any]) -> Option
     Returns:
         The calculated position (0-1023) or None if no position change
     """
-    # For standard button handling, we'll convert to 0/1
-    if isinstance(value, (int, float)):
-        is_pressed = value > 0.5
-        button_value = 1 if is_pressed else 0
-    else:
-        print(f"[GAMEPAD:BUTTON] Invalid button value: {value}")
+    # Ensure value is numeric and convert to 0/1
+    try:
+        # Convert to float if needed
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except (ValueError, TypeError):
+                print(f"[GAMEPAD:BUTTON] Invalid button value (non-numeric string): {value}")
+                return None
+                
+        # Now value should be numeric, check if it's pressed
+        if isinstance(value, (int, float)):
+            is_pressed = float(value) > 0.5
+            button_value = 1 if is_pressed else 0
+        else:
+            print(f"[GAMEPAD:BUTTON] Invalid button value (unknown type): {value}")
+            return None
+    except Exception as e:
+        print(f"[GAMEPAD:BUTTON] Error processing button value: {e}")
         return None
         
     # Get button state tracking dict
@@ -180,6 +211,11 @@ def handle_button_control(servo, value, mode, context: Dict[str, Any]) -> Option
     # Get previous state or set default
     state_key = f"{servo_id}"
     prev_state = button_states.get(state_key, 0)
+    if isinstance(prev_state, str):
+        try:
+            prev_state = float(prev_state)
+        except (ValueError, TypeError):
+            prev_state = 0
     
     if mode == "toggle":
         # Toggle mode: Change position only on button press (0->1)
@@ -229,9 +265,25 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
     """
     # Ensure value is treated as a float
     try:
-        float_value = float(value)
+        # Convert to float if needed
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except (ValueError, TypeError):
+                print(f"[GAMEPAD:AXIS] Invalid axis value (non-numeric string): {value}")
+                return None
+                
+        # Now value should be numeric
+        if isinstance(value, (int, float)):
+            float_value = float(value)
+        else:
+            print(f"[GAMEPAD:AXIS] Invalid axis value (unknown type): {value}")
+            return None
     except (ValueError, TypeError):
         print(f"[GAMEPAD:AXIS] Cannot convert to number: {value}")
+        return None
+    except Exception as e:
+        print(f"[GAMEPAD:AXIS] Error processing axis value: {e}")
         return None
     
     # Get axis state tracking dict
@@ -240,6 +292,12 @@ def handle_axis_control(servo, value, mode, multiplier, context: Dict[str, Any])
     
     # Store current state
     prev_value = axis_states.get(f"{servo_id}", 0)
+    if isinstance(prev_value, str):
+        try:
+            prev_value = float(prev_value)
+        except (ValueError, TypeError):
+            prev_value = 0
+    
     axis_states[f"{servo_id}"] = float_value
     
     if mode == "absolute":
