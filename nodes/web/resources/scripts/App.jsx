@@ -63,7 +63,7 @@ const App = () => {
             main: {
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden',
+              overflow: 'auto',
               paddingTop: rem(35),
               paddingBottom: 0,
               paddingLeft: 0,

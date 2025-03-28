@@ -58,7 +58,7 @@ const DashboardView = forwardRef((props, ref) => {
   `;
 
   return (
-    <div className="dashboard" ref={ref} style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="dashboard-view" ref={ref} style={{ height: '100%', overflow: 'hidden' }}>
       <style>{styles}</style>
       <div className="dashboard-grid">
         <div className="eyes-content">
