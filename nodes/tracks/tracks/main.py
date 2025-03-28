@@ -19,6 +19,11 @@ COMMAND_SCALE = 100.0 # Scale joystick (-1..1) to Pico command range (-100..100)
 INVERT_Y_AXIS = False # Keep forward/backward as is
 INVERT_X_AXIS = True  # Invert left/right to fix the turning direction
 JOYSTICK_DEADZONE = 0.0 # Old script had no deadzone, set to 0.0
+
+# --- Easing Configuration ---
+EASING_ENABLED = True # Enable/disable easing
+EASING_FACTOR = 0.3  # Easing factor (0.0-1.0): lower = smoother but less responsive
+MAX_ACCEL_RATE = 20   # Maximum acceleration change per tick (prevents abrupt changes)
 # ---
 
 serial_buffer = queue.Queue()
@@ -92,6 +97,12 @@ def main():
     latest_joystick_x = 0.0
     latest_joystick_y = 0.0
     last_command_sent = ""
+    
+    # Variables for easing implementation
+    current_linear = 0
+    current_angular = 0
+    target_linear = 0
+    target_angular = 0
 
     print("Waiting for Dora events...")
     try:
@@ -114,10 +125,34 @@ def main():
                     y_multiplier = -1.0 if INVERT_Y_AXIS else 1.0
                     x_multiplier = -1.0 if INVERT_X_AXIS else 1.0
 
-                    # Convert joystick inputs to linear and angular velocities.
-                    # Directly map Y to linear, X to angular (matching old script)
-                    linear = int(current_y * y_multiplier * COMMAND_SCALE)
-                    angular = int(current_x * x_multiplier * COMMAND_SCALE)
+                    # Calculate target velocities from joystick input
+                    target_linear = int(current_y * y_multiplier * COMMAND_SCALE)
+                    target_angular = int(current_x * x_multiplier * COMMAND_SCALE)
+                    
+                    if EASING_ENABLED:
+                        # Apply easing to smooth movement
+                        # Calculate differences between current and target values
+                        linear_diff = target_linear - current_linear
+                        angular_diff = target_angular - current_angular
+                        
+                        # Limit maximum change rate if needed
+                        if MAX_ACCEL_RATE > 0:
+                            linear_diff = max(min(linear_diff, MAX_ACCEL_RATE), -MAX_ACCEL_RATE)
+                            angular_diff = max(min(angular_diff, MAX_ACCEL_RATE), -MAX_ACCEL_RATE)
+                        
+                        # Apply easing using the easing factor
+                        current_linear += int(linear_diff * EASING_FACTOR)
+                        current_angular += int(angular_diff * EASING_FACTOR)
+                        
+                        # Set linear and angular to the eased values
+                        linear = current_linear
+                        angular = current_angular
+                    else:
+                        # No easing - direct mapping
+                        linear = target_linear
+                        angular = target_angular
+                        current_linear = linear
+                        current_angular = angular
 
                     cmd = f"move {linear} {angular}"
 
@@ -183,6 +218,12 @@ def main():
 
         if ser and ser.is_open:
             try:
+                # Reset the easing values to ensure immediate stop
+                current_linear = 0
+                current_angular = 0
+                target_linear = 0
+                target_angular = 0
+                
                 print("Sending stop command (move 0 0)...")
                 ser.write(("move 0 0\n").encode("utf-8"))
                 ser.flush()
