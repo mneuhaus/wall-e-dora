@@ -180,21 +180,22 @@ def calculate_position(servo, value: float, context: Dict[str, Any], control_nam
         invert = config.get("invert", False)
         multiplier = float(config.get("multiplier", 1.0)) # Ensure float
         is_analog_override = config.get("isAnalog", False) # Explicit override
+        
+        # Get the input range configuration - default to "bipolar" for axes and "unipolar" for buttons
+        input_range = config.get("input_range")
+        if input_range is None:
+            input_range = "bipolar" if control_type == "axis" else "unipolar"
 
         # --- Apply Inversion ---
-        # Inversion logic depends on the *expected* type of control
+        # Inversion logic depends on the input range, not just control type
         original_value = value
         if invert:
-            if control_type == "axis": # Assumes bipolar (-1 to 1) range ideally
-                 value = -value
-                 # print(f"[GAMEPAD] Inverted axis value for {control_name} ({servo.id}): {original_value} -> {value}")
-            elif control_type == "button": # Assumes unipolar (0 to 1) range ideally
-                 value = 1.0 - value
-                 # print(f"[GAMEPAD] Inverted button value for {control_name} ({servo.id}): {original_value} -> {value}")
-            else: # Fallback: guess based on value range? Risky. Let's just flip sign.
-                 value = -value
-                 # print(f"[GAMEPAD] Inverted unknown type value for {control_name} ({servo.id}): {original_value} -> {value}")
-
+            if input_range == "bipolar":  # For bipolar (-1 to 1) range
+                value = -value
+                # print(f"[GAMEPAD] Inverted bipolar value for {control_name} ({servo.id}): {original_value} -> {value}")
+            else:  # For unipolar (0 to 1) range
+                value = 1.0 - value
+                # print(f"[GAMEPAD] Inverted unipolar value for {control_name} ({servo.id}): {original_value} -> {value}")
 
         # --- Determine Handling Path ---
         # Use axis handler if:
@@ -205,9 +206,9 @@ def calculate_position(servo, value: float, context: Dict[str, Any], control_nam
            (control_type == "button" and mode in ["absolute", "relative"]) or \
            (control_type == "button" and is_analog_override):
 
-            # print(f"[GAMEPAD] Handling '{control_name}' ({servo.id}) as ANALOG (Type: {control_type}, Mode: {mode}, isAnalog: {is_analog_override})")
-            # Pass the ORIGINAL control_type to handle_axis_control to differentiate input range
-            return handle_axis_control(servo, value, mode, multiplier, context, control_type)
+            # print(f"[GAMEPAD] Handling '{control_name}' ({servo.id}) as ANALOG (Type: {control_type}, Mode: {mode}, isAnalog: {is_analog_override}, Range: {input_range})")
+            # Pass input_range to handle_axis_control
+            return handle_axis_control(servo, value, mode, multiplier, context, control_type, input_range)
 
         elif control_type == "button":
             # print(f"[GAMEPAD] Handling '{control_name}' ({servo.id}) as BUTTON (Mode: {mode})")
@@ -284,9 +285,19 @@ def handle_button_control(servo, value: float, mode: Optional[str], context: Dic
         return None
 
 
-def handle_axis_control(servo, value: float, mode: Optional[str], multiplier: float, context: Dict[str, Any], original_control_type: Optional[str]) -> Optional[int]:
+def handle_axis_control(servo, value: float, mode: Optional[str], multiplier: float, context: Dict[str, Any], 
+                   original_control_type: Optional[str], input_range: str = "bipolar") -> Optional[int]:
     """
-    Handle axis-type controls (absolute or relative). Differentiates input range.
+    Handle axis-type controls (absolute or relative) with support for different input ranges.
+    
+    Args:
+        servo: The servo object
+        value: The control input value
+        mode: The control mode ("absolute" or "relative")
+        multiplier: Sensitivity multiplier
+        context: The node context
+        original_control_type: Original control type ("axis" or "button")
+        input_range: Input range type - "bipolar" (-1 to 1) or "unipolar" (0 to 1)
     """
     try:
         # Get servo physical limits
@@ -298,28 +309,21 @@ def handle_axis_control(servo, value: float, mode: Optional[str], multiplier: fl
              print(f"[GAMEPAD:AXIS] Invalid servo range for {servo.id}: min={min_pulse}, max={max_pulse}. Cannot proceed.")
              return None
 
-        # Axis states (optional, mainly for relative mode if complex logic needed)
-        # axis_states = context.setdefault("gamepad_axis_states", {})
-        # servo_id = servo.id
-        # state_key = f"{servo_id}"
-        # prev_value = axis_states.get(state_key, 0.0)
-        # axis_states[state_key] = value # Store current value
-
         # --- Apply Mode Logic ---
         new_position = None # Initialize to None
 
         if mode == "absolute":
             normalized_value = 0.0 # Value mapped to 0.0 - 1.0 range
 
-            # *** Differentiate based on original control type ***
-            if original_control_type == "axis":
-                # Assume BIPOLAR input (-1.0 to 1.0) typical for joysticks
+            # Normalize based on input_range setting
+            if input_range == "bipolar":
+                # For bipolar inputs (-1.0 to 1.0) like joysticks
                 clamped_value = max(-1.0, min(value, 1.0)) # Clamp input first
                 normalized_value = (clamped_value + 1.0) / 2.0 # Map [-1, 1] to [0, 1]
                 # print(f"[GAMEPAD:AXIS] Absolute (Bipolar): Servo {servo.id}, Val={value:.2f} -> Clamp={clamped_value:.2f} -> Norm={normalized_value:.2f}")
-            else: # Assume "button" (acting as analog) or unknown -> UNIPOLAR (0.0 to 1.0)
+            else: # "unipolar" (0.0 to 1.0) for triggers, sliders, etc.
                 clamped_value = max(0.0, min(value, 1.0)) # Clamp input first
-                normalized_value = clamped_value # Value is already in [0, 1] range
+                normalized_value = clamped_value # Already in [0, 1] range
                 # print(f"[GAMEPAD:AXIS] Absolute (Unipolar): Servo {servo.id}, Val={value:.2f} -> Clamp={clamped_value:.2f} -> Norm={normalized_value:.2f}")
 
             # Apply multiplier to adjust the *sensitivity* or *effective range* within the 0-1 space.
@@ -335,30 +339,39 @@ def handle_axis_control(servo, value: float, mode: Optional[str], multiplier: fl
         elif mode == "relative":
             # Deadzone threshold to prevent drift from noisy axes near center
             deadzone = 0.1 # Adjust as needed
-            if abs(value) > deadzone:
-                # Clamp value to [-1.0, 1.0] to represent max speed/rate
+            
+            # For unipolar inputs, we need to adjust the interpretation for relative movement
+            if input_range == "unipolar":
+                # Convert unipolar [0,1] to bipolar [-1,1] for relative movement
+                # Center is at 0.5 for unipolar inputs in relative mode
+                adjusted_value = (value - 0.5) * 2.0
+                # Apply deadzone to adjusted value
+                if abs(adjusted_value) <= deadzone:
+                    return None
+                relative_rate = max(-1.0, min(adjusted_value, 1.0))
+            else:  # bipolar
+                # Apply deadzone directly
+                if abs(value) <= deadzone:
+                    return None
                 relative_rate = max(-1.0, min(value, 1.0))
+            
+            # Define a step size for relative movement per event
+            # Make step proportional to servo range and multiplier for sensitivity control
+            base_step_per_event = servo_range * 0.02 # Adjust base step % as needed
+            change = relative_rate * multiplier * base_step_per_event
 
-                # Define a step size for relative movement per event
-                # Make step proportional to servo range and multiplier for sensitivity control
-                base_step_per_event = servo_range * 0.02 # Adjust base step % as needed
-                change = relative_rate * multiplier * base_step_per_event
+            # Get current position reliably
+            current_pos = float(servo.settings.position)
+            target_pos = current_pos + change
 
-                # Get current position reliably
-                current_pos = float(servo.settings.position)
-                target_pos = current_pos + change
-
-                # Clamp the target position to the servo's physical limits
-                new_position = int(max(min_pulse, min(target_pos, max_pulse)))
-                # print(f"[GAMEPAD:AXIS] Relative: Servo {servo.id}, Val={value:.2f} -> Rate={relative_rate:.2f}, Change={change:.2f}, Cur={current_pos}, New={new_position}")
-
-            # If value is within the deadzone, new_position remains None (its initial value)
-            # No 'else' block or 'pass' is needed here.
+            # Clamp the target position to the servo's physical limits
+            new_position = int(max(min_pulse, min(target_pos, max_pulse)))
+            # print(f"[GAMEPAD:AXIS] Relative: Servo {servo.id}, Val={value:.2f} -> Rate={relative_rate:.2f}, Change={change:.2f}, Cur={current_pos}, New={new_position}")
 
         else:
             print(f"[GAMEPAD:AXIS] Unknown axis mode '{mode}' for servo {servo.id}")
 
-        return new_position # Will be None if within deadzone in relative mode, or calculated value otherwise
+        return new_position
 
     except AttributeError as e:
         print(f"[GAMEPAD:AXIS] Error accessing servo attributes for {getattr(servo, 'id', 'UNKNOWN')}: {e}")
