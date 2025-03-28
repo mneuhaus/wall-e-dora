@@ -23,11 +23,17 @@ from .sdk import (
 )
 
 # Control table addresses for SCS servos
+ADDR_SCS_ID = 5
+ADDR_SCS_EEPROM_LOCK = 48
 ADDR_SCS_TORQUE_ENABLE = 40
 ADDR_SCS_GOAL_POSITION = 42
 ADDR_SCS_PRESENT_POSITION = 56
 ADDR_SCS_MOVING_SPEED = 46
 ADDR_SCS_PRESENT_VOLTAGE = 62  # Address for reading current voltage
+
+# EEPROM lock/unlock values
+VALUE_UNLOCK_EEPROM = 0
+VALUE_LOCK_EEPROM = 1
 
 # Default device settings
 BAUDRATE = 1000000
@@ -150,7 +156,7 @@ class Servo:
         
     def _set_id_with_sdk(self, new_id: int) -> bool:
         """
-        Set servo ID using SDK approach.
+        Set servo ID using SDK approach with proper EEPROM handling.
         
         Args:
             new_id: The new ID to assign to the servo
@@ -176,13 +182,27 @@ class Servo:
                 print(f"Failed to set baudrate for servo {old_id}")
                 port_handler.closePort()
                 return False
-                
-            # The ID register is at address 5 for SCS servos
-            id_register = 5
             
-            # Write the new ID to the servo
+            # STEP 1: Unlock EEPROM
+            print(f"Unlocking EEPROM for ID {old_id}...")
+            result, error = packet_handler.write1ByteTxRx(
+                port_handler, old_id, ADDR_SCS_EEPROM_LOCK, VALUE_UNLOCK_EEPROM
+            )
+            
+            if result != COMM_SUCCESS or error != 0:
+                print(f"Failed to unlock EEPROM for servo {old_id}")
+                print(f"  - Result: {packet_handler.getTxRxResult(result)}")
+                if error != 0:
+                    print(f"  - Error: {packet_handler.getRxPacketError(error)}")
+                port_handler.closePort()
+                return False
+            
+            time.sleep(0.02)  # Small delay after unlock
+            
+            # STEP 2: Write new ID to the servo
+            print(f"Writing new ID {new_id} for servo {old_id}...")
             id_result, id_error = packet_handler.write1ByteTxRx(
-                port_handler, old_id, id_register, new_id
+                port_handler, old_id, ADDR_SCS_ID, new_id
             )
             
             if id_result != COMM_SUCCESS or id_error != 0:
@@ -190,9 +210,35 @@ class Servo:
                 print(f"  - Result: {packet_handler.getTxRxResult(id_result)}")
                 if id_error != 0:
                     print(f"  - Error: {packet_handler.getRxPacketError(id_error)}")
+                
+                # Try to re-lock EEPROM with old ID if ID change fails
+                print(f"Attempting safety re-lock with old ID {old_id}...")
+                lock_result, lock_error = packet_handler.write1ByteTxRx(
+                    port_handler, old_id, ADDR_SCS_EEPROM_LOCK, VALUE_LOCK_EEPROM
+                )
+                if lock_result != COMM_SUCCESS or lock_error != 0:
+                    print("Warning: Safety re-lock failed!")
+                
                 port_handler.closePort()
                 return False
-                
+            
+            time.sleep(0.1)  # Longer delay for EEPROM write
+            
+            # STEP 3: Lock EEPROM with NEW ID
+            print(f"Locking EEPROM for new ID {new_id}...")
+            lock_result, lock_error = packet_handler.write1ByteTxRx(
+                port_handler, new_id, ADDR_SCS_EEPROM_LOCK, VALUE_LOCK_EEPROM
+            )
+            
+            if lock_result != COMM_SUCCESS or lock_error != 0:
+                print(f"Warning: Failed to lock EEPROM for new ID {new_id}")
+                print(f"  - Result: {packet_handler.getTxRxResult(lock_result)}")
+                if lock_error != 0:
+                    print(f"  - Error: {packet_handler.getRxPacketError(lock_error)}")
+                print(f"ID likely changed, but EEPROM remains unlocked.")
+            else:
+                print(f"EEPROM locked successfully for new ID {new_id}")
+            
             # Update the servo object's ID attributes
             self.id = new_id
             self.settings.id = new_id

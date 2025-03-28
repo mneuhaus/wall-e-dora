@@ -64,12 +64,12 @@ const EyesWidget = (props) => {
       width: 100%;
       height: 100%;
       overflow-y: auto;
-      padding: 10px;
+      padding: 0px;
     }
     
     .gif-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
       gap: 10px;
       margin-top: 10px;
     }

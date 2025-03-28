@@ -32,14 +32,14 @@ const DashboardView = forwardRef((props, ref) => {
   }, []);
 
   return (
-    <div className="dashboard" ref={ref} style={{ height: '100%', overflow: 'hidden' }}>
+    <div className="dashboard" ref={ref} style={{ height: '100%', overflow: 'auto' }}>
       <div className="grid-container" style={{ height: '100%', overflow: 'auto' }}>
         <ResponsiveGridLayout
           className="layout"
           layouts={{ lg: layout }}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 10, sm: 8, xs: 6, xxs: 4 }}
-          rowHeight={80}
+          cols={{ lg: 24, md: 20, sm: 16, xs: 12, xxs: 8 }}
+          rowHeight={40}
           isDraggable={isEditable}
           isResizable={isEditable}
           draggableHandle=".drag-handle"

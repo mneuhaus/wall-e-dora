@@ -34,7 +34,11 @@ import {
 
 // Import components
 import { ConnectionStatus, ServoStatus, PowerStatus } from './components/status';
-import { GridLockControl as GridLock, VolumeControl as Volume } from './components/controls';
+import { 
+  GridLockControl as GridLock, 
+  VolumeControl as Volume,
+  RandomSoundControl as RandomSound
+} from './components/controls';
 import { GamepadStatus as Gamepad } from './components/status';
 
 // Alias PowerStatus as Power for consistency
@@ -56,14 +60,14 @@ const App = () => {
           }}
         >
           <AppShell
-            header={{ height: rem(50) }}
+            header={{ height: rem(30) }}
             padding={0}
             styles={{
               main: {
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden',
-                paddingTop: rem(50),
+                overflow: 'auto',
+                paddingTop: rem(30),
                 paddingBottom: 0,
                 paddingLeft: 0,
                 paddingRight: 0
@@ -82,6 +86,7 @@ const App = () => {
                     <ServoStatus />
                     <GridLock />
                     <Volume />
+                    <RandomSound />
                     <Power />
                     <ConnectionStatus />
                   </Group>

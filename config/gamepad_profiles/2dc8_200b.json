@@ -1,6 +1,26 @@
 {
   "id": "8BitDo Ultimate MG (Vendor: 2dc8 Product: 200b)",
   "mapping": {
+    "DPAD_DOWN": {
+      "index": 13,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "DPAD_LEFT": {
+      "index": 14,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "DPAD_RIGHT": {
+      "index": 15,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "DPAD_UP": {
+      "index": 12,
+      "isAnalog": false,
+      "type": "button"
+    },
     "FACE_1": {
       "index": 0,
       "isAnalog": false,
@@ -12,22 +32,22 @@
       "type": "button"
     },
     "FACE_3": {
-      "index": 3,
+      "index": 2,
       "isAnalog": false,
       "type": "button"
     },
     "FACE_4": {
-      "index": 4,
+      "index": 3,
       "isAnalog": false,
       "type": "button"
     },
     "HOME": {
-      "index": 12,
+      "index": 16,
       "isAnalog": false,
       "type": "button"
     },
     "LEFT_ANALOG_BUTTON": {
-      "index": 13,
+      "index": 10,
       "isAnalog": false,
       "type": "button"
     },
@@ -42,17 +62,17 @@
       "type": "axis"
     },
     "LEFT_SHOULDER": {
+      "index": 4,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "LEFT_SHOULDER_BOTTOM": {
       "index": 6,
       "isAnalog": true,
       "type": "button"
     },
-    "LEFT_SHOULDER_BOTTOM": {
-      "index": 4,
-      "isAnalog": true,
-      "type": "axis"
-    },
     "RIGHT_ANALOG_BUTTON": {
-      "index": 14,
+      "index": 11,
       "isAnalog": false,
       "type": "button"
     },
@@ -62,27 +82,27 @@
       "type": "axis"
     },
     "RIGHT_ANALOG_STICK_Y": {
-      "index": 5,
-      "isAnalog": true,
-      "type": "axis"
-    },
-    "RIGHT_SHOULDER": {
-      "index": 7,
-      "isAnalog": true,
-      "type": "button"
-    },
-    "RIGHT_SHOULDER_BOTTOM": {
       "index": 3,
       "isAnalog": true,
       "type": "axis"
     },
+    "RIGHT_SHOULDER": {
+      "index": 5,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "RIGHT_SHOULDER_BOTTOM": {
+      "index": 7,
+      "isAnalog": true,
+      "type": "button"
+    },
     "SELECT": {
-      "index": 11,
+      "index": 9,
       "isAnalog": false,
       "type": "button"
     },
     "START": {
-      "index": 10,
+      "index": 8,
       "isAnalog": false,
       "type": "button"
     }

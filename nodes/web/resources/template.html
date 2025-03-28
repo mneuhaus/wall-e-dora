@@ -14,18 +14,18 @@
         margin: 0; 
         padding: 0;
         font-family: Roboto, sans-serif;
-        height: 100vh;
-        max-height: 100vh;
-        overflow: hidden;
-        position: fixed;
+        /* height: 100vh; */
+        /* max-height: 100vh; */
+        /* overflow: hidden; */
+        /* position: fixed; */
         width: 100%;
       }
       
       #root {
-        height: 100%;
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        overflow: auto;
       }
       
       header {
@@ -36,7 +36,7 @@
       
       main {
         flex: 1;
-        overflow: hidden;
+        overflow: auto;
       }
     </style>
   </head>
