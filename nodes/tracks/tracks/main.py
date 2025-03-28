@@ -15,10 +15,9 @@ BAUD_RATE = 115200
 COMMAND_SCALE = 100.0 # Scale joystick (-1..1) to Pico command range (-100..100)
 
 # --- Joystick Mapping Configuration ---
-# Reverting to match the OLD working script's logic for THIS specific firmware.
-# NO inversion, NO deadzone.
-INVERT_Y_AXIS = False # Old script did not invert Y
-INVERT_X_AXIS = False # Old script did not invert X
+# Configuration for joystick axis mapping
+INVERT_Y_AXIS = False # Keep forward/backward as is
+INVERT_X_AXIS = True  # Invert left/right to fix the turning direction
 JOYSTICK_DEADZONE = 0.0 # Old script had no deadzone, set to 0.0
 # ---
 
