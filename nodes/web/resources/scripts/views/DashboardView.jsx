@@ -46,7 +46,7 @@ const DashboardView = forwardRef((props, ref) => {
           onLayoutChange={(layout) => onLayoutChange(layout)}
           margin={[5, 15]}
           useCSSTransforms={true}
-          compactType="vertical"
+          compactType="horizontal"
         >
           {layout.map(item => (
             <div key={item.i} data-grid={item}>
