@@ -64,7 +64,8 @@ const EyesWidget = (props) => {
       width: 100%;
       height: 100%;
       overflow-y: auto;
-      padding: 0px;
+      padding: 0;
+      padding-right: 5px;
     }
     
     .gif-grid {
@@ -112,9 +113,14 @@ const EyesWidget = (props) => {
     
     .empty-state {
       width: 100%;
-      text-align: center;
+      height: 100%;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
       padding: 20px;
       color: rgba(255, 255, 255, 0.7);
+      font-size: 16px;
     }
     
     .loading-state {
@@ -174,7 +180,10 @@ const EyesWidget = (props) => {
           ))}
         </div>
       ) : (
-        <div className="empty-state">No images available</div>
+        <div className="empty-state">
+          <i className="fas fa-image" style={{ marginRight: '10px', opacity: 0.5 }}></i>
+          No images available
+        </div>
       )}
     </div>
   );

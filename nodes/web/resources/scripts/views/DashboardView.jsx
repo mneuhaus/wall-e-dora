@@ -1,67 +1,76 @@
 /**
  * DashboardView Component
  * 
- * The main dashboard view that displays the grid of widgets.
- * Provides a responsive grid layout where widgets can be arranged, resized, and configured.
+ * The main dashboard view that displays a fixed layout with eye and sound widgets.
+ * Uses CSS Grid for reliable layout control.
  * 
  * @component
  */
 import React, { useEffect, forwardRef } from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
 import { useAppContext } from '../contexts/AppContext';
-import { useGridContext } from '../contexts/GridContext';
-import WidgetContainer from '../components/WidgetContainer';
 import node from '../Node';
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
+import EyesWidget from '../components/widgets/EyesWidget';
+import SoundWidget from '../components/widgets/SoundWidget';
 
 const DashboardView = forwardRef((props, ref) => {
   const { availableServos } = useAppContext();
-  const { 
-    layout, 
-    isEditable, 
-    onLayoutChange
-  } = useGridContext();
 
   // Request initial servo status
   useEffect(() => {
     // Request initial servo status
     node.emit('SCAN', []);
     
-    // Note: Widget state loading is now fully handled by GridContext
+    // Request sounds list
+    node.emit('scan_sounds', []);
   }, []);
 
+  // CSS Grid styles
+  const styles = `
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 70% 30%;
+      grid-template-rows: 1fr;
+      grid-template-areas: 
+        "eyes-content sounds-content";
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    
+    .eyes-content {
+      grid-area: eyes-content;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+    
+    .sounds-content {
+      grid-area: sounds-content;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  `;
+
   return (
-    <div className="dashboard" ref={ref} style={{ height: '100%', overflow: 'auto' }}>
-      <div className="grid-container" style={{ height: '100%', overflow: 'auto' }}>
-        <ResponsiveGridLayout
-          className="layout"
-          layouts={{ lg: layout }}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 24, md: 20, sm: 16, xs: 12, xxs: 8 }}
-          rowHeight={40}
-          isDraggable={isEditable}
-          isResizable={isEditable}
-          draggableHandle=".drag-handle"
-          onLayoutChange={(layout) => onLayoutChange(layout)}
-          margin={[5, 15]}
-          useCSSTransforms={true}
-          compactType="horizontal"
-        >
-          {layout.map(item => (
-            <div key={item.i} data-grid={item}>
-              <WidgetContainer 
-                type={item.type}
-                widgetProps={item}
-              />
-            </div>
-          ))}
-        </ResponsiveGridLayout>
+    <div className="dashboard" ref={ref} style={{ height: '100%', overflow: 'hidden' }}>
+      <style>{styles}</style>
+      <div className="dashboard-grid">
+        <div className="eyes-content">
+          <EyesWidget />
+        </div>
+        
+        <div className="sounds-content">
+          <SoundWidget />
+        </div>
       </div>
     </div>
   );
 });
 
 export default DashboardView;
-
-// CSS is now in the main.css file, converted from the Vue component's scoped CSS

@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="utf-8">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="build/main.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimal-ui"/>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffc107">
+    <link rel="manifest" href="manifest.webmanifest">
+    <!-- Explicit icon definitions with absolute paths -->
+    <link rel="apple-touch-icon" href="/icons/192x192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/512x512.png">
     <title>wall-e</title>
     <style>
       *, *::before, *::after {
@@ -13,19 +23,25 @@
       html, body { 
         margin: 0; 
         padding: 0;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
         font-family: Roboto, sans-serif;
-        /* height: 100vh; */
-        /* max-height: 100vh; */
-        /* overflow: hidden; */
-        /* position: fixed; */
         width: 100%;
+        height: 100vh; /* Use viewport height */
+        overscroll-behavior-y: none;
+        overflow: hidden;
+        position: fixed;
+        -webkit-overflow-scrolling: touch; /* For smoother scrolling on iOS */
       }
       
       #root {
-        min-height: 100vh;
+        height: 100vh;
+        width: 100%;
         display: flex;
         flex-direction: column;
-        overflow: auto;
+        overflow: hidden;
       }
       
       header {
@@ -36,7 +52,27 @@
       
       main {
         flex: 1;
-        overflow: auto;
+        overflow: hidden;
+        margin-top: 5px;
+      }
+      
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 191, 0, 0.3);
+        border-radius: 5px;
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 191, 0, 0.5);
       }
     </style>
   </head>
@@ -45,6 +81,62 @@
 
     <script type="text/javascript">
       let gridState = {{ gridState }};
+      
+      // Register service worker for PWA support
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+              console.error('Service Worker registration failed:', error);
+            });
+        });
+      }
+      
+      // Detect if running in standalone mode (PWA)
+      const isStandalone = window.navigator.standalone || 
+                          window.matchMedia('(display-mode: standalone)').matches;
+      
+      // Apply PWA-specific behaviors when in standalone mode
+      if (isStandalone) {
+        // Prevent pull-to-refresh
+        document.addEventListener('touchmove', function(e) {
+          if (e.touches.length > 1) {
+            e.preventDefault();
+          }
+        }, { passive: false });
+        
+        // Hide address bar on page load
+        window.addEventListener('load', function() {
+          // Set a timeout to ensure the page is fully loaded
+          setTimeout(function() {
+            // Scroll to hide the address bar
+            window.scrollTo(0, 1);
+          }, 100);
+        });
+        
+        // Hide address bar on orientation change
+        window.addEventListener('orientationchange', function() {
+          // Set a timeout to ensure the orientation change is complete
+          setTimeout(function() {
+            // Scroll to hide the address bar
+            window.scrollTo(0, 1);
+          }, 100);
+        });
+        
+        // Handle resize events to keep address bar hidden
+        window.addEventListener('resize', function() {
+          // Set a timeout to ensure the resize is complete
+          setTimeout(function() {
+            // Scroll to hide the address bar
+            window.scrollTo(0, 1);
+          }, 100);
+        });
+        
+        console.log('Running in standalone PWA mode with address bar hiding');
+      }
     </script>
     <script src="build/runtime.js"></script>
     <script src="build/main.js"></script>

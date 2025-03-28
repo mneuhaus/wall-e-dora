@@ -197,19 +197,8 @@ async def websocket_handler(request):
 async def index(request):
     import os, json
     template = request.app['jinja_env'].get_template('template.html')
-    # Load grid state from file if it exists
-    grid_state = {}
-    grid_state_path = os.path.join(os.path.dirname(__file__), "..", "grid_state.json")
-
-    if os.path.exists(grid_state_path):
-        try:
-            with open(grid_state_path, "r", encoding="utf-8") as f:
-                grid_state = json.load(f)
-        except Exception as e:
-            print(f"Error loading grid state for template: {e}")
-
-    # We set this as a JSON string in the template to initialize the frontend immediately
-    rendered = template.render(gridState=json.dumps(grid_state))
+    # For fixed layout, we don't need to load grid state
+    rendered = template.render(gridState=json.dumps({}))
     return web.Response(text=rendered, content_type='text/html')
 
 async def broadcast_bytes(data_bytes):
@@ -257,6 +246,82 @@ def start_background_webserver():
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_static('/resources/', path=template_path, name='resources')
+        
+        # Add specific route for icons with correct MIME types
+        app.router.add_static('/icons/', 
+            path=os.path.join(template_path, "icons"),
+            name='icons', 
+            show_index=True,
+            append_version=False
+        )
+        
+        # Add specific route for screenshots
+        app.router.add_static('/screenshots/', 
+            path=os.path.join(template_path, "screenshots"),
+            name='screenshots', 
+            show_index=True,
+            append_version=False
+        )
+        
+        # Add special route for manifest.webmanifest with correct MIME type
+        async def serve_manifest(request):
+            manifest_path = os.path.join(template_path, "manifest.webmanifest")
+            if os.path.exists(manifest_path):
+                with open(manifest_path, 'r') as f:
+                    content = f.read()
+                return web.Response(text=content, content_type="application/manifest+json")
+            return web.Response(status=404)
+        
+        app.router.add_get('/manifest.webmanifest', serve_manifest)
+        
+        # Add special route for service-worker.js with correct MIME type
+        async def serve_service_worker(request):
+            sw_path = os.path.join(template_path, "service-worker.js")
+            if os.path.exists(sw_path):
+                with open(sw_path, 'r') as f:
+                    content = f.read()
+                return web.Response(text=content, content_type="application/javascript")
+            return web.Response(status=404)
+            
+        app.router.add_get('/service-worker.js', serve_service_worker)
+        
+        # Add handler for serving icon files with correct MIME type
+        async def serve_icon(request):
+            icon_name = request.match_info.get('icon')
+            icon_path = os.path.join(template_path, "icons", icon_name)
+            if os.path.exists(icon_path):
+                # Log that we're trying to serve this icon
+                logging.info(f"Serving icon: {icon_name} from {icon_path}")
+                return web.FileResponse(
+                    path=icon_path,
+                    headers={
+                        'Content-Type': 'image/png',
+                        'Cache-Control': 'max-age=86400'
+                    }
+                )
+            logging.error(f"Icon not found: {icon_name}")
+            return web.Response(status=404)
+            
+        app.router.add_get('/icons/{icon}', serve_icon)
+        
+        # Add handler for serving screenshot files with correct MIME type
+        async def serve_screenshot(request):
+            screenshot_name = request.match_info.get('screenshot')
+            screenshot_path = os.path.join(template_path, "screenshots", screenshot_name)
+            if os.path.exists(screenshot_path):
+                # Log that we're trying to serve this screenshot
+                logging.info(f"Serving screenshot: {screenshot_name} from {screenshot_path}")
+                return web.FileResponse(
+                    path=screenshot_path,
+                    headers={
+                        'Content-Type': 'image/png',
+                        'Cache-Control': 'max-age=86400'
+                    }
+                )
+            logging.error(f"Screenshot not found: {screenshot_name}")
+            return web.Response(status=404)
+            
+        app.router.add_get('/screenshots/{screenshot}', serve_screenshot)
 
         app.router.add_static('/build/',
             path=os.path.join(os.path.dirname(__file__), "..", "resources/build"),

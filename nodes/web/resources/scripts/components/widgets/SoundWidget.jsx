@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import node from '../../Node';
 
 /**
- * SoundWidget - A grid widget for playing sounds
+ * SoundWidget - A widget for playing sounds
  * 
  * @component
  * @param {Object} props - Component props
@@ -45,19 +45,88 @@ const SoundWidget = (props) => {
   };
   
   const formatSoundName = (sound) => {
-    // Remove file extension and convert underscores to spaces
+    // Remove file extension and convert dashes/underscores to spaces
     return sound
       .replace(/\.(mp3|wav|ogg)$/i, '')
-      .replace(/_/g, ' ')
+      .replace(/[_-]/g, ' ')
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   };
   
+  // Custom styles for the sounds list
+  const styles = `
+    .sounds-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 5px;
+    }
+    
+    .sound-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .sound-item:hover {
+      background-color: rgba(255, 191, 0, 0.15);
+    }
+    
+    .sound-item.playing {
+      background-color: rgba(255, 191, 0, 0.3);
+    }
+    
+    .sound-item i {
+      margin-right: 10px;
+      color: #ffc107;
+      font-size: 14px;
+      min-width: 14px;
+    }
+    
+    .sound-name {
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .loading-state i {
+      font-size: 2rem;
+      color: rgba(255, 191, 0, 0.7);
+    }
+    
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: rgba(255, 255, 255, 0.7);
+    }
+  `;
+  
   // Render loading state
   if (loading) {
     return (
       <div className="loading-state">
+        <style>{styles}</style>
         <i className="fas fa-spinner fa-spin"></i>
         <span>Loading sounds...</span>
       </div>
@@ -65,7 +134,8 @@ const SoundWidget = (props) => {
   }
   
   return (
-    <div id="sounds" className="small-spacing">
+    <div className="sounds-container">
+      <style>{styles}</style>
       {sounds.length > 0 ? (
         sounds.map(sound => (
           <div 
