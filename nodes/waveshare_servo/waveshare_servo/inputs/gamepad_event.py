@@ -5,6 +5,8 @@ from typing import Dict, Any, Optional
 def handle_gamepad_event(event: Dict[str, Any], context: Dict[str, Any]) -> None:
     """
     Handle gamepad button and axis events and map them to servo movements.
+    Handles potential differences in input ranges (e.g., 0-1 vs -1 to 1)
+    via an optional 'input_range' field in servo gamepad_config.
 
     Args:
         event: The event data containing control name ('id') and value.
@@ -25,34 +27,17 @@ def handle_gamepad_event(event: Dict[str, Any], context: Dict[str, Any]) -> None
         # Handle PyArrow arrays (most common case from dataflow)
         if hasattr(raw_value, "__len__") and len(raw_value) > 0:
             item = raw_value[0]
-            # Use as_py() if available (best method)
-            if hasattr(item, "as_py"):
-                value = item.as_py()
-            # Try string conversion as fallback for Arrow objects
-            else:
-                raw_str = str(item).strip('"\'')
-                try:
-                    value = float(raw_str)
-                except (ValueError, TypeError):
-                    print(f"[GAMEPAD] Warning: Could not convert Arrow item '{raw_str}' to number for control '{control_name}'. Using 0.")
-                    value = 0.0
-        # Handle simple numeric types
-        elif isinstance(raw_value, (int, float)):
-            value = float(raw_value)
-        # Handle string types (attempt conversion)
-        elif isinstance(raw_value, str):
-            try:
-                value = float(raw_value.strip())
-            except (ValueError, TypeError):
-                print(f"[GAMEPAD] Warning: Could not convert string '{raw_value}' to number for control '{control_name}'. Using 0.")
-                value = 0.0
-        # Handle None or unexpected types
-        else:
-            print(f"[GAMEPAD] Warning: Unsupported or null value type '{type(raw_value)}' for control '{control_name}'. Using 0.")
-            value = 0.0
+            if hasattr(item, "as_py"): value = item.as_py()
+            else: value = float(str(item).strip('"\'')) # Attempt conversion
+        elif isinstance(raw_value, (int, float)): value = float(raw_value)
+        elif isinstance(raw_value, str): value = float(raw_value.strip())
+        else: value = 0.0 # Default for None or unexpected types
 
+    except (ValueError, TypeError) as e:
+        print(f"[GAMEPAD] Warning: Could not convert raw value '{raw_value}' to number for control '{control_name}'. Error: {e}. Using 0.0.")
+        value = 0.0
     except Exception as e:
-        print(f"[GAMEPAD] Error extracting value for control '{control_name}': {e}. Using 0.")
+        print(f"[GAMEPAD] Error extracting value for control '{control_name}': {e}. Using 0.0.")
         value = 0.0
 
     # Ensure value is float for consistency downstream
@@ -60,162 +45,139 @@ def handle_gamepad_event(event: Dict[str, Any], context: Dict[str, Any]) -> None
         value = float(value)
     except (ValueError, TypeError, OverflowError):
         print(f"[GAMEPAD] Critical Error: Could not ensure final value is float for control '{control_name}'. Value: {value}. Aborting handling.")
-        return # Cannot proceed without a valid float
+        return
 
     # --- Find Mapped Servos ---
     mapped_servos = find_servos_by_control(control_name, context)
-
-    if not mapped_servos:
-        # Reduce noise: only print if you expect a mapping
-        # print(f"[GAMEPAD] No servos mapped to control '{control_name}'")
-        return
-
-    # print(f"[GAMEPAD] Found {len(mapped_servos)} servo(s) mapped to '{control_name}' with value {value}")
+    if not mapped_servos: return
 
     # --- Process Each Mapped Servo ---
     for servo in mapped_servos:
         try:
             servo_id = servo.id
-            config = servo.settings.gamepad_config
-
-            if not config:
-                print(f"[GAMEPAD] Servo {servo_id} mapped to '{control_name}' but has no gamepad_config.")
+            if not hasattr(servo, 'settings') or not hasattr(servo.settings, 'gamepad_config'):
+                print(f"[GAMEPAD] Servo {servo_id} mapped to '{control_name}' but missing settings or gamepad_config.")
                 continue
 
-            control_type = config.get("type") # "button" or "axis"
-            control_mode = config.get("mode") # "toggle", "momentary", "absolute", "relative"
+            config = servo.settings.gamepad_config
+            if not config: # Check if config is not None or empty dict
+                 print(f"[GAMEPAD] Servo {servo_id} mapped to '{control_name}' but has empty gamepad_config.")
+                 continue
 
-            # print(f"[GAMEPAD] Processing servo {servo_id} (Control: '{control_name}', Type: {control_type}, Mode: {control_mode}, Raw Value: {value})")
+            # control_type is more about HOW the servo behaves (button/axis action)
+            # input_range (new) is about the EXPECTED VALUE RANGE from the device
+            control_type = config.get("type")
+            input_range = config.get("input_range") # NEW: Expect "unipolar" (0-1) or "bipolar" (-1 to 1)
 
             # Calculate servo position based on mapping configuration
-            # Pass control_name for logging, control_type for logic differentiation
-            position = calculate_position(servo, value, context, control_name, control_type)
+            position = calculate_position(servo, value, context, control_name, control_type, input_range) # Pass input_range
 
             if position is not None:
-                # Ensure position is within valid bounds (e.g., 0-1023 or servo's specific min/max pulse)
-                # Assuming 0-1023 for generic servo nodes, adjust if necessary based on servo capabilities
                 min_pulse = getattr(getattr(servo, 'settings', None), 'min_pulse', 0)
                 max_pulse = getattr(getattr(servo, 'settings', None), 'max_pulse', 1023)
-                clamped_position = max(min_pulse, min(int(position), max_pulse))
+                # Ensure position is int before clamping
+                clamped_position = max(min_pulse, min(int(round(position)), max_pulse)) # Round before int conversion
 
-
-                # Only move if the position actually changed (optional optimization)
                 current_pos = getattr(getattr(servo, 'settings', None), 'position', None)
                 if current_pos is None or clamped_position != current_pos:
-                     print(f"[GAMEPAD] Moving servo {servo_id} to position {clamped_position} (Raw calculated: {position})")
-                     # *** This is the call to the actual move_servo function ***
-                     # Ensure 'move_servo' is correctly imported or available in the execution scope
-                     from waveshare_servo.inputs.move_servo import move_servo # Assuming this is the correct import path
+                     print(f"[GAMEPAD] Moving servo {servo_id} to position {clamped_position} (Control: '{control_name}', Value: {value:.2f}, Raw Calc: {position:.2f})")
+                     from waveshare_servo.inputs.move_servo import move_servo
                      move_servo(context, servo_id, clamped_position)
-                     # Update the position in the context AFTER moving, if necessary for state tracking
-                     # This assumes move_servo doesn't update the context itself.
+                     # Update context state AFTER successful move
                      if "servos" in context and servo_id in context["servos"]:
-                        try:
-                           context["servos"][servo_id].settings.position = clamped_position
-                        except AttributeError:
-                           print(f"[GAMEPAD] Warning: Could not update position state in context for servo {servo_id}")
-
-                # else:
-                #     print(f"[GAMEPAD] No position change needed for servo {servo_id} (already at {clamped_position})")
-
-            # else:
-            #     print(f"[GAMEPAD] No position calculation result for servo {servo_id}")
+                        try: context["servos"][servo_id].settings.position = clamped_position
+                        except AttributeError: pass # Ignore if context structure is different
 
         except AttributeError as e:
              print(f"[GAMEPAD] Error processing servo: Missing attribute {e}. Servo data: {getattr(servo, '__dict__', 'N/A')}")
         except ImportError:
-             print(f"[GAMEPAD] CRITICAL ERROR: Could not import 'move_servo' function. Check installation and path.")
-             # Potentially re-raise or handle this more gracefully depending on application needs
-             break # Stop processing more servos if the move function is missing
+             print(f"[GAMEPAD] CRITICAL ERROR: Could not import 'move_servo' function.")
+             break
         except Exception as e:
              print(f"[GAMEPAD] Unexpected error processing servo {getattr(servo, 'id', 'UNKNOWN')}: {e}")
 
 
 def find_servos_by_control(control_name: str, context: Dict[str, Any]) -> list:
-    """
-    Find all servos mapped to a specific gamepad control.
-    """
+    """ Finds servos mapped to a specific control. (No changes needed here) """
     servos = context.get("servos", {})
     matched_servos = []
     for servo in servos.values():
         try:
-            # Check if servo has settings and an attached_control
-            if hasattr(servo, 'settings') and hasattr(servo.settings, 'attached_control'):
-                if servo.settings.attached_control == control_name:
-                    matched_servos.append(servo)
+            if hasattr(servo, 'settings') and getattr(servo.settings, 'attached_control', None) == control_name:
+                 matched_servos.append(servo)
         except Exception as e:
             print(f"[GAMEPAD:FIND] Error accessing settings for a servo: {e}")
-            continue # Skip problematic servo object
-
-    # Optional: Reduce noise by only printing if matches are found or expected
-    # if matched_servos:
-    #     servo_ids = [s.id for s in matched_servos if hasattr(s, 'id')]
-    #     print(f"[GAMEPAD:FIND] Found {len(matched_servos)} servos for control '{control_name}': {servo_ids}")
-    # else:
-    #     print(f"[GAMEPAD:FIND] No servos found for control '{control_name}'")
-
     return matched_servos
 
 
-def calculate_position(servo, value: float, context: Dict[str, Any], control_name: str, control_type: Optional[str]) -> Optional[int]:
+def calculate_position(servo, value: float, context: Dict[str, Any], control_name: str, control_type: Optional[str], input_range: Optional[str]) -> Optional[float]: # Return float for precision before clamping
     """
-    Calculate servo position based on control value and mapping configuration.
+    Calculate servo position based on control value, configuration, and input range.
 
     Args:
-        servo: The servo object (should have settings.gamepad_config).
+        servo: The servo object.
         value: The processed gamepad control value (float).
         context: The node context.
-        control_name: The name of the gamepad control being handled.
-        control_type: The type from the config ("button", "axis", or None).
+        control_name: The name of the gamepad control.
+        control_type: Configured type ("button" or "axis").
+        input_range: Configured input range ("unipolar", "bipolar", or None).
 
     Returns:
-        The calculated position (int, typically within servo's min/max pulse) or None.
+        The calculated position (float) or None.
     """
     try:
         config = servo.settings.gamepad_config
-        if not config:
-            return None
+        if not config: return None
 
         mode = config.get("mode")
         invert = config.get("invert", False)
-        multiplier = float(config.get("multiplier", 1.0)) # Ensure float
-        is_analog_override = config.get("isAnalog", False) # Explicit override
-        
-        # Get the input range configuration - default to "bipolar" for axes and "unipolar" for buttons
-        input_range = config.get("input_range")
-        if input_range is None:
-            input_range = "bipolar" if control_type == "axis" else "unipolar"
+        multiplier = float(config.get("multiplier", 1.0))
+        is_analog_override = config.get("isAnalog", False) # If type=button, treat as analog anyway
 
-        # --- Apply Inversion ---
-        # Inversion logic depends on the input range, not just control type
+        # --- Determine Effective Input Range (Defaulting for Android target) ---
+        effective_input_range = input_range
+        if effective_input_range is None:
+             # If not specified, guess based on type, defaulting to UNIPOLAR for Android focus
+             if control_type == "axis":
+                  effective_input_range = "bipolar" # Traditional joysticks often are
+                  print(f"[GAMEPAD:CALC] Warning: 'input_range' not set for axis '{control_name}' ({servo.id}). Assuming 'bipolar' (-1 to 1). Specify if input is 'unipolar' (0 to 1).")
+             else: # button or unknown
+                  effective_input_range = "unipolar" # Safer default for triggers/buttons on Android
+                  # Only warn if it's likely being treated as analog later
+                  if mode in ["absolute", "relative"] or is_analog_override:
+                      print(f"[GAMEPAD:CALC] Warning: 'input_range' not set for control '{control_name}' ({servo.id}) acting as analog. Assuming 'unipolar' (0 to 1). Specify if input is 'bipolar' (-1 to 1).")
+
+
+        # --- Apply Inversion based on effective range ---
         original_value = value
         if invert:
-            if input_range == "bipolar":  # For bipolar (-1 to 1) range
-                value = -value
-                # print(f"[GAMEPAD] Inverted bipolar value for {control_name} ({servo.id}): {original_value} -> {value}")
-            else:  # For unipolar (0 to 1) range
-                value = 1.0 - value
-                # print(f"[GAMEPAD] Inverted unipolar value for {control_name} ({servo.id}): {original_value} -> {value}")
+            if effective_input_range == "bipolar":
+                 value = -value # Flip sign for -1 to 1
+            elif effective_input_range == "unipolar":
+                 value = 1.0 - value # Map 0->1, 1->0
+            else: # Fallback guess - unipolar inversion is often safer
+                 value = 1.0 - value
+                 print(f"[GAMEPAD:CALC] Warning: Inverting with unknown input_range for {control_name} ({servo.id}). Assuming unipolar inversion (1.0 - value).")
+            # print(f"[GAMEPAD] Inverted value ({effective_input_range}) for {control_name} ({servo.id}): {original_value:.2f} -> {value:.2f}")
+
 
         # --- Determine Handling Path ---
-        # Use axis handler if:
-        # 1. Config type is "axis"
-        # 2. Config type is "button" BUT mode is "absolute" or "relative"
-        # 3. Config type is "button" BUT isAnalog override is true
-        if control_type == "axis" or \
-           (control_type == "button" and mode in ["absolute", "relative"]) or \
-           (control_type == "button" and is_analog_override):
+        # Treat as axis if type is axis OR (type is button AND mode is absolute/relative OR isAnalog override)
+        is_handled_as_axis = (
+            control_type == "axis" or
+            (control_type == "button" and (mode in ["absolute", "relative"] or is_analog_override))
+        )
 
-            # print(f"[GAMEPAD] Handling '{control_name}' ({servo.id}) as ANALOG (Type: {control_type}, Mode: {mode}, isAnalog: {is_analog_override}, Range: {input_range})")
-            # Pass input_range to handle_axis_control
-            return handle_axis_control(servo, value, mode, multiplier, context, control_type, input_range)
-
+        if is_handled_as_axis:
+            # print(f"[GAMEPAD] Handling '{control_name}' ({servo.id}) as ANALOG (Mode: {mode}, Input: {effective_input_range})")
+            # Pass the *determined* effective_input_range for correct processing
+            return handle_axis_control(servo, value, mode, multiplier, context, effective_input_range)
         elif control_type == "button":
             # print(f"[GAMEPAD] Handling '{control_name}' ({servo.id}) as BUTTON (Mode: {mode})")
+            # Button handler expects 0/1 logic, value should be raw (but possibly inverted)
             return handle_button_control(servo, value, mode, context)
-
         else:
-            print(f"[GAMEPAD] Unknown control type '{control_type}' for control '{control_name}' ({servo.id}). Cannot calculate position.")
+            print(f"[GAMEPAD] Unknown control type '{control_type}' for control '{control_name}' ({servo.id}).")
             return None
 
     except AttributeError as e:
@@ -227,55 +189,36 @@ def calculate_position(servo, value: float, context: Dict[str, Any], control_nam
 
 
 def handle_button_control(servo, value: float, mode: Optional[str], context: Dict[str, Any]) -> Optional[int]:
-    """
-    Handle button-type controls (toggle or momentary). Handles 0/1 logic.
-    """
+    """ Handle button-type controls (toggle or momentary). Assumes 0/1 logic via threshold. """
     try:
-        # Determine if pressed (value > threshold, commonly 0.5 for analog triggers/buttons)
-        is_pressed = value > 0.5
+        # Use a threshold suitable for 0-1 inputs (analog triggers acting as buttons)
+        # and also works for digital 0/1 inputs.
+        threshold = 0.5
+        is_pressed = value > threshold
         button_state = 1 if is_pressed else 0
 
+        # State tracking remains the same
         button_states = context.setdefault("gamepad_button_states", {})
         servo_id = servo.id
-        state_key = f"{servo_id}" # Use servo ID for state tracking
-
-        # Get previous state, defaulting to 0 (released)
+        state_key = f"{servo_id}"
         prev_state = button_states.get(state_key, 0)
 
-        # --- Apply Mode Logic ---
         new_position = None
         min_pulse = servo.settings.min_pulse
         max_pulse = servo.settings.max_pulse
 
         if mode == "toggle":
-            # Toggle only on PRESS event (transition from 0 to 1)
-            if button_state == 1 and prev_state == 0:
-                current_pos = servo.settings.position
-                # Toggle between min and max
+            if button_state == 1 and prev_state == 0: # Trigger on press edge
+                current_pos = servo.settings.position # Assumes position is reliably updated
                 middle_point = min_pulse + (max_pulse - min_pulse) / 2.0
                 new_position = min_pulse if current_pos > middle_point else max_pulse
-                # print(f"[GAMEPAD:BUTTON] Toggle {servo_id}: Pressed. Current={current_pos}, New={new_position}")
-            # else:
-                # print(f"[GAMEPAD:BUTTON] Toggle {servo_id}: No change (State: {button_state}, Prev: {prev_state})")
-
         elif mode == "momentary":
-            # Position directly follows button state
-            target_position = max_pulse if button_state == 1 else min_pulse
-            # Only return a position if it's different from current (optional optimization)
-            # Requires reliable current position tracking for optimization to work
-            # current_pos = getattr(getattr(servo, 'settings', None), 'position', None)
-            # if current_pos is None or target_position != current_pos:
-            #    new_position = target_position
-            new_position = target_position # Simpler: always return target position
-            # print(f"[GAMEPAD:BUTTON] Momentary {servo_id}: State={button_state}, Target={new_position}")
-
+             new_position = max_pulse if button_state == 1 else min_pulse
         else:
             print(f"[GAMEPAD:BUTTON] Unknown button mode '{mode}' for servo {servo_id}")
 
-        # Update state history *after* processing logic based on prev_state
         button_states[state_key] = button_state
-
-        return new_position
+        return new_position # Return int as button modes usually target endpoints
 
     except AttributeError as e:
         print(f"[GAMEPAD:BUTTON] Error accessing servo attributes for {getattr(servo, 'id', 'UNKNOWN')}: {e}")
@@ -285,93 +228,72 @@ def handle_button_control(servo, value: float, mode: Optional[str], context: Dic
         return None
 
 
-def handle_axis_control(servo, value: float, mode: Optional[str], multiplier: float, context: Dict[str, Any], 
-                   original_control_type: Optional[str], input_range: str = "bipolar") -> Optional[int]:
+def handle_axis_control(servo, value: float, mode: Optional[str], multiplier: float, context: Dict[str, Any], input_range: str) -> Optional[float]: # Return float
     """
-    Handle axis-type controls (absolute or relative) with support for different input ranges.
-    
-    Args:
-        servo: The servo object
-        value: The control input value
-        mode: The control mode ("absolute" or "relative")
-        multiplier: Sensitivity multiplier
-        context: The node context
-        original_control_type: Original control type ("axis" or "button")
-        input_range: Input range type - "bipolar" (-1 to 1) or "unipolar" (0 to 1)
+    Handle axis-type controls (absolute or relative) respecting the input_range.
     """
     try:
-        # Get servo physical limits
-        min_pulse = servo.settings.min_pulse
-        max_pulse = servo.settings.max_pulse
-        servo_range = float(max_pulse - min_pulse)
+        min_pulse = float(servo.settings.min_pulse) # Ensure float for calculations
+        max_pulse = float(servo.settings.max_pulse)
+        servo_range = max_pulse - min_pulse
+        if servo_range <= 0: return None # Invalid range
 
-        if servo_range <= 0:
-             print(f"[GAMEPAD:AXIS] Invalid servo range for {servo.id}: min={min_pulse}, max={max_pulse}. Cannot proceed.")
-             return None
-
-        # --- Apply Mode Logic ---
-        new_position = None # Initialize to None
+        new_position = None
 
         if mode == "absolute":
-            normalized_value = 0.0 # Value mapped to 0.0 - 1.0 range
+            normalized_value = 0.0 # Target range [0.0, 1.0]
 
-            # Normalize based on input_range setting
             if input_range == "bipolar":
-                # For bipolar inputs (-1.0 to 1.0) like joysticks
-                clamped_value = max(-1.0, min(value, 1.0)) # Clamp input first
-                normalized_value = (clamped_value + 1.0) / 2.0 # Map [-1, 1] to [0, 1]
-                # print(f"[GAMEPAD:AXIS] Absolute (Bipolar): Servo {servo.id}, Val={value:.2f} -> Clamp={clamped_value:.2f} -> Norm={normalized_value:.2f}")
-            else: # "unipolar" (0.0 to 1.0) for triggers, sliders, etc.
-                clamped_value = max(0.0, min(value, 1.0)) # Clamp input first
-                normalized_value = clamped_value # Already in [0, 1] range
-                # print(f"[GAMEPAD:AXIS] Absolute (Unipolar): Servo {servo.id}, Val={value:.2f} -> Clamp={clamped_value:.2f} -> Norm={normalized_value:.2f}")
+                 # Input: -1.0 to 1.0
+                 clamped_value = max(-1.0, min(value, 1.0))
+                 normalized_value = (clamped_value + 1.0) / 2.0 # Map [-1, 1] -> [0, 1]
+                 # print(f"[GAMEPAD:AXIS] Absolute (Bipolar): Servo {servo.id}, Val={value:.2f} -> Norm={normalized_value:.2f}")
+            elif input_range == "unipolar":
+                 # Input: 0.0 to 1.0 (like Android trigger)
+                 clamped_value = max(0.0, min(value, 1.0))
+                 normalized_value = clamped_value # Already in [0, 1] range
+                 # print(f"[GAMEPAD:AXIS] Absolute (Unipolar): Servo {servo.id}, Val={value:.2f} -> Norm={normalized_value:.2f}")
+            else: # Should not happen if calculate_position sets a default
+                 print(f"[GAMEPAD:AXIS] Error: Reached absolute mode with unknown input_range '{input_range}' for {servo.id}")
+                 return None
 
-            # Apply multiplier to adjust the *sensitivity* or *effective range* within the 0-1 space.
+            # Apply multiplier for sensitivity/scaling within the [0, 1] space
             center_point = 0.5
             effective_value = center_point + (normalized_value - center_point) * multiplier
             final_scaled_value = max(0.0, min(effective_value, 1.0))
 
-            # Map the final [0.0, 1.0] value to the servo's pulse range
-            new_position = int(min_pulse + (final_scaled_value * servo_range))
-            # print(f"[GAMEPAD:AXIS] Absolute: Servo {servo.id} -> Norm={normalized_value:.2f} * Mult={multiplier:.2f} -> Scaled={final_scaled_value:.2f} -> Pos={new_position} (Range: {min_pulse}-{max_pulse})")
+            new_position = min_pulse + (final_scaled_value * servo_range)
+            # print(f"[GAMEPAD:AXIS] Absolute Output: Servo {servo.id} -> Scaled={final_scaled_value:.2f} -> Pos={new_position:.1f}")
 
 
         elif mode == "relative":
-            # Deadzone threshold to prevent drift from noisy axes near center
-            deadzone = 0.1 # Adjust as needed
-            
-            # For unipolar inputs, we need to adjust the interpretation for relative movement
-            if input_range == "unipolar":
-                # Convert unipolar [0,1] to bipolar [-1,1] for relative movement
-                # Center is at 0.5 for unipolar inputs in relative mode
-                adjusted_value = (value - 0.5) * 2.0
-                # Apply deadzone to adjusted value
-                if abs(adjusted_value) <= deadzone:
-                    return None
-                relative_rate = max(-1.0, min(adjusted_value, 1.0))
-            else:  # bipolar
-                # Apply deadzone directly
-                if abs(value) <= deadzone:
-                    return None
-                relative_rate = max(-1.0, min(value, 1.0))
-            
-            # Define a step size for relative movement per event
-            # Make step proportional to servo range and multiplier for sensitivity control
-            base_step_per_event = servo_range * 0.02 # Adjust base step % as needed
-            change = relative_rate * multiplier * base_step_per_event
+            deadzone = 0.1
+            if abs(value) > deadzone:
+                # Determine rate based on input range
+                relative_rate = 0.0
+                if input_range == "bipolar":
+                    # Expects -1 to 1 for direction/speed
+                    relative_rate = max(-1.0, min(value, 1.0))
+                elif input_range == "unipolar":
+                    # Expects 0 to 1 for speed (direction comes from invert/multiplier sign)
+                    # Assume 0 is stop, 1 is max rate *in the configured direction*
+                    relative_rate = max(0.0, min(value, 1.0))
+                    # If multiplier is negative, rate effectively becomes negative for change calc
+                else: return None # Should not happen
 
-            # Get current position reliably
-            current_pos = float(servo.settings.position)
-            target_pos = current_pos + change
+                base_step_per_event = servo_range * 0.02 # % step per event
+                change = relative_rate * multiplier * base_step_per_event
 
-            # Clamp the target position to the servo's physical limits
-            new_position = int(max(min_pulse, min(target_pos, max_pulse)))
-            # print(f"[GAMEPAD:AXIS] Relative: Servo {servo.id}, Val={value:.2f} -> Rate={relative_rate:.2f}, Change={change:.2f}, Cur={current_pos}, New={new_position}")
+                current_pos = float(servo.settings.position) # Need reliable current pos
+                target_pos = current_pos + change
+                new_position = max(min_pulse, min(target_pos, max_pulse)) # Clamp result
+                # print(f"[GAMEPAD:AXIS] Relative ({input_range}): Servo {servo.id}, Val={value:.2f}, Rate={relative_rate:.2f}, Change={change:.1f}, New={new_position:.1f}")
+            # else: stay at current position (new_position remains None implicitly if not set)
 
         else:
             print(f"[GAMEPAD:AXIS] Unknown axis mode '{mode}' for servo {servo.id}")
 
-        return new_position
+        return new_position # Return float
 
     except AttributeError as e:
         print(f"[GAMEPAD:AXIS] Error accessing servo attributes for {getattr(servo, 'id', 'UNKNOWN')}: {e}")

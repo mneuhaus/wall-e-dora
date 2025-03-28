@@ -69,7 +69,8 @@
     "LEFT_SHOULDER_BOTTOM": {
       "index": 6,
       "isAnalog": true,
-      "type": "button"
+      "type": "button",
+      "input_range": "unipolar"
     },
     "RIGHT_ANALOG_BUTTON": {
       "index": 11,
@@ -94,7 +95,8 @@
     "RIGHT_SHOULDER_BOTTOM": {
       "index": 7,
       "isAnalog": true,
-      "type": "button"
+      "type": "button",
+      "input_range": "unipolar"
     },
     "SELECT": {
       "index": 9,
