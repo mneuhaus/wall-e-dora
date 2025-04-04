@@ -1,245 +1,91 @@
 /**
  * ServoSelector Component
  * 
- * A dropdown selector component for choosing servos.
+ * A dropdown selector component for choosing servos using Mantine components.
  * Displays available servos with their IDs and names.
  * Handles selection and provides the servo ID to the parent component.
  * 
  * @component
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../../contexts/AppContext';
-import node from '../../../Node';
-
-// Use portal for dropdown to escape the re-rendering parent components
-const createPortal = (content) => {
-  if (typeof document === 'undefined') return null;
-  
-  // Create or get the portal element
-  let portalElement = document.getElementById('dropdown-portal');
-  if (!portalElement) {
-    portalElement = document.createElement('div');
-    portalElement.id = 'dropdown-portal';
-    portalElement.style.position = 'fixed';
-    portalElement.style.top = '0';
-    portalElement.style.left = '0';
-    portalElement.style.width = '100%';
-    portalElement.style.height = '100%';
-    portalElement.style.zIndex = '9999';
-    portalElement.style.pointerEvents = 'none';
-    document.body.appendChild(portalElement);
-  }
-  
-  // Create a container for this dropdown
-  const container = document.createElement('div');
-  container.style.pointerEvents = 'auto';
-  portalElement.appendChild(container);
-  
-  // Render the content into the portal
-  const renderPortal = () => {
-    // Use a basic DOM-based approach for rendering
-    container.innerHTML = '';
-    if (typeof content === 'string') {
-      container.innerHTML = content;
-    } else if (content instanceof HTMLElement) {
-      container.appendChild(content);
-    }
-  };
-  
-  renderPortal();
-  
-  return {
-    update: renderPortal,
-    remove: () => {
-      if (container.parentNode) {
-        container.parentNode.removeChild(container);
-      }
-    }
-  };
-};
+import { Select, Text, Group } from '@mantine/core';
 
 const ServoSelector = ({ value, onChange, label }) => {
   const { availableServos } = useAppContext();
-  const [isOpen, setIsOpen] = useState(false);
   const [selectedServo, setSelectedServo] = useState(null);
-  const [cachedServos, setCachedServos] = useState([]);
-  const dropdownRef = useRef(null);
-  const buttonRef = useRef(null);
-  const portalRef = useRef(null);
-  const originalListeners = useRef(null);
-  
-  // Initialize cached servos once
+  const [options, setOptions] = useState([]);
+
+  // Update options when availableServos changes
   useEffect(() => {
-    if (availableServos && availableServos.length > 0 && !isOpen) {
-      setCachedServos([...availableServos]);
-      
-      // Update selected servo info
-      if (value) {
-        const selectedId = parseInt(value);
-        const servo = availableServos.find(s => {
-          const currentId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
-          return currentId === selectedId;
-        });
-        
-        if (servo) {
-          setSelectedServo(servo);
-        }
-      }
-    }
-  }, [value, availableServos, isOpen]);
-
-  // When dropdown opens, disable Node event handlers
-  useEffect(() => {
-    if (isOpen) {
-      // Temporarily disable servo status updates
-      if (node && node.emitter) {
-        // Save original listeners
-        originalListeners.current = { ...node.emitter.all };
-        
-        // Remove servo_status event listeners
-        node.emitter.off('servo_status');
-      }
-      
-      // Create the dropdown element
-      const createDropdownElement = () => {
-        const rect = buttonRef.current?.getBoundingClientRect();
-        if (!rect) return null;
-        
-        const dropdown = document.createElement('div');
-        dropdown.className = 'servo-selector-dropdown';
-        dropdown.style.position = 'absolute';
-        dropdown.style.top = `${rect.bottom + window.scrollY}px`;
-        dropdown.style.left = `${rect.left + window.scrollX}px`;
-        dropdown.style.width = `${rect.width}px`;
-        dropdown.style.zIndex = '10000';
-        dropdown.style.maxHeight = '300px';
-        dropdown.style.overflowY = 'auto';
-        dropdown.style.backgroundColor = 'var(--surface)';
-        dropdown.style.border = '1px solid rgba(255, 215, 0, 0.3)';
-        dropdown.style.borderRadius = '6px';
-        dropdown.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.3)';
-        
-        // Add "None" option
-        const noneOption = document.createElement('div');
-        noneOption.className = 'servo-selector-option';
-        noneOption.style.padding = '10px 16px';
-        noneOption.style.cursor = 'pointer';
-        noneOption.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
-        noneOption.innerHTML = '<div class="servo-option-text">None</div>';
-        noneOption.addEventListener('click', () => handleSelectServo(null));
-        dropdown.appendChild(noneOption);
-        
-        // Add servo options
-        cachedServos.forEach(servo => {
-          const option = document.createElement('div');
-          option.className = `servo-selector-option ${parseInt(value) === parseInt(servo.id) ? 'selected' : ''}`;
-          option.style.padding = '10px 16px';
-          option.style.cursor = 'pointer';
-          option.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
-          if (parseInt(value) === parseInt(servo.id)) {
-            option.style.backgroundColor = 'rgba(255, 215, 0, 0.2)';
-          }
-          option.innerHTML = `
-            <div class="servo-option-text">
-              ${servo.alias ? `${servo.alias} <span style="font-size: 12px; opacity: 0.7;">(#${servo.id})</span>` : `Servo #${servo.id}`}
-            </div>
-          `;
-          option.addEventListener('click', () => handleSelectServo(servo.id));
-          dropdown.appendChild(option);
-        });
-        
-        return dropdown;
-      };
-      
-      // Create and position the dropdown
-      const dropdownElement = createDropdownElement();
-      if (dropdownElement) {
-        portalRef.current = createPortal(dropdownElement);
-        
-        // Add global click handler for closing
-        const handleGlobalClick = (e) => {
-          if (!dropdownElement.contains(e.target) && e.target !== buttonRef.current) {
-            closeDropdown();
-          }
-        };
-        
-        setTimeout(() => {
-          document.addEventListener('click', handleGlobalClick);
-        }, 100);
-        
-        // Save the click handler for cleanup
-        dropdownElement._clickHandler = handleGlobalClick;
-      }
-    }
-
-    return () => {
-      if (!isOpen && originalListeners.current) {
-        // Restore original listeners
-        Object.entries(originalListeners.current).forEach(([event, handlers]) => {
-          handlers.forEach(handler => {
-            node.emitter.on(event, handler);
-          });
-        });
-        originalListeners.current = null;
-      }
-      
-      // Remove the dropdown if it exists
-      if (portalRef.current) {
-        portalRef.current.remove();
-        portalRef.current = null;
-      }
-    };
-  }, [isOpen, cachedServos, value]);
-
-  const closeDropdown = () => {
-    // Remove document click listener
-    if (portalRef.current) {
-      document.removeEventListener('click', portalRef.current._clickHandler);
-      portalRef.current.remove();
-      portalRef.current = null;
-    }
+    const servoOptions = [
+      { value: '', label: 'None Selected' }, // Option for no selection
+      ...(availableServos || []).map(servo => ({
+        value: String(servo.id), // Ensure value is string for Select component
+        label: servo.alias ? `${servo.alias} (#${servo.id})` : `Servo #${servo.id}`,
+        id: servo.id,
+        alias: servo.alias
+      }))
+    ];
+    setOptions(servoOptions);
     
-    setIsOpen(false);
-  };
-
-  const handleSelectServo = (servoId) => {
-    closeDropdown();
+    // Update selected servo info based on current value
+    const currentSelectedValue = value === null ? '' : String(value);
+    const foundServo = servoOptions.find(opt => opt.value === currentSelectedValue);
+    setSelectedServo(foundServo || null);
     
-    // Normalize the servo ID to ensure consistency
-    const normalizedId = servoId === null ? null : parseInt(servoId);
-    console.log(`ServoSelector selected: ${normalizedId}`);
-    
-    // Delay to ensure proper timing but use a higher priority task
-    setTimeout(() => {
-      // Call the change handler with the normalized ID
-      onChange(normalizedId);
-      
-      // For debugging
-      console.log(`ServoSelector onChange called with: ${normalizedId}`);
-    }, 50);
-  };
+  }, [availableServos, value]);
 
-  const toggleDropdown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsOpen(!isOpen);
+  const handleSelectChange = (selectedValue) => {
+    // Find the selected option object
+    const selectedOption = options.find(opt => opt.value === selectedValue);
+    
+    // Determine the ID to pass to onChange
+    // If 'None Selected' is chosen, pass null
+    // Otherwise, parse the ID from the value string
+    const idToPass = selectedOption && selectedOption.value !== '' ? parseInt(selectedOption.value) : null;
+    
+    console.log(`ServoSelector selected: ${idToPass} (raw value: ${selectedValue})`);
+    
+    // Update local state for display
+    setSelectedServo(selectedOption);
+    
+    // Call the parent onChange handler with the normalized ID (number or null)
+    onChange(idToPass);
   };
 
   return (
-    <div className="servo-selector" ref={dropdownRef}>
-      <label className="servo-selector-label">{label || 'Select Servo'}</label>
-      <button 
-        className="servo-selector-button" 
-        onClick={toggleDropdown}
-        ref={buttonRef}
-        type="button"
-      >
-        {selectedServo ? 
-          (selectedServo.alias ? `${selectedServo.alias} (#${selectedServo.id})` : `Servo #${selectedServo.id}`) 
-          : 'None Selected'}
-        <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`}></i>
-      </button>
-    </div>
+    <Select
+      label={label || 'Select Servo'}
+      placeholder="Choose a servo"
+      value={selectedServo ? selectedServo.value : ''} // Use empty string for 'None'
+      onChange={handleSelectChange}
+      data={options}
+      searchable
+      nothingFoundMessage="No servos available"
+      styles={{
+        input: { 
+          backgroundColor: 'var(--mantine-color-dark-6)',
+          borderColor: 'var(--mantine-color-dark-4)',
+          '&:focus': {
+            borderColor: 'var(--mantine-color-amber-6)'
+          }
+        },
+        dropdown: {
+          backgroundColor: 'var(--mantine-color-dark-7)',
+          borderColor: 'var(--mantine-color-dark-4)'
+        },
+        item: {
+          '&[data-selected]': {
+            backgroundColor: 'var(--mantine-color-amber-9)',
+            color: 'var(--mantine-color-dark-9)'
+          },
+          '&[data-hovered]': {
+            backgroundColor: 'var(--mantine-color-dark-5)'
+          }
+        }
+      }}
+    />
   );
 };
 
