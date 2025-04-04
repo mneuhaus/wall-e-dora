@@ -487,8 +487,9 @@ void setup() {
   
   WiFi.mode(WIFI_STA);
   
-  const char* ssid = "wall-e.neuhaus.nrw";
-  const char* password = "galactic";
+  // TODO: Load credentials securely (e.g., from SPIFFS, EEPROM, or WiFiManager)
+  const char* ssid = "YOUR_WIFI_SSID"; // Replace with your SSID
+  const char* password = "YOUR_WIFI_PASSWORD"; // Replace with your Password
   
   // Update WiFi status to "connecting" (yellow)
   tft.fillScreen(TFT_BLACK);

@@ -561,19 +561,22 @@ class Gamepad:
 ###########################
 # Import gamepad mappings #
 ###########################
-scriptDir = os.path.dirname(os.path.realpath(__file__))
-controllerScript = os.path.join(scriptDir, "Controllers.py")
-exec(open(controllerScript).read())
+# Import controller classes directly
+from .Controllers import PS3, PS4, Xbox360, XboxONE, Steam, MMP1251, GameHat, PG9099, example
 
 # Generate a list of available gamepad types
-moduleDict = globals()
-classList = [moduleDict[a] for a in moduleDict.keys() if inspect.isclass(moduleDict[a])]
-controllerDict = {}
-deviceNames = []
-for gamepad in classList:
-    controllerDict[gamepad.__name__.upper()] = gamepad
-    deviceNames.append(gamepad.__name__)
-deviceNames.sort()
+controllerDict = {
+    'PS3': PS3,
+    'PS4': PS4,
+    'XBOX360': Xbox360,
+    'XBOXONE': XboxONE,
+    'STEAM': Steam,
+    'MMP1251': MMP1251,
+    'GAMEHAT': GameHat,
+    'PG9099': PG9099,
+    'EXAMPLE': example,
+}
+deviceNames = sorted(controllerDict.keys())
 
 ##################################################################
 # When this script is run it provides testing code for a gamepad #
