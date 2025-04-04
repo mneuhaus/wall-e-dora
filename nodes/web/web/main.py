@@ -291,6 +291,7 @@ def start_background_webserver():
         import os
         import jinja2
         import json
+        import aiohttp
 
         app = web.Application()
         aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
