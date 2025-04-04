@@ -120,8 +120,8 @@ The main README.md provides project-level documentation:
 - Run single test: `pytest nodes/[node_name]/tests/test_[node_name].py::test_function_name`
 
 ## Linting/Formatting
-- Format code: `ruff format`
-- Lint code: `ruff check`
+- Format code: `ruff format .`
+- Lint code: `ruff check .`
 
 ## Code Change Workflow
 When making changes to the project, follow this workflow:
