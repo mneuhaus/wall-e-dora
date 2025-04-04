@@ -283,8 +283,11 @@ async def broadcast_bytes(data_bytes: bytes):
 def asset_url(asset):
     return asset
 
+
 def start_background_webserver():
+    """Initialize and start the aiohttp web server in a background thread."""
     async def init_app():
+        """Async function to set up the aiohttp application."""
         import os
         import jinja2
         import json
