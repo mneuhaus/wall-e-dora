@@ -1,4 +1,4 @@
-"""Waveshare Servo Node for WALL-E-DORA project."""
+"""Waveshare Servo Node package for the WALL-E-DORA project."""
 
-# Module exports
+# Module exports (currently empty, consider exporting key classes/functions)
 __all__ = []

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Script to flash Tracks firmware to the device.
+"""Script to flash Tracks firmware to a Raspberry Pi Pico device.
 
 Usage:
     python3 flash_firmware.py /dev/serial/by-id/usb-Raspberry_Pi_Pico_E66...-if00
@@ -20,8 +19,16 @@ import subprocess
 import os
 import time
 
-def find_usb_details(device_path: str) -> tuple[str | None, str | None]:
-    """Uses udevadm to find the bus and device number for a /dev/ttyACM* path."""
+def find_usb_details(device_path: str) -> tuple[Optional[str], Optional[str]]:
+    """Use udevadm to find the USB bus and device number for a serial device path.
+
+    Args:
+        device_path: The path to the serial device (e.g., /dev/ttyACM0).
+
+    Returns:
+        A tuple containing (bus_number, device_number) as strings, or (None, None)
+        if they cannot be determined.
+    """
     busnum = None
     devnum = None
     try:
@@ -64,6 +71,15 @@ def find_usb_details(device_path: str) -> tuple[str | None, str | None]:
 
 
 def flash_firmware(device_path: str) -> None:
+    """Flash the compiled firmware UF2 file to the specified Pico device.
+
+    Locates the firmware file, attempts to find the USB bus/device number
+    of the running Pico using the serial path, reboots the Pico into BOOTSEL
+    mode using `picotool`, waits, and then loads the firmware using `picotool`.
+
+    Args:
+        device_path: The serial device path of the Pico in run mode.
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     firmware_file = os.path.join(script_dir, "..", "firmware", "build", "tracks_firmware.uf2")
 

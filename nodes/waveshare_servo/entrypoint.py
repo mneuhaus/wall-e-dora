@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""
-Entry point for the Waveshare Servo Node.
-This file allows Dora to run the node directly.
+"""Entry point script for the Waveshare Servo Node.
+
+This script ensures the package directory is in the Python path and then
+calls the main function from the `waveshare_servo.main` module. This allows
+Dora to execute the node using this file as the target path.
 """
 
 import sys

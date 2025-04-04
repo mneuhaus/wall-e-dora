@@ -1,6 +1,4 @@
-"""
-Handler for move_servo events.
-"""
+"""Handler for the 'move_servo' input event."""
 
 import traceback
 from typing import Dict, Any
@@ -17,9 +15,18 @@ from waveshare_servo.utils.event_processor import extract_event_data
 from waveshare_servo.outputs.servo_status import broadcast_servo_status
 
 
-def handle_move_servo(context, event: Dict[str, Any]) -> bool:
-    """
-    Handle incoming move_servo event by extracting data and moving the servo.
+def handle_move_servo(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Handle incoming 'move_servo' event.
+
+    Extracts the servo ID and target position from the event data and calls
+    the `move_servo` function to perform the action.
+
+    Args:
+        context: The node context dictionary containing shared state (node, config, servos).
+        event: The Dora input event dictionary.
+
+    Returns:
+        True if the servo move was successfully initiated, False otherwise.
     """
     try:
         data, error = extract_event_data(event)
@@ -34,17 +41,16 @@ def handle_move_servo(context, event: Dict[str, Any]) -> bool:
     return False
 
 
-def move_servo(context, servo_id: int, position: int) -> bool:
-    """
-    Move a servo to a specific position.
-    
+def move_servo(context: Dict[str, Any], servo_id: int, position: int) -> bool:
+    """Move a specific servo to the target position.
+
     Args:
-        context: Node context dictionary
-        servo_id: ID of the servo to move
-        position: Target position
-        
+        context: The node context dictionary.
+        servo_id: The ID of the servo to move.
+        position: The target position for the servo.
+
     Returns:
-        bool: Success or failure
+        True if the move command was successful, False otherwise.
     """
     node = context["node"]
     config = context["config"]

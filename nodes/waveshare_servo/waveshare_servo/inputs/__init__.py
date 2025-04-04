@@ -1,5 +1,8 @@
-"""
-Input handlers for the Waveshare Servo Node.
+"""Input handlers for the Waveshare Servo Node.
+
+This package contains modules that handle specific input events received
+by the Waveshare Servo Node via the Dora dataflow. Each module typically
+exports a `handle_<event_name>` function.
 """
 
 from .move_servo import handle_move_servo, move_servo

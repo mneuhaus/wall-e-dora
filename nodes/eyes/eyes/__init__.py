@@ -1,3 +1,5 @@
+"""Eyes Node package initialization."""
+
 import os
 
 # Define the path to the README file relative to the package directory

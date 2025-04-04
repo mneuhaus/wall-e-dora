@@ -1,13 +1,24 @@
-"""
-Calibration operation for servos.
-"""
+"""Provides the servo calibration function."""
 
 import time
 import re
 
 
-def calibrate_servo(servo):
-    """Calibrate the servo min/max values."""
+def calibrate_servo(servo) -> bool:
+    """Calibrate the servo by sending it to its min and max pulse positions.
+
+    This function attempts to move the servo to its configured `min_pulse` and
+    `max_pulse` values. It currently considers the calibration successful if
+    the commands can be sent without error, rather than reading back the
+    actual achieved position (which might not be supported reliably by the
+    servo's text protocol).
+
+    Args:
+        servo: The `Servo` object to calibrate.
+
+    Returns:
+        True if the calibration commands were sent successfully, False otherwise.
+    """
     try:
         print(f"Starting calibration for servo {servo.id}")
         

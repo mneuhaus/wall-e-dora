@@ -1,3 +1,5 @@
+"""Unit tests for the ConfigManager class."""
+
 import os
 import json
 import pytest
@@ -14,13 +16,17 @@ def test_import_main():
 
 
 class TestConfigManager:
+    """Test suite for the ConfigManager."""
+
     def setup_method(self):
+        """Set up a temporary directory and ConfigManager instance for each test."""
         # Create a temporary file for testing
         self.temp_dir = tempfile.TemporaryDirectory()
         self.config_path = os.path.join(self.temp_dir.name, "test_settings.json")
         self.config_manager = ConfigManager(self.config_path)
 
     def teardown_method(self):
+        """Clean up the temporary directory after each test."""
         # Clean up temporary files
         self.temp_dir.cleanup()
 
@@ -31,6 +37,7 @@ class TestConfigManager:
         assert data == {}
 
     def test_update_setting_root_level(self):
+        """Test updating a setting at the root level."""
         result = self.config_manager.update_setting("test_key", "test_value")
         assert result == {"path": "test_key", "value": "test_value"}
         assert self.config_manager.get_setting("test_key") == "test_value"
@@ -41,6 +48,7 @@ class TestConfigManager:
         assert data["test_key"] == "test_value"
 
     def test_update_setting_nested(self):
+        """Test updating a nested setting using dot notation."""
         result = self.config_manager.update_setting("parent.child", "child_value")
         assert result == {"path": "parent.child", "value": "child_value"}
         assert self.config_manager.get_setting("parent.child") == "child_value"
@@ -51,6 +59,7 @@ class TestConfigManager:
         assert data["parent"]["child"] == "child_value"
 
     def test_update_setting_with_list(self):
+        """Test updating settings within a list using numeric indices."""
         # Setting array elements
         self.config_manager.update_setting("servo.0.speed", 10)
         self.config_manager.update_setting("servo.1.speed", 20)
@@ -69,6 +78,7 @@ class TestConfigManager:
         assert data["servo"][2]["speed"] == 30
 
     def test_update_creates_intermediate_structures(self):
+        """Test that updating a deep path creates necessary parent dicts/lists."""
         # Setting a deeply nested value
         self.config_manager.update_setting("a.b.c.d.e", "deep_value")
         
@@ -81,11 +91,13 @@ class TestConfigManager:
         assert isinstance(self.config_manager.get_setting("a.b"), dict)
 
     def test_get_nonexistent_setting(self):
+        """Test getting a setting that does not exist."""
         # Get non-existent value
         assert self.config_manager.get_setting("nonexistent") is None
         assert self.config_manager.get_setting("a.b.nonexistent") is None
 
     def test_get_all_settings(self):
+        """Test retrieving the entire configuration dictionary."""
         # Add some settings
         self.config_manager.update_setting("key1", "value1")
         self.config_manager.update_setting("key2.nested", "value2")

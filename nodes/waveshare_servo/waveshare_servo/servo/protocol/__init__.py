@@ -1,6 +1,4 @@
-"""
-Servo protocol implementation for the Waveshare Servo Node.
-"""
+"""Low-level servo protocol command implementations."""
 
 from .ping_command import send_ping_command
 from .position_command import send_position_command, parse_position_command

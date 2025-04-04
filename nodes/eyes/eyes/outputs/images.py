@@ -1,20 +1,21 @@
-"""Output handlers for GIF images."""
+"""Output handler for broadcasting available eye images."""
+
 import os
 import glob
 from pathlib import Path
 import pyarrow as pa
 
 
-def broadcast_available_images(context, event=None):
-    """
-    Broadcasts the list of available GIF images to the web node.
-    
+def broadcast_available_images(context: dict, event: dict = None):
+    """Scan the gif_sync directory and broadcast the list of available images.
+
+    Finds all GIF and JPG/JPEG files in the `nodes/eyes/gif_sync` directory,
+    collects metadata (filename, paths, size, type, timestamp), sorts them,
+    and sends the list as a PyArrow array via the 'available_images' output.
+
     Args:
-        context (dict): The context dictionary containing dependencies.
-        event (dict, optional): The input event that triggered this output.
-        
-    Returns:
-        None
+        context: The node context dictionary containing the Dora node instance.
+        event: The triggering Dora event (optional, currently unused).
     """
     # Get the path to the gif_sync directory
     current_dir = Path(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))

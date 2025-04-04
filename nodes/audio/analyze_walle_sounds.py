@@ -1,3 +1,14 @@
+"""Script to analyze Wall-E audio files using OpenAI's GPT-4o.
+
+This script processes MP3 files in a specified directory, transcribes them
+using Whisper, and then uses GPT-4o to suggest a descriptive filename
+based on the emotional content and sound type perceived in the audio.
+It can optionally rename the files based on the suggestions.
+
+Requires OpenAI API key (set via --api_key or OPENAI_API_KEY env var)
+and the `openai` and `pydub` Python packages.
+"""
+
 import os
 import argparse
 import json

@@ -1,6 +1,4 @@
-"""
-Serial connection manager for the Waveshare Servo Node.
-"""
+"""Serial connection manager and servo discovery for the Waveshare Servo Node."""
 
 import time
 from typing import Optional, Set
@@ -12,14 +10,22 @@ from .discovery import discover_servos
 
 
 class ServoScanner:
-    """Manages serial connection and servo discovery."""
+    """Manages the serial connection and performs servo discovery."""
 
     def __init__(self):
+        """Initialize the ServoScanner."""
         self.port = None
         self.serial_conn = None
 
     def connect(self) -> bool:
-        """Connect to the servo controller."""
+        """Establish a serial connection to the servo controller.
+
+        Finds the correct serial port using `find_servo_port` and opens
+        the connection with the required baud rate.
+
+        Returns:
+            True if the connection was successful, False otherwise.
+        """
         try:
             if self.serial_conn and self.serial_conn.is_open:
                 return True
@@ -38,12 +44,19 @@ class ServoScanner:
             return False
 
     def disconnect(self):
-        """Disconnect from the servo controller."""
+        """Close the serial connection if it's open."""
         if self.serial_conn and self.serial_conn.is_open:
             self.serial_conn.close()
 
     def discover_servos(self) -> Set[int]:
-        """Discover all connected servos."""
+        """Discover all connected servos by pinging them.
+
+        Ensures a connection is established and then calls the
+        `discover_servos` utility function.
+
+        Returns:
+            A set of IDs of the discovered servos.
+        """
         if not self.connect():
             return set()
         

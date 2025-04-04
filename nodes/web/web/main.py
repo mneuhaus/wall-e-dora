@@ -1,3 +1,10 @@
+"""Main module for the Web Node.
+
+Sets up an aiohttp web server with WebSocket support to serve the React frontend
+and handle real-time communication with clients and other Dora nodes.
+Manages gamepad profiles and orchestrates data flow between the UI and backend nodes.
+"""
+
 from dora import Node
 import threading
 import asyncio
@@ -23,11 +30,24 @@ from handlers.gamepad_profiles import (
 
 logging.basicConfig(level=logging.INFO)
 
-global_web_inputs = []
-ws_clients = set()
-web_loop = None
+# Global variables (consider refactoring into a class or context)
+global_web_inputs = []  # Queue for events received from WebSocket clients
+ws_clients = set()      # Set of active WebSocket client connections
+web_loop = None         # asyncio event loop for the web server thread
 
-def flush_web_inputs(node, profile_manager):
+
+def flush_web_inputs(node: Node, profile_manager: GamepadProfileManager):
+    """Process queued events received from WebSocket clients.
+
+    Iterates through `global_web_inputs`, handles special events like saving
+    grid state or joystick settings locally, and forwards other events
+    to the appropriate Dora outputs.
+
+    Args:
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance (unused here but
+                         passed for consistency).
+    """
     global global_web_inputs
     if not global_web_inputs:
         return
@@ -141,7 +161,20 @@ def flush_web_inputs(node, profile_manager):
             )
     global_web_inputs = []
 
-async def websocket_handler(request):
+
+async def websocket_handler(request: web.Request):
+    """Handle incoming WebSocket connections and messages.
+
+    Manages the lifecycle of a WebSocket connection, receives messages
+    from the client, queues them for processing by `flush_web_inputs`,
+    and removes the client upon disconnection.
+
+    Args:
+        request: The aiohttp request object.
+
+    Returns:
+        The WebSocketResponse object.
+    """
     logging.info("New WebSocket connection request received")
     ws = web.WebSocketResponse()
     await ws.prepare(request)
@@ -194,15 +227,32 @@ async def websocket_handler(request):
 
     return ws
 
-async def index(request):
+
+async def index(request: web.Request):
+    """Serve the main HTML template for the React frontend.
+
+    Renders `template.html` using Jinja2. Currently injects an empty
+    grid state, as the state is primarily managed via WebSocket.
+
+    Args:
+        request: The aiohttp request object.
+
+    Returns:
+        An aiohttp web Response object containing the rendered HTML.
+    """
     import os, json
     template = request.app['jinja_env'].get_template('template.html')
     # For fixed layout, we don't need to load grid state
     rendered = template.render(gridState=json.dumps({}))
     return web.Response(text=rendered, content_type='text/html')
 
-async def broadcast_bytes(data_bytes):
-    """Broadcast data to all connected WebSocket clients"""
+
+async def broadcast_bytes(data_bytes: bytes):
+    """Broadcast binary data (decoded as UTF-8 string) to all connected WebSocket clients.
+
+    Args:
+        data_bytes: The bytes object containing the message to broadcast.
+    """
     try:
         data_str = data_bytes.decode("utf-8")
 
@@ -442,7 +492,9 @@ def start_background_webserver():
     thread = threading.Thread(target=run_loop, daemon=True)
     thread.start()
 
+
 def start_asset_compilation():
+    """Start the Webpack Encore asset compilation process in watch mode."""
     cmd = ['nodes/web/resources/node_modules/.bin/encore', 'dev', '--watch']
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
     def print_output():
@@ -450,8 +502,15 @@ def start_asset_compilation():
             print("[ASSET COMPILER]", line, end="")
     threading.Thread(target=print_output, daemon=True).start()
 
+
 def main():
-    # start_asset_compilation()
+    """Main function for the Web Node.
+
+    Starts the background web server, initializes the Dora node and the
+    GamepadProfileManager, and enters the main Dora event loop to process
+    incoming events from other nodes and the web UI.
+    """
+    # start_asset_compilation() # Usually run manually or via Makefile
     start_background_webserver()
     node = Node()
 

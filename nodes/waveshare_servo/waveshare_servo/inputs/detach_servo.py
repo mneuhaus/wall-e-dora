@@ -1,6 +1,4 @@
-"""
-Handler for detach_servo events.
-"""
+"""Handler for the 'detach_servo' input event."""
 
 import traceback
 from typing import Dict, Any
@@ -17,9 +15,18 @@ from waveshare_servo.utils.event_processor import extract_event_data
 from waveshare_servo.outputs.servo_status import broadcast_servo_status
 
 
-def handle_detach_servo(context, event: Dict[str, Any]) -> bool:
-    """
-    Handle incoming detach_servo event by extracting data and detaching the servo from its control.
+def handle_detach_servo(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Handle incoming 'detach_servo' event.
+
+    Extracts the servo ID from the event data and calls the `detach_servo`
+    function to remove its gamepad control mapping.
+
+    Args:
+        context: The node context dictionary.
+        event: The Dora input event dictionary.
+
+    Returns:
+        True if the servo was successfully detached, False otherwise.
     """
     try:
         data, error = extract_event_data(event)
@@ -33,16 +40,18 @@ def handle_detach_servo(context, event: Dict[str, Any]) -> bool:
     return False
 
 
-def detach_servo(context, servo_id: int) -> bool:
-    """
-    Detach a servo from its gamepad control.
-    
+def detach_servo(context: Dict[str, Any], servo_id: int) -> bool:
+    """Detach a servo from its assigned gamepad control.
+
+    Clears the `attached_control` and `gamepad_config` settings for the
+    specified servo both in the local state and in the configuration file.
+
     Args:
-        context: Node context dictionary
-        servo_id: ID of the servo to detach
-        
+        context: The node context dictionary.
+        servo_id: The ID of the servo to detach.
+
     Returns:
-        bool: Success or failure
+        True if the servo was found and detached successfully, False otherwise.
     """
     node = context["node"]
     config = context["config"]

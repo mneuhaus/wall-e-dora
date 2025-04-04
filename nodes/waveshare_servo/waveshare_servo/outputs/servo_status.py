@@ -1,6 +1,4 @@
-"""
-Broadcaster for servo status updates.
-"""
+"""Broadcaster function for servo status updates."""
 
 import json
 import traceback
@@ -19,7 +17,16 @@ from waveshare_servo.servo.controller import Servo
 
 
 def broadcast_servo_status(node, servo_id: int, servos: Dict[int, Servo]):
-    """Broadcast the status of a single servo."""
+    """Broadcast the status of a single specified servo.
+
+    Retrieves the servo's settings, converts them to a dictionary, and sends
+    it as a JSON string via the 'servo_status' output.
+
+    Args:
+        node: The Dora node instance.
+        servo_id: The ID of the servo whose status should be broadcast.
+        servos: The dictionary mapping servo IDs to Servo objects.
+    """
     try:
         if servo_id in servos:
             servo = servos[servo_id]

@@ -1,6 +1,4 @@
-"""
-Individual servo control for the Waveshare Servo Node.
-"""
+"""Provides the Servo class for controlling individual Waveshare servos."""
 
 from typing import Optional
 import time
@@ -41,15 +39,42 @@ PROTOCOL_END = 1  # Using protocol_end = 1
 
 
 class Servo:
-    """Represents a single servo with all its operations."""
+    """Represents a single Waveshare servo motor and its operations.
+
+    Handles sending commands, moving the servo, calibration, ID changes,
+    and reading status like voltage, using both a text-based protocol
+    and the underlying Dynamixel SDK for communication.
+
+    Attributes:
+        serial_conn: The shared serial connection object.
+        settings: A ServoSettings data object holding the servo's configuration.
+        id: The numerical ID of the servo.
+    """
 
     def __init__(self, serial_conn, settings: ServoSettings):
+        """Initialize a Servo instance.
+
+        Args:
+            serial_conn: The PySerial connection object used for communication.
+            settings: A ServoSettings data object containing the initial
+                      configuration for this servo.
+        """
         self.serial_conn = serial_conn
         self.settings = settings
         self.id = settings.id
 
     def send_command(self, command: str) -> Optional[str]:
-        """Send a command to the servo and get the response."""
+        """Send a command string to the servo and return the response.
+
+        Determines the appropriate protocol (SCS binary or text-based) based
+        on the command format and sends it via the serial connection.
+
+        Args:
+            command: The command string to send (e.g., "PING", "P1500T1000", "ID2").
+
+        Returns:
+            The response string from the servo, or None if an error occurred.
+        """
         try:
             if not command or not isinstance(command, str):
                 print(f"Invalid command: {command}")
@@ -99,13 +124,12 @@ class Servo:
         except Exception as e:
             print(f"Error sending command to servo {self.id}: {e}")
             return None
-            
+
     def is_responsive(self) -> bool:
-        """
-        Check if the servo is responsive using the SDK.
-        
+        """Check if the servo is responsive by sending a PING command using the SDK.
+
         Returns:
-            bool: True if the servo responds to ping, False otherwise
+            True if the servo responds successfully to the ping, False otherwise.
         """
         device_name = self.serial_conn.port
         port_handler = None
@@ -138,14 +162,16 @@ class Servo:
             return False
 
     def set_id(self, new_id: int) -> bool:
-        """
-        Set a new ID for the servo.
-        
+        """Set a new ID for the servo using the SDK.
+
+        Handles unlocking the EEPROM, writing the new ID, and re-locking the
+        EEPROM with the new ID. Updates the servo object's ID upon success.
+
         Args:
-            new_id: The new ID to assign to the servo
-            
+            new_id: The new ID to assign (must be between 1 and 31).
+
         Returns:
-            bool: True if successful, False otherwise
+            True if the ID change was successful, False otherwise.
         """
         if not (1 <= new_id <= 31):
             print(f"Invalid servo ID {new_id}. Must be between 1 and 31.")
@@ -153,16 +179,17 @@ class Servo:
             
         # Use only SDK approach
         return self._set_id_with_sdk(new_id)
-        
+
     def _set_id_with_sdk(self, new_id: int) -> bool:
-        """
-        Set servo ID using SDK approach with proper EEPROM handling.
-        
+        """Internal helper to set servo ID using the SDK.
+
+        Handles EEPROM lock/unlock and writing the new ID.
+
         Args:
-            new_id: The new ID to assign to the servo
-            
+            new_id: The new ID to assign.
+
         Returns:
-            bool: True if successful, False otherwise
+            True on success, False on failure.
         """
         old_id = self.id
         device_name = self.serial_conn.port
@@ -255,18 +282,20 @@ class Servo:
             return False
 
     def wiggle(self) -> bool:
-        """Wiggle the servo for identification."""
+        """Wiggle the servo slightly for physical identification."""
         return wiggle_servo(self)
 
     def move(self, position: int) -> bool:
-        """
-        Move the servo to a specific position using SDK-based approach.
-        
+        """Move the servo to a specific target position using the SDK.
+
+        Clamps the position based on the servo's min/max pulse settings and
+        applies inversion if configured.
+
         Args:
-            position: The target position value
-            
+            position: The target position value (typically 0-1023).
+
         Returns:
-            bool: True if successful, False otherwise
+            True if the move command was sent successfully, False otherwise.
         """
         try:
             # Apply min/max constraints
@@ -284,16 +313,17 @@ class Servo:
         except Exception as e:
             print(f"Error moving servo {self.id}: {e}")
             return False
-            
+
     def _move_with_sdk(self, position: int) -> bool:
-        """
-        Move the servo using the SDK approach for more reliable control.
-        
+        """Internal helper to move the servo using the SDK.
+
+        Sends commands to set the speed and then the goal position.
+
         Args:
-            position: The target position value
-            
+            position: The target position value (already clamped and inverted).
+
         Returns:
-            bool: True if successful, False otherwise
+            True on success, False on failure.
         """
         # Ensure position is within the valid range (0-1023)
         position = max(0, min(1023, position))
@@ -354,15 +384,16 @@ class Servo:
             return False
 
     def calibrate(self) -> bool:
-        """Calibrate the servo min/max values."""
+        """Initiate the servo calibration process."""
         return calibrate_servo(self)
-        
+
     def read_voltage(self) -> float:
-        """
-        Read the current voltage from the servo.
-        
+        """Read the current voltage from the servo using the SDK.
+
+        Updates the `self.settings.voltage` attribute.
+
         Returns:
-            float: The current voltage in volts, or 0.0 if unable to read
+            The current voltage in volts, or 0.0 if the read fails.
         """
         device_name = self.serial_conn.port
         port_handler = None

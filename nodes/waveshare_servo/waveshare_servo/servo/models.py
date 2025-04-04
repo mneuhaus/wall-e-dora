@@ -1,6 +1,4 @@
-"""
-Data models for the Waveshare Servo Node.
-"""
+"""Data models for the Waveshare Servo Node."""
 
 from dataclasses import asdict, dataclass, field
 from typing import Dict, Optional, Any

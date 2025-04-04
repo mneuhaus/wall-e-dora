@@ -1,6 +1,4 @@
-"""
-Handler for wiggle_servo events.
-"""
+"""Handler for the 'wiggle_servo' input event."""
 
 import traceback
 from typing import Dict, Any
@@ -16,9 +14,18 @@ if parent_dir not in sys.path:
 from waveshare_servo.utils.event_processor import extract_event_data
 
 
-def handle_wiggle_servo(context, event: Dict[str, Any]) -> bool:
-    """
-    Handle incoming wiggle_servo event by extracting data and wiggling the servo.
+def handle_wiggle_servo(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Handle incoming 'wiggle_servo' event.
+
+    Extracts the servo ID from the event data and calls the `wiggle_servo`
+    function to perform the action.
+
+    Args:
+        context: The node context dictionary.
+        event: The Dora input event dictionary.
+
+    Returns:
+        True if the wiggle action was successful, False otherwise.
     """
     try:
         data, error = extract_event_data(event)
@@ -32,19 +39,17 @@ def handle_wiggle_servo(context, event: Dict[str, Any]) -> bool:
     return False
 
 
-def wiggle_servo(context, servo_id: int) -> bool:
-    """
-    Wiggle a servo to help with physical identification.
-    
+def wiggle_servo(context: Dict[str, Any], servo_id: int) -> bool:
+    """Wiggle a specific servo for physical identification.
+
     Args:
-        context: Node context dictionary
-        servo_id: ID of the servo to wiggle
-        
+        context: The node context dictionary.
+        servo_id: The ID of the servo to wiggle.
+
     Returns:
-        bool: Success or failure
+        True if the wiggle action was successful, False otherwise.
     """
     servos = context["servos"]
-    
     if servo_id in servos:
         servo = servos[servo_id]
         return servo.wiggle()

@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""Script to optimize GIF, JPG, and MP4 files for Wall-E eye displays.
+
+Processes image and video files from an input directory, resizing and
+center-cropping them to 240x240 pixels. Optimizes GIFs using gifsicle,
+JPEGs using Pillow, and converts MP4s to optimized GIFs using ffmpeg
+and gifsicle. Also generates static preview images. Optionally creates
+rotated versions using ImageMagick.
+
+Requires: Python 3, Pillow, gifsicle, ffmpeg, ImageMagick (convert).
+"""
+
 import argparse
 import os
 import sys
@@ -6,7 +17,17 @@ import subprocess
 import math
 from PIL import Image
 
-def create_png_preview(input_file, preview_file):
+
+def create_png_preview(input_file: str, preview_file: str) -> bool:
+    """Create a preview file for a PNG image (essentially a copy).
+
+    Args:
+        input_file: Path to the input (optimized) PNG file.
+        preview_file: Path where the preview PNG file will be saved.
+
+    Returns:
+        True if successful, False otherwise.
+    """
     try:
         # For PNG, the preview is just a copy of the optimized file
         # since it doesn't have multiple frames
@@ -18,7 +39,21 @@ def create_png_preview(input_file, preview_file):
         print(f"Error creating PNG preview for {input_file}: {e}")
         return False
 
-def create_preview(input_file, preview_file):
+
+def create_preview(input_file: str, preview_file: str) -> bool:
+    """Create a static preview image (first frame) for a GIF or PNG file.
+
+    Resizes and center-crops the first frame of the input file to 240x240
+    and saves it to the preview file path. Uses `gifsicle` for GIFs and
+    calls `create_png_preview` for PNGs.
+
+    Args:
+        input_file: Path to the input GIF or PNG file.
+        preview_file: Path where the preview image will be saved.
+
+    Returns:
+        True if successful, False otherwise.
+    """
     # If it's a PNG, use the PNG preview function
     if input_file.lower().endswith('.png'):
         return create_png_preview(input_file, preview_file)
@@ -89,7 +124,20 @@ def create_preview(input_file, preview_file):
         return False
     return True
 
-def convert_mp4_to_gif(input_file, output_file):
+
+def convert_mp4_to_gif(input_file: str, output_file: str) -> bool:
+    """Convert an MP4 video file to an optimized GIF file using ffmpeg.
+
+    Scales the video while maintaining aspect ratio so that the smaller
+    dimension becomes 240 pixels, then center-crops to 240x240.
+
+    Args:
+        input_file: Path to the input MP4 file.
+        output_file: Path where the output GIF file will be saved.
+
+    Returns:
+        True if conversion is successful, False otherwise.
+    """
     # Use ffmpeg to convert MP4 to GIF with scaling and cropping.
     # The filter chain does the following:
     # • If the input is landscape (width >= height), scale using height=240 (width auto-scaled)
@@ -112,7 +160,20 @@ def convert_mp4_to_gif(input_file, output_file):
         return False
     return True
 
-def optimize_jpg(input_file, output_file):
+
+def optimize_jpg(input_file: str, output_file: str) -> bool:
+    """Optimize a JPEG image file using Pillow.
+
+    Center-crops the image to a square aspect ratio, resizes it to 240x240
+    using Lanczos resampling, and saves it with JPEG quality 85.
+
+    Args:
+        input_file: Path to the input JPG/JPEG file.
+        output_file: Path where the optimized JPG file will be saved.
+
+    Returns:
+        True if optimization is successful, False otherwise.
+    """
     try:
         with Image.open(input_file) as im:
             width, height = im.size
@@ -141,7 +202,21 @@ def optimize_jpg(input_file, output_file):
         print(f"Error processing JPEG {input_file}: {e}")
         return False
 
-def optimize_gif(input_file, output_file):
+
+def optimize_gif(input_file: str, output_file: str) -> bool:
+    """Optimize an animated GIF file using gifsicle.
+
+    Resizes the GIF while maintaining aspect ratio so the smaller dimension
+    is 240 pixels, then center-crops to 240x240. Applies gifsicle optimizations
+    (level 3, lossy compression, reduced color palette).
+
+    Args:
+        input_file: Path to the input GIF file.
+        output_file: Path where the optimized GIF file will be saved.
+
+    Returns:
+        True if optimization is successful, False otherwise.
+    """
     try:
         with Image.open(input_file) as im:
             width, height = im.size
@@ -205,9 +280,11 @@ def optimize_gif(input_file, output_file):
         return False
     return True
 
+
 def main():
+    """Main execution function for the image optimization script."""
     parser = argparse.ArgumentParser(
-        description="Optimize all GIF files in an input directory for the TFT device: center-crop to 240x240 and optimize with gifsicle"
+        description="Optimize GIF/JPG/MP4 files for Wall-E eye displays: center-crop to 240x240 and optimize."
     )
     parser.add_argument("input_dir", help="Path to the directory containing original GIF files")
     parser.add_argument("output_dir", help="Path to the directory where optimized GIFs and previews will be stored")

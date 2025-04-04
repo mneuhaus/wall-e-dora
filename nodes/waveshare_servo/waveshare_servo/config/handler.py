@@ -1,6 +1,10 @@
-"""
-Configuration handler for the Waveshare Servo Node.
-Stores servo settings directly in /config/servo.json
+"""Configuration handler for the Waveshare Servo Node.
+
+Handles loading, saving, and accessing servo settings stored directly
+in the project's `/config/servo.json` file.
+
+Note: This is a temporary direct file handler. It's intended to be
+refactored to use the central `config` node in the future.
 """
 
 import json
@@ -22,9 +26,15 @@ from waveshare_servo.servo.models import ServoSettings
 
 
 class ConfigHandler:
-    """Handles servo configuration storage."""
+    """Handles servo configuration storage directly in a JSON file."""
 
     def __init__(self, node):
+        """Initialize the ConfigHandler.
+
+        Args:
+            node: The Dora node instance (currently unused but kept for
+                  future compatibility with the config node).
+        """
         self.node = node
         self.cached_settings = {}
         self.config_file_path = os.path.join(project_root, "config", "servo.json")
@@ -32,7 +42,7 @@ class ConfigHandler:
         self._load_settings()
 
     def _load_settings(self):
-        """Load settings from file or create new if not exists."""
+        """Load settings from the JSON file or create an empty one."""
         try:
             config_dir = os.path.dirname(self.config_file_path)
             if not os.path.exists(config_dir):
@@ -53,7 +63,7 @@ class ConfigHandler:
             self.cached_settings = {}
 
     def _save_settings(self):
-        """Save current settings to file."""
+        """Save the current cached settings to the JSON file."""
         try:
             with open(self.config_file_path, 'w') as f:
                 json.dump(self.cached_settings, f, indent=2)
@@ -62,8 +72,14 @@ class ConfigHandler:
             print(f"Error saving settings: {e}")
             traceback.print_exc()
 
-    def update_servo_setting(self, servo_id: int, property_name: str, value: any):
-        """Update a specific servo setting."""
+    def update_servo_setting(self, servo_id: int, property_name: str, value: Any):
+        """Update a specific setting for a given servo and save to file.
+
+        Args:
+            servo_id: The ID of the servo to update.
+            property_name: The name of the setting property (e.g., 'alias', 'speed').
+            value: The new value for the setting.
+        """
         # Initialize servo settings if needed
         servo_id_str = str(servo_id)  # Use string keys for JSON compatibility
         if servo_id_str not in self.cached_settings:
@@ -78,7 +94,11 @@ class ConfigHandler:
         print(f"Updated setting: servo {servo_id}, {property_name} = {value}")
 
     def update_servo_settings(self, settings: ServoSettings):
-        """Update all settings for a servo."""
+        """Update all settings for a servo based on a ServoSettings object.
+
+        Args:
+            settings: A ServoSettings object containing the new settings.
+        """
         servo_id = settings.id
         servo_dict = settings.to_dict()
         
@@ -93,14 +113,30 @@ class ConfigHandler:
         
         print(f"Updated all settings for servo {servo_id}")
 
-    def get_servo_settings(self, servo_id: int) -> Optional[dict]:
-        """Get settings for a specific servo."""
+    def get_servo_settings(self, servo_id: int) -> Optional[Dict[str, Any]]:
+        """Get the cached settings dictionary for a specific servo.
+
+        Args:
+            servo_id: The ID of the servo whose settings are requested.
+
+        Returns:
+            A dictionary containing the servo's settings, or an empty dictionary
+            if the servo ID is not found in the cache.
+        """
         return self.cached_settings.get(str(servo_id), {})
 
-    def handle_settings_updated(self, setting_path: str, new_value: any):
-        """
-        Handle a setting update notification.
-        This is kept for compatibility but not used with direct file storage.
+    def handle_settings_updated(self, setting_path: str, new_value: Any) -> bool:
+        """Handle a setting update notification (placeholder).
+
+        This method is intended for integration with the central config node.
+        In the current direct file-based implementation, it's a no-op.
+
+        Args:
+            setting_path: The dot-notation path of the updated setting.
+            new_value: The new value of the setting.
+
+        Returns:
+            Always False in the current implementation.
         """
         # This method is now a no-op since we're handling settings directly
         return False

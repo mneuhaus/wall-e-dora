@@ -1,3 +1,10 @@
+"""Main module for the Power Node.
+
+Monitors battery voltage, current, and power consumption using an INA226 sensor
+via I2C. Calculates State of Charge (SoC), estimates remaining runtime, and
+broadcasts power metrics through Dora. Includes safety shutdown logic.
+"""
+
 import time
 import math
 import smbus2
@@ -9,7 +16,10 @@ from dora import Node
 
 
 class BatteryTracker:
+    """Tracks battery state, estimates capacity, and predicts runtime."""
+
     def __init__(self):
+        """Initialize the BatteryTracker with default parameters."""
         # Battery specifications (3S Li-ion pack)
         self.capacity_ah = 2.5  # Initial estimate of capacity in Amp-hours
         self.threshold_soc = 20.0  # Threshold percentage  
@@ -49,9 +59,20 @@ class BatteryTracker:
         self.capacity_tracking_ah_used = 0.0
         self.capacity_estimation_count = 0
 
-    def add_reading(self, voltage, current, power):
+    def add_reading(self, voltage: float, current: float, power: float):
+        """Add a new voltage, current, and power reading to the tracker.
+
+        Updates Exponential Moving Averages (EMAs) for current and power,
+        calculates State of Charge (SoC) based on voltage, estimates the
+        discharge rate, and updates capacity tracking if enabled.
+
+        Args:
+            voltage: The current battery voltage (in Volts).
+            current: The current battery current draw (in Amps, positive for discharge).
+            power: The current power consumption (in Watts).
+        """
         now = datetime.now()
-        
+
         # Store current value in history
         self.current_history.append(abs(current))
         
@@ -143,9 +164,18 @@ class BatteryTracker:
         self.last_timestamp = now
         self.last_soc = current_soc
         self.last_voltage = voltage
-    
-    def start_capacity_tracking(self, voltage, timestamp):
-        """Start tracking for capacity estimation"""
+
+    def start_capacity_tracking(self, voltage: float, timestamp: datetime):
+        """Start a capacity estimation tracking cycle.
+
+        Records the starting voltage, SoC, and time to calculate capacity
+        based on energy consumed over time. Typically called when the battery
+        is near full charge.
+
+        Args:
+            voltage: The starting voltage.
+            timestamp: The starting timestamp.
+        """
         try:
             self.capacity_tracking_enabled = True
             self.capacity_tracking_start_time = timestamp
@@ -156,9 +186,21 @@ class BatteryTracker:
         except Exception as e:
             print(f"Error starting capacity tracking: {str(e)}")
             self.capacity_tracking_enabled = False
-    
-    def update_capacity_tracking(self, voltage, current, time_diff, timestamp):
-        """Update capacity tracking with new measurements"""
+
+    def update_capacity_tracking(self, voltage: float, current: float, time_diff: float, timestamp: datetime):
+        """Update the ongoing capacity estimation cycle.
+
+        Accumulates Amp-hours used since the tracking started. If enough
+        time has passed or enough SoC has dropped, it calculates an estimated
+        capacity and updates the `self.capacity_ah` value using an EMA.
+        Resets the tracking cycle after estimation or if conditions become invalid.
+
+        Args:
+            voltage: The current voltage.
+            current: The current draw.
+            time_diff: Time difference since the last reading (in hours).
+            timestamp: The current timestamp.
+        """
         try:
             # Safety check
             if self.capacity_tracking_start_time is None or self.capacity_tracking_start_soc is None:
@@ -231,10 +273,12 @@ class BatteryTracker:
             print(f"Error in capacity tracking: {str(e)}")
             self.capacity_tracking_enabled = False
 
-    def get_average_power(self):
+    def get_average_power(self) -> float:
+        """Return the smoothed average power consumption (EMA)."""
         return self.ema_power if self.ema_power is not None else 0.0
 
-    def _voltage_to_rough_soc(self, voltage):
+    def _voltage_to_rough_soc(self, voltage: float) -> float:
+        """Estimate State of Charge (SoC) based on voltage (linear approximation)."""
         if voltage >= self.max_voltage:
             return 100.0
         elif voltage <= self.min_voltage:
@@ -243,7 +287,22 @@ class BatteryTracker:
         voltage_offset = voltage - self.min_voltage
         return (voltage_offset / voltage_range) * 100.0
 
-    def estimate_remaining_time(self, current_voltage):
+    def estimate_remaining_time(self, current_voltage: float) -> float:
+        """Estimate the remaining runtime in seconds until SoC reaches the threshold.
+
+        Uses the smoothed discharge rate (EMA) and current SoC to predict
+        remaining time. Applies different logic for idle vs. active states
+        and handles charging or very low current draw scenarios. Uses EMA
+        smoothing on the final runtime estimate.
+
+        Args:
+            current_voltage: The current battery voltage.
+
+        Returns:
+            Estimated remaining runtime in seconds, or float('inf') if
+            estimation is not possible (e.g., during startup or charging).
+            Returns 0.0 if already below the threshold.
+        """
         # Return infinity during startup period
         if self.startup_readings < self.min_readings_before_estimate:
             return float('inf')
@@ -335,17 +394,25 @@ class BatteryTracker:
         return max(0, self.ema_runtime_estimate)
 
 
-def write_register(bus, address, register, value):
+def write_register(bus: smbus2.SMBus, address: int, register: int, value: int):
+    """Write a 16-bit value to an I2C register."""
     bytes_val = value.to_bytes(2, byteorder='big')
     bus.write_i2c_block_data(address, register, list(bytes_val))
 
 
-def read_register(bus, address, register):
+def read_register(bus: smbus2.SMBus, address: int, register: int) -> int:
+    """Read a 16-bit value from an I2C register."""
     result = bus.read_i2c_block_data(address, register, 2)
     return int.from_bytes(bytes(result), byteorder='big')
 
 
 def main():
+    """Main function for the Power Node.
+
+    Initializes the I2C bus, configures the INA226 sensor, creates the
+    BatteryTracker, and enters the Dora event loop to periodically read
+    sensor data, update the tracker, and send power metrics.
+    """
     node = Node()
     battery_tracker = BatteryTracker()
     bus = smbus2.SMBus(1)

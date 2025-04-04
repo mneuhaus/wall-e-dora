@@ -1,1 +1,1 @@
-# Package initialization file for handlers
+"""Package initialization file for web request handlers."""

@@ -1,13 +1,19 @@
-"""
-Ping command for servo protocol.
-"""
+"""Function for sending a PING command to a servo."""
 
 import time
 from typing import Optional
 
 
 def send_ping_command(serial_conn, servo_id: int) -> Optional[str]:
-    """Send a ping command using SCS protocol."""
+    """Send a PING command using the SCS binary protocol.
+
+    Args:
+        serial_conn: The PySerial connection object.
+        servo_id: The ID of the servo to ping.
+
+    Returns:
+        "OK" if a response is received, None otherwise.
+    """
     try:
         # Ping command
         cmd = bytearray([0xFF, 0xFF, servo_id, 2, 1])

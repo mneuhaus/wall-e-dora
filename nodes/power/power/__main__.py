@@ -1,3 +1,5 @@
+"""Entry point for running the Power node directly."""
+
 from .main import main
 
 

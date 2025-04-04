@@ -1,3 +1,5 @@
+"""Input handlers for the Eyes Node."""
+
 # Export input handlers
 from eyes.inputs.tick import process_tick
 from eyes.inputs.list_images import process_list_images

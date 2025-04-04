@@ -1,13 +1,21 @@
-"""
-Servo discovery utilities for the Waveshare Servo Node.
-"""
+"""Servo discovery utility for the Waveshare Servo Node."""
 
 import time
 from typing import Set
 
 
 def discover_servos(serial_conn) -> Set[int]:
-    """Discover all connected servos."""
+    """Discover connected servos by pinging a range of possible IDs.
+
+    Sends a PING command using the SCS protocol format to IDs 1 through 15.
+
+    Args:
+        serial_conn: An open PySerial connection object.
+
+    Returns:
+        A set containing the IDs of the servos that responded to the ping.
+        Returns an empty set if the serial connection is invalid or no servos respond.
+    """
     if not serial_conn or not serial_conn.is_open:
         return set()
 

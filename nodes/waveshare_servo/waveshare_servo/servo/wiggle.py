@@ -1,6 +1,4 @@
-"""
-Wiggle operation for servo identification.
-"""
+"""Provides the wiggle_servo function for servo identification."""
 
 import time
 from .sdk import (
@@ -19,19 +17,24 @@ BAUDRATE = 1000000
 PROTOCOL_END = 1  # Using protocol_end = 1
 
 
-def wiggle_servo(servo, wiggle_range=40, iterations=5):
-    """
-    Wiggle a servo for identification by moving it back and forth by approximately 3% of rotation.
-    
-    This function uses the direct SDK approach to interact with the servo hardware.
-    
+def wiggle_servo(servo, wiggle_range: int = 40, iterations: int = 5) -> bool:
+    """Wiggle a servo for identification using the SDK.
+
+    Moves the servo back and forth around its current position to help
+    physically identify it. Reads the current position, calculates target
+    positions based on `wiggle_range`, enables torque, performs the wiggle
+    motion for the specified `iterations`, restores the original position,
+    and disables torque.
+
     Args:
-        servo: The servo object to wiggle
-        wiggle_range: The number of steps to move in each direction (default: 40 - approx 3% of rotation)
-        iterations: Number of times to complete the wiggle pattern
-        
+        servo: The `Servo` object to wiggle.
+        wiggle_range: The number of position steps to move in each direction
+                      from the current position (default: 40).
+        iterations: The number of back-and-forth wiggle cycles to perform
+                    (default: 5).
+
     Returns:
-        bool: True if wiggle was successful, False otherwise
+        True if the wiggle sequence completed successfully, False otherwise.
     """
     try:
         servo_id = servo.id

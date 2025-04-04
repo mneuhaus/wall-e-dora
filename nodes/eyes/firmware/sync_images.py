@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""Script to synchronize image files between a local directory and Wall-E eye devices.
+
+Scans the network for devices (or uses a specified IP), compares local files
+(GIFs/JPGs) with files on the device using MD5 checksums (if available on the device),
+and uploads/deletes files as needed to keep them in sync.
+
+Requires 'requests' and 'tqdm' Python packages.
+Network scanning relies on standard OS tools ('ping', 'netstat', 'ipconfig').
+"""
+
 import os
 import sys
 import time
@@ -14,10 +24,18 @@ import glob
 import concurrent.futures
 from tqdm import tqdm
 
-def find_devices():
-    """Scan the network for Wall-E eye devices."""
+
+def find_devices() -> list[str]:
+    """Scan the network for Wall-E eye devices.
+
+    Attempts to find devices using mDNS first (if available on the OS).
+    If mDNS fails or is unavailable, falls back to scanning common local
+    network IP ranges (192.168.0.x, 192.168.1.x, 10.0.0.x, etc.).
+
+    Returns:
+        A list of IP addresses of discovered Wall-E eye devices.
+    """
     print("Scanning for Wall-E eye devices...")
-    
     # Try to find devices using mDNS for better user experience if available
     if platform.system() == "Darwin" or platform.system() == "Linux":
         try:
@@ -75,10 +93,18 @@ def find_devices():
     
     return found_devices
 
-def get_potential_gateways():
-    """Get potential gateway IP addresses."""
+
+def get_potential_gateways() -> list[str]:
+    """Attempt to determine potential network gateway base IPs.
+
+    Uses OS-specific commands ('ipconfig', 'netstat') to find the default
+    gateway and extracts the first three octets (e.g., "192.168.1").
+    Falls back to common home network ranges if detection fails.
+
+    Returns:
+        A list of potential base IP address strings (e.g., ["192.168.1", "10.0.0"]).
+    """
     gateways = []
-    
     # Common home network ranges
     common_ranges = ["192.168.0", "192.168.1", "192.168.2", "10.0.0", "10.0.1", "10.42.0"]
     
@@ -115,16 +141,35 @@ def get_potential_gateways():
     
     return gateways
 
-def is_valid_ip(ip):
-    """Check if the string is a valid IPv4 address."""
+
+def is_valid_ip(ip: str) -> bool:
+    """Check if the string is a valid IPv4 address.
+
+    Args:
+        ip: The string to validate.
+
+    Returns:
+        True if the string is a valid IPv4 address, False otherwise.
+    """
     try:
         socket.inet_aton(ip)
         return True
     except socket.error:
         return False
 
-def check_device(ip):
-    """Check if the device at the given IP is a Wall-E eye."""
+
+def check_device(ip: str) -> bool:
+    """Check if the device at the given IP address is a Wall-E eye display.
+
+    Performs a quick socket connection check on port 80, followed by an HTTP
+    GET request to the '/gifs' endpoint to confirm it's the target device.
+
+    Args:
+        ip: The IP address string to check.
+
+    Returns:
+        True if the device is identified as a Wall-E eye, False otherwise.
+    """
     try:
         # Try to connect to port 80 first to quickly filter
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -143,18 +188,37 @@ def check_device(ip):
     except Exception:
         return False
 
-def calculate_file_md5(file_path):
-    """Calculate MD5 hash of a file."""
+
+def calculate_file_md5(file_path: str) -> str:
+    """Calculate the MD5 hash of a file.
+
+    Args:
+        file_path: The path to the file.
+
+    Returns:
+        The hexadecimal MD5 hash string.
+    """
     hash_md5 = hashlib.md5()
     with open(file_path, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
 
-def get_local_files_with_checksums(local_dir):
-    """Get dictionary of local files with their checksums."""
+
+def get_local_files_with_checksums(local_dir: str) -> dict:
+    """Get a dictionary of local image files with their metadata.
+
+    Scans the specified directory for GIF and JPG/JPEG files, calculates
+    their MD5 checksums and sizes.
+
+    Args:
+        local_dir: The path to the local directory to scan.
+
+    Returns:
+        A dictionary where keys are filenames and values are dictionaries
+        containing 'path', 'checksum', and 'size'.
+    """
     local_files = {}
-    
     # Get all gif and jpg files in the local directory
     for ext in ['*.gif', '*.jpg', '*.jpeg', '*.GIF', '*.JPG', '*.JPEG']:
         for file_path in glob.glob(os.path.join(local_dir, ext)):
@@ -172,9 +236,25 @@ def get_local_files_with_checksums(local_dir):
     
     return local_files
 
-def get_device_files_with_metadata(ip, max_retries=3):
-    """Get list of files on the device with checksums if available."""
-    
+
+def get_device_files_with_metadata(ip: str, max_retries: int = 3) -> dict:
+    """Get a dictionary of files on the device with metadata (checksum, size).
+
+    Attempts to use an enhanced '/files' endpoint first (which should return
+    checksums). If that fails or is unavailable, falls back to the basic
+    '/gifs' endpoint which only returns filenames. Includes retry logic with
+    increasing timeouts for robustness.
+
+    Args:
+        ip: The IP address of the device.
+        max_retries: The maximum number of times to retry fetching data.
+
+    Returns:
+        A dictionary where keys are filenames and values are dictionaries
+        containing 'checksum' and 'size' (which may be None if using fallback).
+        Returns an empty dictionary on failure.
+    """
+
     # Function for retrying with backoff
     def try_get_with_retry(url, max_retries=3, initial_timeout=2):
         for retry in range(max_retries):
@@ -226,8 +306,22 @@ def get_device_files_with_metadata(ip, max_retries=3):
         print(f"Error getting files from device: {str(e)}")
         return {}
 
-def determine_sync_actions(local_files, device_files, delete_remote=False):
-    """Determine which files need to be uploaded, which need to be deleted."""
+
+def determine_sync_actions(local_files: dict, device_files: dict, delete_remote: bool = False) -> tuple[list, list]:
+    """Determine which files need to be uploaded or deleted.
+
+    Compares local files and device files based on existence and checksums (if available).
+
+    Args:
+        local_files: Dictionary of local files and their metadata.
+        device_files: Dictionary of device files and their metadata.
+        delete_remote: If True, identify files on the device that are not present locally.
+
+    Returns:
+        A tuple containing two lists: (files_to_upload, files_to_delete).
+        'files_to_upload' contains local file paths.
+        'files_to_delete' contains remote filenames.
+    """
     to_upload = []
     to_delete = []
     
@@ -246,8 +340,16 @@ def determine_sync_actions(local_files, device_files, delete_remote=False):
     
     return to_upload, to_delete
 
-def upload_file(args):
-    """Upload a single file (for parallel processing)."""
+
+def upload_file(args: tuple) -> tuple[bool, str, str]:
+    """Upload a single file to the device. Designed for parallel execution.
+
+    Args:
+        args: A tuple containing (ip_address, local_file_path).
+
+    Returns:
+        A tuple containing (success_boolean, filename, message).
+    """
     ip, file_path = args
     filename = os.path.basename(file_path)
     
@@ -281,10 +383,17 @@ def upload_file(args):
     except Exception as e:
         return (False, filename, f"Error: {str(e)}")
 
-def delete_file(args):
-    """Delete a file from the device."""
+
+def delete_file(args: tuple) -> tuple[bool, str, str]:
+    """Delete a single file from the device. Designed for parallel execution.
+
+    Args:
+        args: A tuple containing (ip_address, filename_to_delete).
+
+    Returns:
+        A tuple containing (success_boolean, filename, message).
+    """
     ip, filename = args
-    
     try:
         response = requests.get(f'http://{ip}/delete?name={filename}', timeout=5)
         
@@ -295,8 +404,23 @@ def delete_file(args):
     except Exception as e:
         return (False, filename, f"Error deleting: {str(e)}")
 
-def sync_files(ip, files_to_upload, files_to_delete, max_workers=5, use_parallel=False):
-    """Sync files to the device."""
+
+def sync_files(ip: str, files_to_upload: list, files_to_delete: list, max_workers: int = 5, use_parallel: bool = False) -> tuple[int, int]:
+    """Perform file synchronization (uploads and deletes) with the device.
+
+    Can operate sequentially (default) or in parallel (using ThreadPoolExecutor).
+    Sequential mode is generally recommended for ESP32 stability.
+
+    Args:
+        ip: The IP address of the target device.
+        files_to_upload: A list of local file paths to upload.
+        files_to_delete: A list of filenames to delete from the device.
+        max_workers: The number of parallel workers for uploads/deletes if use_parallel is True.
+        use_parallel: If True, perform uploads and deletes in parallel threads.
+
+    Returns:
+        A tuple containing (number_of_successes, number_of_failures).
+    """
     successes = 0
     failures = 0
     
@@ -395,7 +519,9 @@ def sync_files(ip, files_to_upload, files_to_delete, max_workers=5, use_parallel
     
     return successes, failures
 
+
 def main():
+    """Main execution function for the command-line sync tool."""
     parser = argparse.ArgumentParser(description='Sync local directory to Wall-E eye device')
     parser.add_argument('local_dir', type=str, help='Local directory containing GIF/JPG files')
     parser.add_argument('--ip', type=str, help='IP address of the device (optional - will auto-discover if not provided)')

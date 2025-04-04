@@ -1,7 +1,9 @@
-"""
-Module for handling gamepad profile management.
+"""Module for handling gamepad profile management.
 
-Provides storage, retrieval, and management of gamepad control mappings.
+Provides storage, retrieval, and management of gamepad control mappings,
+persisting profiles to JSON files in both the project config directory
+and the user's home directory. Includes handlers for Dora events related
+to gamepad profiles.
 """
 
 import os
@@ -12,18 +14,24 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+
 class GamepadProfileManager:
-    """Manages gamepad profiles with persistence to JSON files."""
-    
+    """Manages gamepad profiles with persistence to JSON files.
+
+    Handles loading, saving, retrieving, and deleting gamepad profiles.
+    Profiles are stored in two locations: the project's `config/gamepad_profiles`
+    directory (intended for version control) and the user's home directory
+    at `~/.wall-e-dora/gamepad_profiles` (for user-specific overrides).
+    """
+
     def __init__(self, profiles_dir: str = None):
-        """
-        Initialize the profile manager.
-        
+        """Initialize the profile manager.
+
         Args:
-            profiles_dir: Directory to store profile files. If None, uses both project config dir and ~/.wall-e-dora/gamepad_profiles/
+            profiles_dir: Optional path to the user-specific profiles directory.
+                          If None, defaults to `~/.wall-e-dora/gamepad_profiles/`.
         """
         # Store profiles in two locations
-        
         # 1. Project config directory (for version control)
         self.project_dir = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../..")))
         self.config_profiles_dir = self.project_dir / "config" / "gamepad_profiles"
@@ -47,13 +55,16 @@ class GamepadProfileManager:
         
         # Load all existing profiles
         self.load_all_profiles()
-    
+
     def load_all_profiles(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Load all existing profiles from disk.
-        
+        """Load all existing profiles from both storage locations.
+
+        Reads all `.json` files from the project config directory and the
+        user profiles directory. Profiles are indexed by their full gamepad ID
+        and optionally by a `vendorId:productId` key if available.
+
         Returns:
-            Dict mapping gamepad IDs to profile data
+            A dictionary mapping gamepad IDs to their loaded profile data.
         """
         self.profiles = {}
         self.profiles_by_vendor_product = {}
@@ -90,16 +101,22 @@ class GamepadProfileManager:
         
         print(f"Loaded {len(self.profiles)} gamepad profiles")
         return self.profiles
-    
+
     def save_profile(self, profile: Dict[str, Any]) -> bool:
-        """
-        Save a gamepad profile.
-        
+        """Save a gamepad profile to both storage locations.
+
+        Generates a filename based on vendor/product IDs if available, otherwise
+        uses a sanitized version of the gamepad ID. Writes the profile data
+        as JSON to both the project config and user profile directories.
+
         Args:
-            profile: Profile data with 'id', 'name', 'vendorId', 'productId', and 'mapping' keys
-            
+            profile: The profile data dictionary. Must include an 'id' key.
+                     Should ideally include 'name', 'vendorId', 'productId',
+                     and 'mapping'.
+
         Returns:
-            Success or failure
+            True if the profile was saved successfully to at least one location
+            and updated in the cache, False otherwise.
         """
         if not profile or 'id' not in profile:
             print("Cannot save profile: missing required 'id' field")
@@ -179,16 +196,20 @@ class GamepadProfileManager:
             return True
         else:
             return False
-    
+
     def get_profile(self, gamepad_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get a gamepad profile by ID.
-        
+        """Get a gamepad profile by its full ID or vendor/product ID.
+
+        First attempts a direct lookup using the full gamepad ID string.
+        If not found, it tries to extract vendor and product IDs from the
+        string (e.g., "Vendor: XXXX Product: YYYY") and looks up using
+        the `vendorId:productId` key.
+
         Args:
-            gamepad_id: The unique identifier for the gamepad
-            
+            gamepad_id: The unique identifier string for the gamepad.
+
         Returns:
-            The profile data if found, None otherwise
+            The profile data dictionary if found, otherwise None.
         """
         # First, try direct lookup by full gamepad ID
         profile = self.profiles.get(gamepad_id)
@@ -222,17 +243,16 @@ class GamepadProfileManager:
         
         print(f"DEBUG - get_profile: No profile found for gamepad: {gamepad_id}")
         return None
-        
+
     def get_profile_by_vendor_product(self, vendor_id: str, product_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get a gamepad profile by vendor and product IDs.
-        
+        """Get a gamepad profile directly by vendor and product IDs.
+
         Args:
-            vendor_id: The vendor ID (e.g., "2dc8")
-            product_id: The product ID (e.g., "200b")
-            
+            vendor_id: The vendor ID string (e.g., "2dc8").
+            product_id: The product ID string (e.g., "200b").
+
         Returns:
-            The profile data if found, None otherwise
+            The profile data dictionary if found, otherwise None.
         """
         vendor_product_key = f"{vendor_id}:{product_id}".lower()
         profile = self.profiles_by_vendor_product.get(vendor_product_key)
@@ -243,16 +263,19 @@ class GamepadProfileManager:
             print(f"DEBUG - get_profile_by_vendor_product: No profile found for {vendor_product_key}")
             
         return profile
-    
+
     def delete_profile(self, gamepad_id: str) -> bool:
-        """
-        Delete a gamepad profile.
-        
+        """Delete a gamepad profile from the user directory and cache.
+
+        Note: This currently only deletes from the user directory, not the
+              project config directory, to avoid accidental deletion of
+              version-controlled profiles.
+
         Args:
-            gamepad_id: The unique identifier for the gamepad
-            
+            gamepad_id: The unique identifier string for the gamepad.
+
         Returns:
-            Success or failure
+            True if the profile was successfully deleted, False otherwise.
         """
         if gamepad_id not in self.profiles:
             print(f"No profile found for gamepad '{gamepad_id}'")
@@ -273,21 +296,32 @@ class GamepadProfileManager:
         except Exception as e:
             print(f"Error deleting profile: {e}")
             return False
-    
+
     def list_profiles(self) -> Dict[str, Dict[str, Any]]:
-        """
-        List all available profiles.
-        
+        """List all currently loaded profiles.
+
         Returns:
-            Dict mapping gamepad IDs to profile data
+            A dictionary mapping gamepad IDs to their profile data.
         """
         return self.profiles
 
 
-# Handler functions for web node events
+# -----------------------------------------------------------------------------
+# Dora Event Handlers
+# -----------------------------------------------------------------------------
 
-def handle_save_gamepad_profile(event, node, profile_manager):
-    """Handle save_gamepad_profile events."""
+def handle_save_gamepad_profile(event: Dict, node, profile_manager: GamepadProfileManager):
+    """Handle the 'save_gamepad_profile' Dora input event.
+
+    Extracts profile data from the event, validates it, saves it using the
+    profile manager, and emits an updated list of profiles.
+
+    Args:
+        event: The Dora input event dictionary. Expected value is a PyArrow
+               array containing a single dictionary representing the profile.
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance.
+    """
     print(f"DEBUG - handle_save_gamepad_profile: Got event: {event}")
     print(f"DEBUG - handle_save_gamepad_profile: Event type: {type(event)}")
     
@@ -391,10 +425,20 @@ def handle_save_gamepad_profile(event, node, profile_manager):
         traceback.print_exc()
 
 
-def handle_get_gamepad_profile(event, node, profile_manager):
-    """Handle get_gamepad_profile events."""
+def handle_get_gamepad_profile(event: Dict, node, profile_manager: GamepadProfileManager):
+    """Handle the 'get_gamepad_profile' Dora input event.
+
+    Extracts the requested gamepad ID, retrieves the profile using the
+    profile manager, and emits the profile data (or a not found status)
+    back via the 'gamepad_profile' output.
+
+    Args:
+        event: The Dora input event dictionary. Expected value contains
+               a dictionary with a 'gamepad_id' key.
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance.
+    """
     request_data = event.get('value')
-    
     if not request_data:
         print("No request data provided in event")
         return
@@ -424,10 +468,21 @@ def handle_get_gamepad_profile(event, node, profile_manager):
         node.emit('gamepad_profile', pa.array([{'gamepad_id': gamepad_id, 'exists': False}]))
 
 
-def handle_check_gamepad_profile(event, node, profile_manager):
-    """Handle check_gamepad_profile events to check if a profile exists."""
+def handle_check_gamepad_profile(event: Dict, node, profile_manager: GamepadProfileManager):
+    """Handle the 'check_gamepad_profile' Dora input event.
+
+    Checks if a profile exists for the given gamepad ID or vendor/product IDs.
+    Emits the result (existence status, profile name) via the
+    'gamepad_profile_status' output.
+
+    Args:
+        event: The Dora input event dictionary. Expected value contains a
+               dictionary with 'gamepad_id' and optionally 'vendorId' and
+               'productId'.
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance.
+    """
     request_data = event.get('value')
-    
     if not request_data:
         print("No request data provided in event")
         return
@@ -495,10 +550,19 @@ def handle_check_gamepad_profile(event, node, profile_manager):
         traceback.print_exc()
 
 
-def handle_delete_gamepad_profile(event, node, profile_manager):
-    """Handle delete_gamepad_profile events."""
+def handle_delete_gamepad_profile(event: Dict, node, profile_manager: GamepadProfileManager):
+    """Handle the 'delete_gamepad_profile' Dora input event.
+
+    Extracts the gamepad ID, deletes the corresponding profile using the
+    profile manager, and emits an updated list of profiles.
+
+    Args:
+        event: The Dora input event dictionary. Expected value contains a
+               dictionary with a 'gamepad_id' key.
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance.
+    """
     request_data = event.get('value')
-    
     if not request_data:
         print("No request data provided in event")
         return
@@ -521,15 +585,31 @@ def handle_delete_gamepad_profile(event, node, profile_manager):
         emit_profiles_list(node, profile_manager)
 
 
-def handle_list_gamepad_profiles(event, node, profile_manager):
-    """Handle list_gamepad_profiles events."""
+def handle_list_gamepad_profiles(event: Dict, node, profile_manager: GamepadProfileManager):
+    """Handle the 'list_gamepad_profiles' Dora input event.
+
+    Retrieves the current list of profiles from the manager and emits it.
+
+    Args:
+        event: The Dora input event dictionary (value is usually ignored).
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance.
+    """
     emit_profiles_list(node, profile_manager)
 
 
-def emit_profiles_list(node, profile_manager):
-    """Emit the list of available profiles."""
+def emit_profiles_list(node, profile_manager: GamepadProfileManager):
+    """Emit the current list of available gamepad profiles.
+
+    Retrieves the profiles from the manager and sends them as a PyArrow
+    array containing a single dictionary (mapping IDs to profiles) via the
+    'gamepad_profiles_list' output.
+
+    Args:
+        node: The Dora node instance.
+        profile_manager: The GamepadProfileManager instance.
+    """
     profiles = profile_manager.list_profiles()
-    
     print(f"DEBUG - emit_profiles_list: Got profiles from manager: {profiles}")
     print(f"DEBUG - emit_profiles_list: About to emit full gamepad_profiles_list")
     

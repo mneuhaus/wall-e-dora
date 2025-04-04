@@ -1,6 +1,4 @@
-"""
-Handler for settings events.
-"""
+"""Handler for the 'settings' input event (full configuration broadcast)."""
 
 import traceback
 from typing import Dict, Any
@@ -16,8 +14,20 @@ if parent_dir not in sys.path:
 from waveshare_servo.utils.event_processor import extract_event_data
 
 
-def handle_settings(context, event: Dict[str, Any]) -> bool:
-    """Handle settings event."""
+def handle_settings(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Handle the 'settings' input event.
+
+    Updates the local configuration cache based on the received settings broadcast.
+    This function is currently designed to work with the direct file-based
+    config handler and might need adjustments if switching to the config node.
+
+    Args:
+        context: The node context dictionary.
+        event: The Dora input event dictionary containing the settings data.
+
+    Returns:
+        True if the settings were processed successfully, False otherwise.
+    """
     try:
         config = context["config"]
         data, error = extract_event_data(event)

@@ -1,3 +1,5 @@
+"""Entry point for running the Config node directly."""
+
 from .main import main
 
 

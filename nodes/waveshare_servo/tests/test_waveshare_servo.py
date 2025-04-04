@@ -1,4 +1,4 @@
-"""Tests for the waveshare_servo node."""
+"""Unit tests for the waveshare_servo node components."""
 
 import json
 from unittest.mock import MagicMock, patch
@@ -14,7 +14,7 @@ from waveshare_servo.main import (
 
 
 class TestServoSettings:
-    """Test the ServoSettings class."""
+    """Tests for the ServoSettings data class."""
 
     def test_settings_defaults(self):
         """Test default settings."""
@@ -37,7 +37,7 @@ class TestServoSettings:
 
 
 class TestServoScanner:
-    """Test the ServoScanner class."""
+    """Tests for the ServoScanner class (port finding, connection, discovery)."""
 
     @patch("serial.tools.list_ports.comports")
     def test_find_servo_port(self, mock_comports):
@@ -89,7 +89,7 @@ class TestServoScanner:
 
 
 class TestServo:
-    """Test the Servo class."""
+    """Tests for the Servo class (command sending, movement, etc.)."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -131,7 +131,7 @@ class TestServo:
 
 
 class TestConfigHandler:
-    """Test the ConfigHandler class."""
+    """Tests for the ConfigHandler class (settings management)."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -179,7 +179,7 @@ class TestConfigHandler:
 
 
 class TestServoManager:
-    """Test the ServoManager class."""
+    """Tests for the ServoManager class (orchestration logic)."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -239,7 +239,7 @@ class TestServoManager:
 
 
 def test_run():
-    """Test the run function."""
+    """Test the main run function of the node."""
     # Create mock node and manager
     node = MagicMock()
 

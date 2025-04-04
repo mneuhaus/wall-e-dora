@@ -1,6 +1,4 @@
-"""
-Output functions for the Waveshare Servo Node.
-"""
+"""Output broadcaster functions for the Waveshare Servo Node."""
 
 from .servo_status import broadcast_servo_status
 from .servos_list import broadcast_servos_list

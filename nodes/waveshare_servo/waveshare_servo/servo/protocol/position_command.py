@@ -1,13 +1,24 @@
-"""
-Position command for servo protocol.
-"""
+"""Functions for sending and parsing servo position commands."""
 
 import time
 from typing import Optional
 
 
 def send_position_command(serial_conn, servo_id: int, position: int, time_value: int) -> Optional[str]:
-    """Send a position command with time parameter."""
+    """Send a position command with time parameter using SCS binary protocol.
+
+    Writes the goal position (address 42) and optionally the moving speed
+    (address 46) if `time_value` is greater than 0.
+
+    Args:
+        serial_conn: The PySerial connection object.
+        servo_id: The target servo ID.
+        position: The target goal position (0-1023).
+        time_value: The time parameter (often interpreted as speed, 0 means max speed).
+
+    Returns:
+        "OK" if commands were sent successfully, None otherwise.
+    """
     try:
         # Send as SCS format
         # Write Goal Position (address 42) for SCS servo
@@ -33,8 +44,15 @@ def send_position_command(serial_conn, servo_id: int, position: int, time_value:
         return None
 
 
-def parse_position_command(command: str) -> tuple:
-    """Parse a position command in the format P<position>T<time>."""
+def parse_position_command(command: str) -> tuple[int, int]:
+    """Parse a position command string in the format 'P<position>T<time>'.
+
+    Args:
+        command: The command string to parse.
+
+    Returns:
+        A tuple containing (position, time_value). Returns (0, 0) if parsing fails.
+    """
     try:
         # Validate command format
         if not command.startswith('P') or 'T' not in command:

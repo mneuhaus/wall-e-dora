@@ -1,8 +1,11 @@
 # coding: utf-8
-"""
-Standard gamepad mappings.
+"""Standard gamepad mappings for common controller types.
 
-Pulled in to Gamepad.py directly.
+This module defines subclasses of the base `Gamepad` class, providing
+pre-defined button and axis mappings for specific controllers like
+PS3, PS4, Xbox 360, etc.
+
+These classes are imported and used by `Gamepad.py`.
 """
 
 

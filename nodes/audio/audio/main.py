@@ -1,3 +1,9 @@
+"""Main module for the Audio Node.
+
+Handles audio playback using Pygame mixer, manages sound files,
+and responds to Dora events for playing sounds and setting volume.
+"""
+
 import os
 import time
 import random
@@ -5,7 +11,9 @@ import pygame
 import pyarrow as pa
 from dora import Node
 
-def setup_hardware():
+
+def setup_hardware() -> str:
+    """Initialize Pygame mixer and return the path to the sounds directory."""
     pygame.mixer.init()
     pygame.mixer.music.set_volume(1.0)
     for i in range(pygame.mixer.get_num_channels()):
@@ -14,7 +22,9 @@ def setup_hardware():
     sounds_dir = os.path.join(os.path.dirname(__file__), "..", "sounds")
     return sounds_dir
 
-def play_startup_sound(sounds_dir):
+
+def play_startup_sound(sounds_dir: str):
+    """Play the startup sound if it exists."""
     startup_sound = os.path.join(sounds_dir, "startup.mp3")
     if not os.path.exists(startup_sound):
         print(f"Startup sound not found at {startup_sound}")
@@ -31,7 +41,9 @@ def play_startup_sound(sounds_dir):
     except pygame.error as e:
         print(f"Error playing startup sound: {e}")
 
-def play_sound(sounds_dir, filename):
+
+def play_sound(sounds_dir: str, filename: str):
+    """Play the specified sound file."""
     sound_file = os.path.join(sounds_dir, filename)
     if not os.path.exists(sound_file):
         print(f"Sound file not found: {sound_file}")
@@ -46,7 +58,10 @@ def play_sound(sounds_dir, filename):
     except pygame.error as e:
         print(f"Error playing sound {filename}: {e}")
 
-def load_volume():
+
+def load_volume() -> float:
+    """Load the volume setting from the configuration file."""
+    # TODO: Refactor to use the config node instead of volume.cfg
     vol_file = os.path.join(os.path.dirname(__file__), "volume.cfg")
     try:
         with open(vol_file, "r") as f:
@@ -55,7 +70,10 @@ def load_volume():
     except Exception:
         return 1.0
 
-def save_volume(vol):
+
+def save_volume(vol: float):
+    """Save the volume setting to the configuration file."""
+    # TODO: Refactor to use the config node instead of volume.cfg
     vol_file = os.path.join(os.path.dirname(__file__), "volume.cfg")
     try:
         with open(vol_file, "w") as f:
@@ -63,7 +81,13 @@ def save_volume(vol):
     except Exception as e:
         print("Could not save volume:", e)
 
+
 def main():
+    """Main function for the Audio Node.
+
+    Initializes hardware, loads settings, and enters the Dora event loop
+    to handle audio playback and volume control commands.
+    """
     sounds_dir = setup_hardware()
     vol = load_volume()
     pygame.mixer.music.set_volume(vol)

@@ -1,12 +1,27 @@
 #!/usr/bin/env python3
+"""Script to convert PNG images to single-frame GIF files suitable for eye displays.
+
+Resizes PNGs to 240x240 (center-cropping if necessary) and saves them as GIFs.
+Optionally creates a circular masked version for previews.
+"""
+
 import os
 import sys
 import argparse
 import math
 from PIL import Image, ImageDraw
 
-def create_circular_mask(size, radius=None):
-    """Create a circular mask image with anti-aliasing."""
+
+def create_circular_mask(size: tuple[int, int], radius: int = None) -> Image.Image:
+    """Create a circular mask image with anti-aliasing.
+
+    Args:
+        size: A tuple (width, height) for the mask size.
+        radius: The radius of the circle. If None, uses half the smaller dimension.
+
+    Returns:
+        A PIL Image object representing the circular mask (grayscale 'L' mode).
+    """
     width, height = size
     mask = Image.new('L', size, 0)
     draw = ImageDraw.Draw(mask)
@@ -22,10 +37,21 @@ def create_circular_mask(size, radius=None):
     
     return mask
 
-def convert_png_to_gif(input_dir, output_dir, circular=False):
-    """
-    Convert all PNG files in input_dir to 240x240 single-frame GIF files in output_dir.
-    If circular=True, apply a circular mask to emulate border-radius.
+
+def convert_png_to_gif(input_dir: str, output_dir: str, circular: bool = False):
+    """Convert PNG files to 240x240 single-frame GIFs.
+
+    Scans the input directory for PNG files, processes each one by:
+    1. Center-cropping to a square aspect ratio if needed.
+    2. Resizing to 240x240 using Lanczos resampling.
+    3. Converting to RGB mode.
+    4. Saving as a GIF file in the output directory.
+    5. Optionally creates a circular masked preview GIF (commented out).
+
+    Args:
+        input_dir: Path to the directory containing input PNG files.
+        output_dir: Path to the directory where output GIF files will be saved.
+        circular: If True, create circular preview GIFs (currently commented out).
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -104,7 +130,9 @@ def convert_png_to_gif(input_dir, output_dir, circular=False):
         except Exception as e:
             print(f"Error processing {input_path}: {e}")
 
+
 def main():
+    """Main execution function for the PNG to GIF conversion script."""
     parser = argparse.ArgumentParser(
         description="Convert PNG files to 240x240 single-frame GIF files"
     )

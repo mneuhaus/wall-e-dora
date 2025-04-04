@@ -1,6 +1,4 @@
-"""
-Broadcaster for list of actually found servos, sorted by alias then ID.
-"""
+"""Broadcaster for the list of discovered servos."""
 
 import json
 import traceback
@@ -19,7 +17,17 @@ from waveshare_servo.servo.controller import Servo
 
 
 def broadcast_servos_list(node, servos: Dict[int, Servo]):
-    """Broadcast the list of only the servos that are actually found/connected, sorted by alias then ID."""
+    """Broadcast the list of discovered and responsive servos.
+
+    Filters the provided servo dictionary to include only those servos that
+    respond to a PING command, then sorts them by alias (case-insensitive)
+    and then by ID. The resulting list is sent as a JSON string via the
+    'servos_list' output.
+
+    Args:
+        node: The Dora node instance used for sending output.
+        servos: A dictionary mapping servo IDs to Servo objects.
+    """
     try:
         # Filter out servos that aren't actually found by checking connection
         found_servos = []

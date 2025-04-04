@@ -1,6 +1,4 @@
-"""
-Handler for setting_updated events.
-"""
+"""Handler for the 'setting_updated' input event."""
 
 import traceback
 from typing import Dict, Any
@@ -16,8 +14,21 @@ if parent_dir not in sys.path:
 from waveshare_servo.utils.event_processor import extract_event_data
 
 
-def handle_setting_updated(context, event: Dict[str, Any]) -> bool:
-    """Handle setting_updated event."""
+def handle_setting_updated(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Handle the 'setting_updated' input event.
+
+    Processes notifications about specific setting changes from the config node.
+    Updates the local configuration cache and applies relevant changes to
+    the corresponding servo object if applicable (e.g., updating speed or
+    moving the servo if the position setting changed).
+
+    Args:
+        context: The node context dictionary.
+        event: The Dora input event dictionary containing the updated setting path and value.
+
+    Returns:
+        True if the event was processed successfully, False otherwise.
+    """
     try:
         config = context["config"]
         servos = context["servos"]

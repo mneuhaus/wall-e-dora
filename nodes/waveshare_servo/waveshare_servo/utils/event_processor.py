@@ -1,6 +1,4 @@
-"""
-Event processing utilities for the Waveshare Servo Node.
-"""
+"""Event data extraction utility for the Waveshare Servo Node."""
 
 import json
 import traceback
@@ -8,11 +6,19 @@ from typing import Any, Dict, Optional, Tuple
 
 
 def extract_event_data(event: Dict[str, Any]) -> Tuple[Optional[Any], Optional[str]]:
-    """
-    Extract data from event, handling different event formats.
-    
+    """Extract data payload from a Dora input event.
+
+    Handles various potential formats, including checking both 'data' and 'value'
+    fields, converting PyArrow arrays (including StructArrays) to Python objects,
+    and attempting to parse JSON strings.
+
+    Args:
+        event: The Dora input event dictionary.
+
     Returns:
-        Tuple of (extracted_data, error_message)
+        A tuple containing:
+            - The extracted data payload (can be dict, list, str, etc.) or None if extraction fails.
+            - An error message string if an error occurred, otherwise None.
     """
     if event["type"] != "INPUT":
         return None, "Not an INPUT event"

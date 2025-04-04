@@ -1,6 +1,4 @@
-"""
-Serial port finding utilities for the Waveshare Servo Node.
-"""
+"""Utility function to find the serial port for the Waveshare servo controller."""
 
 import os
 from typing import Optional
@@ -9,7 +7,15 @@ import serial.tools.list_ports
 
 
 def find_servo_port() -> Optional[str]:
-    """Find the serial port for the servo controller."""
+    """Find the serial port connected to the Waveshare servo controller.
+
+    Attempts to find the port first by a specific device ID path (if it exists)
+    and then falls back to scanning all available serial ports for common
+    USB-to-Serial chip identifiers.
+
+    Returns:
+        The device path string (e.g., '/dev/ttyUSB0') if found, otherwise None.
+    """
     # Try by direct name first (this was used in the previous implementation)
     try:
         device_path = '/dev/serial/by-id/usb-1a86_USB_Single_Serial_58FD016638-if00'

@@ -1,4 +1,10 @@
-"""Main orchestration module for the eyes node."""
+"""Main orchestration module for the Eyes Node.
+
+Initializes the Dora node and handles incoming events for controlling
+the Wall-E eye displays, including periodic file synchronization and
+on-demand image display requests.
+"""
+
 from dora import Node
 import pyarrow as pa
 
@@ -10,10 +16,11 @@ from eyes.outputs.images import broadcast_available_images
 
 
 def main():
-    """
-    Main entry point for the eyes node.
-    
-    Initializes the node and orchestrates event handling.
+    """Main function for the Eyes Node.
+
+    Initializes the Dora node, sets up the context, broadcasts the initial
+    list of available images, and enters the main event loop to process
+    tick, list_images, and play_gif events.
     """
     # Create the Node
     node = Node()

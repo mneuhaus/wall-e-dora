@@ -1,6 +1,4 @@
-"""
-Handler for calibrate_servo events.
-"""
+"""Handler for the 'calibrate_servo' input event."""
 
 import traceback
 from typing import Dict, Any
@@ -17,9 +15,18 @@ from waveshare_servo.utils.event_processor import extract_event_data
 from waveshare_servo.outputs.servo_status import broadcast_servo_status
 
 
-def handle_calibrate_servo(context, event: Dict[str, Any]) -> bool:
-    """
-    Handle incoming calibrate_servo event by extracting data and calibrating the servo.
+def handle_calibrate_servo(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
+    """Handle incoming 'calibrate_servo' event.
+
+    Extracts the servo ID from the event data and calls the `calibrate_servo`
+    function to perform the calibration.
+
+    Args:
+        context: The node context dictionary.
+        event: The Dora input event dictionary.
+
+    Returns:
+        True if the calibration was successful, False otherwise.
     """
     try:
         data, error = extract_event_data(event)
@@ -33,16 +40,15 @@ def handle_calibrate_servo(context, event: Dict[str, Any]) -> bool:
     return False
 
 
-def calibrate_servo(context, servo_id: int) -> bool:
-    """
-    Calibrate a servo by testing min/max positions.
-    
+def calibrate_servo(context: Dict[str, Any], servo_id: int) -> bool:
+    """Calibrate a specific servo by testing its min/max positions.
+
     Args:
-        context: Node context dictionary
-        servo_id: ID of the servo to calibrate
-        
+        context: The node context dictionary.
+        servo_id: The ID of the servo to calibrate.
+
     Returns:
-        bool: Success or failure
+        True if the calibration was successful, False otherwise.
     """
     node = context["node"]
     config = context["config"]

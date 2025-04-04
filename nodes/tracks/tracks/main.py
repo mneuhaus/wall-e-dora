@@ -1,3 +1,10 @@
+"""Main module for the Tracks Node.
+
+Handles communication with the RP2040 microcontroller via serial port
+to control the robot's tracks based on joystick input received via Dora.
+Includes logic for easing/smoothing movement commands and sending heartbeats.
+"""
+
 from dora import Node
 import pyarrow as pa
 from serial import Serial
@@ -27,11 +34,21 @@ MAX_ACCEL_RATE = 20   # Maximum acceleration change per tick (prevents abrupt ch
 # ---
 
 serial_buffer = queue.Queue()
-serial_read_stop_event = threading.Event() # To signal the reader thread to stop
+serial_read_stop_event = threading.Event()  # To signal the reader thread to stop
 
-# --- Background Serial Reader (Corrected read_until) ---
-def background_serial_reader(ser, stop_event):
-    """Continuously reads lines from serial and puts them in a queue."""
+
+# --- Background Serial Reader ---
+def background_serial_reader(ser: Serial, stop_event: threading.Event):
+    """Continuously read lines from the serial port in a background thread.
+
+    Reads lines ending in newline characters, decodes them as UTF-8,
+    and puts them into the global `serial_buffer` queue. Handles potential
+    serial errors and stops when the `stop_event` is set.
+
+    Args:
+        ser: The PySerial Serial object.
+        stop_event: A threading.Event object to signal when to stop reading.
+    """
     print("Serial reader thread started.")
     while not stop_event.is_set():
         try:
@@ -61,7 +78,7 @@ def background_serial_reader(ser, stop_event):
 
 
 def flush_serial_buffer():
-    """Prints all messages currently in the serial buffer."""
+    """Print all messages currently queued in the serial buffer."""
     while not serial_buffer.empty():
         try:
             line = serial_buffer.get_nowait()
@@ -71,14 +88,30 @@ def flush_serial_buffer():
         except Exception as e:
             print(f"Error getting from serial buffer: {e}")
 
-def start_background_thread(ser, stop_event):
-    """Starts the background serial reader thread."""
+
+def start_background_thread(ser: Serial, stop_event: threading.Event) -> threading.Thread:
+    """Start the background serial reader thread.
+
+    Args:
+        ser: The PySerial Serial object.
+        stop_event: The threading.Event object to signal stopping.
+
+    Returns:
+        The started background thread object.
+    """
     thread = threading.Thread(target=background_serial_reader, args=(ser, stop_event), daemon=True)
     thread.start()
     return thread
 
 # --- Main Application ---
 def main():
+    """Main function for the Tracks Node.
+
+    Initializes the serial connection to the RP2040, starts the background
+    serial reader, and enters the Dora event loop. Processes joystick input,
+    applies optional easing, sends movement commands and heartbeats to the
+    microcontroller, and handles node shutdown.
+    """
     ser = None
     reader_thread = None
     try:

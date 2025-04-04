@@ -1,6 +1,4 @@
-"""
-Configuration module for the Waveshare Servo Node.
-"""
+"""Configuration handling module for the Waveshare Servo Node."""
 
 from .handler import ConfigHandler
 
