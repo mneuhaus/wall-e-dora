@@ -7,5 +7,5 @@ export const WIDGET_TYPES = {
   JOYSTICK: 'joystick-widget',
   TEST: 'test-widget',
   SEPARATOR: 'separator',
-  POWER: 'power-widget'
+  EYES: 'eyes-widget'
 };

@@ -1,126 +1,160 @@
 # Waveshare Servo Node
 
 ## Purpose
-The Waveshare Servo Node controls servo motors for animatronic movements, allowing precise positioning of the robot's movable parts with proper calibration and safety features.
+This node provides control and management for Waveshare servo motors connected to the WALL-E-DORA robot. It handles servo discovery, calibration, movement, and configuration while integrating with the central config system.
 
 ## Overview
-The waveshare_servo node manages all animatronic movements for the Wall-E robot by controlling multiple SCS servos through a Waveshare servo controller. It provides precise position control, calibration, speed adjustment, and safety features to protect servos from damage.
+The Waveshare Servo node manages all servo-related operations through a clean, modular architecture:
 
 ```mermaid
 graph TD
-    subgraph "Waveshare Servo Node Architecture"
-        ServoNode[Waveshare Servo Node]
-        ServoManager[Servo Manager]
-        CalibrationSystem[Calibration System]
-        SettingsManager[Settings Manager]
-        ProtocolHandler[Protocol Handler]
-        SerialInterface[Serial Interface]
-    end
-
-    subgraph "External Communication"
-        WebNode[Web Node]
-        DoraTimer[Dora Timer]
-    end
-
-    subgraph "Hardware"
-        ServoController[Waveshare Controller]
-        ServoMotors[SCS Servos]
-    end
-
-    WebNode -- "set_servo, calibrate, wiggle, etc." --> ServoNode
-    ServoNode -- "servo_status" --> WebNode
-    DoraTimer -- "SCAN" --> ServoNode
-
-    ServoNode --> ServoManager
-    ServoNode --> CalibrationSystem
-    ServoNode --> SettingsManager
-    ServoManager --> ProtocolHandler
-    CalibrationSystem --> ProtocolHandler
-    ProtocolHandler --> SerialInterface
-    SettingsManager <-- Load/Save --> JSON[Settings.json]
-    SerialInterface <--> ServoController
-    ServoController --> ServoMotors
+    A[Main Orchestrator] --> B[Servo Package]
+    B --> B1[Controller]
+    B --> B2[Scanner]
+    B --> B3[Protocol]
+    B --> B4[SDK]
+    A --> C[Inputs]
+    C --> C1[move_servo]
+    C --> C2[wiggle_servo]
+    C --> C3[calibrate_servo]
+    C --> C4[update_servo_setting]
+    C --> C5[tick]
+    C --> C6[settings]
+    A --> D[Outputs]
+    D --> D1[servo_status]
+    D --> D2[servos_list]
+    A --> E[Config]
+    A --> F[Utils]
 ```
+
+## Code Structure
+The node follows a clean, modular architecture with each component having a single responsibility:
+
+### Project Structure
+
+```
+waveshare_servo/
+├── __init__.py           # Package definition
+├── __main__.py           # Entry point for direct execution
+├── entrypoint.py         # Dora entrypoint script
+├── main.py               # Main orchestration module (no domain logic)
+├── config/               # Configuration management
+│   ├── __init__.py
+│   └── handler.py        # ConfigHandler implementation
+├── utils/                # Cross-cutting utilities
+│   ├── __init__.py
+│   └── event_processor.py # Event data extraction utilities
+├── inputs/               # Input event handlers
+│   ├── __init__.py
+│   ├── move_servo.py
+│   ├── wiggle_servo.py
+│   ├── calibrate_servo.py
+│   ├── update_servo_setting.py
+│   ├── tick.py
+│   ├── settings.py
+│   └── setting_updated.py
+├── outputs/              # Output event broadcasters
+│   ├── __init__.py
+│   ├── servo_status.py
+│   └── servos_list.py
+└── servo/                # Servo domain-specific functionality
+    ├── __init__.py
+    ├── controller.py     # The main Servo class
+    ├── models.py         # ServoSettings data class
+    ├── scanner.py        # Serial connection management
+    ├── port_finder.py    # Utility for finding serial ports
+    ├── discovery.py      # Servo discovery functions
+    ├── wiggle.py         # Servo wiggle operation
+    ├── calibrate.py      # Servo calibration operation
+    ├── protocol/         # Low-level servo command implementation
+    │   ├── __init__.py
+    │   ├── ping_command.py
+    │   ├── position_command.py
+    │   ├── id_command.py
+    │   └── text_command.py
+    └── sdk/              # Low-level servo communication SDK
+        ├── __init__.py
+        ├── port_handler.py
+        ├── packet_handler.py
+        ├── protocol_packet_handler.py
+        ├── group_sync_read.py
+        ├── group_sync_write.py
+        └── scservo_def.py
+```
+
+### Key Files
+
+- `main.py`: Orchestrates the interaction between inputs, servo domain logic, and outputs
+- `config/handler.py`: Handles communication with the config node and maintains settings
+- `utils/event_processor.py`: Utility for extracting and parsing event data from Dora events
+- `inputs/*.py`: One file per input event type, each with a handle_* function 
+- `outputs/*.py`: Functions for formatting and broadcasting data to other nodes
+- `servo/*.py`: Servo-specific domain implementation files
 
 ## Functional Requirements
-
-### Servo Control
-- Control multiple SCS servos through a Waveshare controller
-- Support position, speed, and acceleration control
-- Implement calibration to set safe movement ranges
-- Allow servo aliasing for friendly naming
-- Provide servo status monitoring
-- Support movement within calibrated limits only
-
-### Servo Management
-- Scan for connected servos and report status
-- Support servo ID configuration
-- Store and retrieve servo settings persistently
-- Implement overload detection and protection
-- Provide test movement functionality ("wiggle")
+- Scan and discover connected servo motors
+- Assign unique IDs to new servos (ID 1 gets automatically reassigned)
+- Move servos to specified positions with controlled speed
+- Wiggle servos for physical identification
+- Calibrate servos by testing min/max range
+- Store and retrieve servo configuration (aliases, position limits, etc.)
+- React to configuration changes from other nodes
+- Broadcast servo status for UI consumption
 
 ## Technical Requirements
+- Connect to Waveshare servo controller via serial port
+- Send properly formatted commands to servos via serial
+- Manage servo settings using the central config system
+- Handle servo inversions for motors mounted in opposite directions
+- Ensure settings persistence across restarts
+- Perform periodic scanning for new servos
+- Validate position requests against calibrated limits
 
-### Hardware Interface
-- Communicate with Waveshare servo controller via serial
-- Support SCS servo protocol
-- Implement proper error handling for communication issues
-- Ensure safe servo movement within mechanical limits
-- Support hot-plugging of servos
+## Dora Node Integration
 
-### Control Algorithms
-- Apply speed ramping for smooth movement
-- Implement safety checks for position limits
-- Handle servo errors and overload conditions
-- Support synchronized movement of multiple servos
-- Implement proper torque control
+### Inputs
+- `move_servo`: Move a servo to specified position
+- `wiggle_servo`: Wiggle a servo for identification
+- `calibrate_servo`: Calibrate a servo's position limits
+- `update_servo_setting`: Update a specific servo setting
+- `tick`: Periodic trigger for servo scanning
+- `settings`: Receive broadcast of all settings
+- `setting_updated`: Receive notification of a specific setting change
 
-### Configuration Management
-- Store calibration data in JSON format
-- Persist servo settings between restarts
-- Support servo ID remapping
-- Maintain aliases for human-readable control
-- Implement proper error recovery
-
-### Dora Node Integration
-
-The waveshare_servo node connects to the Dora framework with these data flows:
-
-#### Inputs
-| Input ID       | Source                | Description                     |
-|----------------|----------------------|---------------------------------|
-| SCAN           | dora/timer/millis/300 | Trigger servo scan and status   |
-| change_servo_id | web/change_servo_id  | Command to remap servo ID       |
-| wiggle         | web/wiggle           | Trigger test movement           |
-| calibrate      | web/calibrate        | Start calibration sequence      |
-| set_servo      | web/set_servo        | Command to set servo position   |
-| set_speed      | web/set_speed        | Set servo movement speed        |
-| set_alias      | web/set_alias        | Set friendly name for servo     |
-
-#### Outputs
-| Output ID      | Destination | Description                    |
-|----------------|------------|--------------------------------|
-| servo_status   | web        | Status of all connected servos |
-
-## Servo Protocol Details
-
-The SCS servo protocol supports these key features:
-- 1000000 baud communication rate
-- 16-bit position values (0-4095)
-- 16-bit speed values
-- 8-bit acceleration values
-- ID remapping with EPROM unlock/lock
-- Position, speed, and load reading
+### Outputs
+- `servo_status`: Status update for a single servo
+- `servos_list`: List of all discovered servos
+- `update_setting`: Send setting updates to config node
 
 ## Getting Started
+1. Connect the Waveshare servo controller to a USB port
+2. Connect servo motors to the controller
+3. Start the node as part of the WALL-E-DORA system
 
-- Install dependencies:
-```bash
-pip install -e .
-```
+## Architecture Details
+
+### Key Components
+- **Main Orchestrator**: Coordinates the flow between inputs, actions, and outputs using a context dict pattern
+- **Servo**: Represents a single servo with all its operations
+- **ServoScanner**: Handles discovery of servos via serial port
+- **ConfigHandler**: Interfaces with the config node for settings management
+- **ServoSettings**: Data class for servo configuration parameters
+- **Protocol Implementations**: Low-level servo command implementation
+- **Input Handlers**: Dedicated handlers for each input event type
+- **Output Broadcasters**: Functions for sending data to other nodes
+
+### Key Features
+- **Dependency Injection via Context Dictionary**: Components share state via a context dict rather than class instances
+- **Pure Orchestration in Main**: Main file focuses solely on orchestration with no domain logic
+- **Single-Responsibility Principle**: Each file has exactly one responsibility
+- **Modular Directory Structure**: Code organized into logical directories (inputs/, outputs/, config/, utils/, servo/)
+- **Clear Dependency Hierarchy**: Well-defined dependencies between components
+- **Clean Input/Output Pattern**: Clear data flow from inputs through domain logic to outputs
+- **Domain-Driven Organization**: Servo-specific code isolated in dedicated directory
+- **Event-Based Architecture**: Reactive processing based on Dora events
+- **Proper Error Handling**: Comprehensive error handling and logging
 
 ## Contribution Guide
-
 - Format with [ruff](https://docs.astral.sh/ruff/):
 ```bash
 ruff check . --fix
@@ -137,11 +171,11 @@ pytest . # Test
 ```
 
 ## Future Enhancements
-1. Support for coordinated multi-servo movements
-2. Sequence recording and playback
-3. PID control for precise positioning
-4. Torque-based positioning for compliant movements
-5. Advanced motion planning for natural movements
+- Add multi-servo group movement capability
+- Implement servo movement sequences/animations
+- Add position feedback from servos (if hardware supports it)
+- Improve servo discovery with more robust identification
+- Add support for different servo controller hardware
 
 ## License
 Waveshare Servo node's code is released under the MIT License.

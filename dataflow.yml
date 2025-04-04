@@ -9,55 +9,82 @@ nodes:
       - power
       - soc
       - runtime
+      - capacity
+      - discharge_rate
       - shutdown
+
+  - id: config
+    path: nodes/config/config/main.py
+    inputs:
+      update_setting: web/update_setting
+      tick: dora/timer/secs/5
+    outputs:
+      - setting_updated
+      - settings
 
   - id: web
     path: nodes/web/web/main.py
     inputs:
-      tick: dora/timer/millis/100
+      tick: dora/timer/millis/33
       voltage: power/voltage
       current: power/current
       power: power/power
       soc: power/soc
       runtime: power/runtime
+      capacity: power/capacity
+      discharge_rate: power/discharge_rate
       shutdown: power/shutdown
       available_sounds: audio/available_sounds
       servo_status: waveshare_servo/servo_status
+      servos_list: waveshare_servo/servos_list
+      setting_updated: config/setting_updated
+      settings: config/settings
+      save_gamepad_profile: web/save_gamepad_profile
+      delete_gamepad_profile: web/delete_gamepad_profile
+      available_images: eyes/available_images
       # camera_feed: opencv-video-capture/image
     outputs:
       - slider_input
       - play_sound
       - set_volume
       - stop
+      - play_gif
       - GAMEPAD_LEFT_ANALOG_STICK_X
       - GAMEPAD_LEFT_ANALOG_STICK_Y
-      - RIGHT_ANALOG_STICK_X
-      - RIGHT_ANALOG_STICK_
-      - FACE_1
-      - FACE_2
-      - FACE_3
-      - FACE_4
-      - LEFT_SHOULDER
-      - RIGHT_SHOULDER
-      - LEFT_SHOULDER_BOTTOM
-      - RIGHT_SHOULDER_BOTTOM
-      - SELECT
-      - START
-      - LEFT_ANALOG_BUTTON
-      - RIGHT_ANALOG_BUTTON
-      - DPAD_UP
-      - DPAD_DOWN
-      - DPAD_LEFT
-      - DPAD_RIGHT
-      - HOME
-      - MISCBUTTON_1
-      - MISCBUTTON_2
-      - change_servo_id
-      - wiggle
-      - calibrate
-      - set_servo
-      - set_speed
-      - set_alias
+      - GAMEPAD_RIGHT_ANALOG_STICK_X
+      - GAMEPAD_RIGHT_ANALOG_STICK_Y
+      - GAMEPAD_FACE_1
+      - GAMEPAD_FACE_2
+      - GAMEPAD_FACE_3
+      - GAMEPAD_FACE_4
+      - GAMEPAD_LEFT_SHOULDER
+      - GAMEPAD_RIGHT_SHOULDER
+      - GAMEPAD_LEFT_SHOULDER_BOTTOM
+      - GAMEPAD_RIGHT_SHOULDER_BOTTOM
+      - GAMEPAD_SELECT
+      - GAMEPAD_START
+      - GAMEPAD_LEFT_ANALOG_BUTTON
+      - GAMEPAD_RIGHT_ANALOG_BUTTON
+      - GAMEPAD_DPAD_UP
+      - GAMEPAD_DPAD_DOWN
+      - GAMEPAD_DPAD_LEFT
+      - GAMEPAD_DPAD_RIGHT
+      - GAMEPAD_HOME
+      - GAMEPAD_MISCBUTTON_1
+      - GAMEPAD_MISCBUTTON_2
+      - move_servo
+      - wiggle_servo
+      - calibrate_servo
+      - update_servo_setting
+      - update_setting
+      - save_gamepad_profile
+      - get_gamepad_profile
+      - check_gamepad_profile
+      - delete_gamepad_profile
+      - list_gamepad_profiles
+      - gamepad_profile
+      - gamepad_profile_status
+      - gamepad_profiles_list
 
   - id: audio
     path: nodes/audio/audio/main.py
@@ -67,6 +94,7 @@ nodes:
       volume_tick: dora/timer/secs/1
       set_volume: web/set_volume
       stop: web/stop
+      setting_updated: config/setting_updated
     outputs:
       - available_sounds
       - volume
@@ -74,23 +102,47 @@ nodes:
   - id: tracks
     path: nodes/tracks/tracks/main.py
     inputs:
-      tick: dora/timer/millis/100
+      tick: dora/timer/millis/33
       heartbeat: dora/timer/secs/1
-      LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
-      LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
+      GAMEPAD_LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
+      GAMEPAD_LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
+      setting_updated: config/setting_updated
 
   - id: waveshare_servo
-    path: nodes/waveshare_servo/waveshare_servo/main.py
+    path: nodes/waveshare_servo/entrypoint.py
     inputs:
-      SCAN: dora/timer/millis/300
-      change_servo_id: web/change_servo_id
-      wiggle: web/wiggle
-      calibrate: web/calibrate
-      set_servo: web/set_servo
-      set_speed: web/set_speed
-      set_alias: web/set_alias
+      tick: dora/timer/secs/3
+      move_servo: web/move_servo
+      wiggle_servo: web/wiggle_servo
+      calibrate_servo: web/calibrate_servo
+      update_servo_setting: web/update_servo_setting
+      # Gamepad control inputs
+      GAMEPAD_LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
+      GAMEPAD_LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
+      GAMEPAD_RIGHT_ANALOG_STICK_X: web/GAMEPAD_RIGHT_ANALOG_STICK_X
+      GAMEPAD_RIGHT_ANALOG_STICK_Y: web/GAMEPAD_RIGHT_ANALOG_STICK_Y
+      GAMEPAD_FACE_1: web/GAMEPAD_FACE_1
+      GAMEPAD_FACE_2: web/GAMEPAD_FACE_2
+      GAMEPAD_FACE_3: web/GAMEPAD_FACE_3
+      GAMEPAD_FACE_4: web/GAMEPAD_FACE_4
+      GAMEPAD_LEFT_SHOULDER: web/GAMEPAD_LEFT_SHOULDER
+      GAMEPAD_RIGHT_SHOULDER: web/GAMEPAD_RIGHT_SHOULDER
+      GAMEPAD_LEFT_SHOULDER_BOTTOM: web/GAMEPAD_LEFT_SHOULDER_BOTTOM
+      GAMEPAD_RIGHT_SHOULDER_BOTTOM: web/GAMEPAD_RIGHT_SHOULDER_BOTTOM
+      GAMEPAD_SELECT: web/GAMEPAD_SELECT
+      GAMEPAD_START: web/GAMEPAD_START
+      GAMEPAD_LEFT_ANALOG_BUTTON: web/GAMEPAD_LEFT_ANALOG_BUTTON
+      GAMEPAD_RIGHT_ANALOG_BUTTON: web/GAMEPAD_RIGHT_ANALOG_BUTTON
+      GAMEPAD_DPAD_UP: web/GAMEPAD_DPAD_UP
+      GAMEPAD_DPAD_DOWN: web/GAMEPAD_DPAD_DOWN
+      GAMEPAD_DPAD_LEFT: web/GAMEPAD_DPAD_LEFT
+      GAMEPAD_DPAD_RIGHT: web/GAMEPAD_DPAD_RIGHT
+      GAMEPAD_HOME: web/GAMEPAD_HOME
+      GAMEPAD_MISCBUTTON_1: web/GAMEPAD_MISCBUTTON_1
+      GAMEPAD_MISCBUTTON_2: web/GAMEPAD_MISCBUTTON_2
     outputs:
       - servo_status
+      - servos_list
 
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture
@@ -106,3 +158,11 @@ nodes:
   #   inputs:
   #     image: opencv-video-capture/image
 
+  - id: eyes
+    path: nodes/eyes/entrypoint.py
+    inputs:
+      TICK: dora/timer/secs/60
+      list_images: dora/timer/secs/10
+      play_gif: web/play_gif
+    outputs:
+      - available_images

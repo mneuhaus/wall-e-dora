@@ -7,18 +7,29 @@
  * @component
  */
 import React from 'react';
+import { ActionIcon, Tooltip } from '@mantine/core';
 import { useAppContext } from '../../contexts/AppContext';
 
 const ConnectionStatus = () => {
   const { isConnected } = useAppContext();
   
   return (
-    <button 
-      className="transparent circle"
-      aria-label="Connection Status"
+    <Tooltip
+      label={isConnected ? "Connected to server" : "Disconnected from server"} 
+      position="bottom"
+      withArrow
     >
-      <i className={`fa-solid fa-wifi ${isConnected ? 'green-text' : 'red-text'}`}></i>
-    </button>
+      <ActionIcon 
+        variant="transparent" 
+        radius="xl"
+        aria-label="Connection Status"
+      >
+        <i 
+          className="fa-solid fa-wifi" 
+          style={{ color: `var(--mantine-color-${isConnected ? 'green' : 'red'}-6)` }}
+        ></i>
+      </ActionIcon>
+    </Tooltip>
   );
 };
 

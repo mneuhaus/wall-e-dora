@@ -35,16 +35,6 @@ Encore
     .enableSourceMaps(!Encore.isProduction())
     // enables hashed filenames (e.g. app.abc123.css)
     .enableVersioning(false)
-
-    .configureBabel((config) => {
-        config.plugins.push('@babel/plugin-transform-class-properties');
-    })
-
-    // enables @babel/preset-env polyfills
-    .configureBabelPresetEnv((config) => {
-        config.useBuiltIns = 'usage';
-        config.corejs = 3;
-    })
     
     // Enable React - this automatically adds the @babel/preset-react
     .enableReactPreset()

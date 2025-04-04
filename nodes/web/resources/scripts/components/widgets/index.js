@@ -10,8 +10,8 @@ import { WIDGET_TYPES } from '../../constants/widgetTypes';
 import ServoWidget from './ServoWidget';
 import SoundWidget from './SoundWidget';
 import JoystickWidget from './JoystickWidget';
-import PowerWidget from './PowerWidget';
 import TestWidget from './TestWidget';
+import EyesWidget from './EyesWidget';
 
 /**
  * Registry of all available widgets mapped by their type constants
@@ -21,8 +21,8 @@ export const WIDGET_REGISTRY = {
   [WIDGET_TYPES.SOUND]: SoundWidget,
   [WIDGET_TYPES.JOYSTICK]: JoystickWidget,
   [WIDGET_TYPES.TEST]: TestWidget,
+  [WIDGET_TYPES.EYES]: EyesWidget,
   [WIDGET_TYPES.SEPARATOR]: 'div',
-  [WIDGET_TYPES.POWER]: PowerWidget,
 };
 
 /**

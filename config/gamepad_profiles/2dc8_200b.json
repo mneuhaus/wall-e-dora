@@ -1,0 +1,115 @@
+{
+  "id": "8BitDo Ultimate MG (Vendor: 2dc8 Product: 200b)",
+  "mapping": {
+    "DPAD_DOWN": {
+      "index": 13,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "DPAD_LEFT": {
+      "index": 14,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "DPAD_RIGHT": {
+      "index": 15,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "DPAD_UP": {
+      "index": 12,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_1": {
+      "index": 0,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_2": {
+      "index": 1,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_3": {
+      "index": 2,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "FACE_4": {
+      "index": 3,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "HOME": {
+      "index": 16,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "LEFT_ANALOG_BUTTON": {
+      "index": 10,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "LEFT_ANALOG_STICK_X": {
+      "index": 0,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "LEFT_ANALOG_STICK_Y": {
+      "index": 1,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "LEFT_SHOULDER": {
+      "index": 4,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "LEFT_SHOULDER_BOTTOM": {
+      "index": 6,
+      "isAnalog": true,
+      "type": "button",
+      "input_range": "unipolar"
+    },
+    "RIGHT_ANALOG_BUTTON": {
+      "index": 11,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "RIGHT_ANALOG_STICK_X": {
+      "index": 2,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "RIGHT_ANALOG_STICK_Y": {
+      "index": 3,
+      "isAnalog": true,
+      "type": "axis"
+    },
+    "RIGHT_SHOULDER": {
+      "index": 5,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "RIGHT_SHOULDER_BOTTOM": {
+      "index": 7,
+      "isAnalog": true,
+      "type": "button",
+      "input_range": "unipolar"
+    },
+    "SELECT": {
+      "index": 9,
+      "isAnalog": false,
+      "type": "button"
+    },
+    "START": {
+      "index": 8,
+      "isAnalog": false,
+      "type": "button"
+    }
+  },
+  "name": "2dc8 Product: 200b) 200b)",
+  "productId": "200b",
+  "vendorId": "2dc8"
+}

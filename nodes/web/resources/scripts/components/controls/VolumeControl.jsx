@@ -2,78 +2,108 @@
  * VolumeControl Component
  * 
  * A control for adjusting the audio volume.
- * Provides a dropdown with a slider to adjust the volume level.
+ * Provides a popup with a horizontal slider to adjust the volume level.
  * 
  * @component
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Popover,
+  ActionIcon, 
+  Slider, 
+  Text, 
+  Stack, 
+  Box,
+  Group,
+  rem
+} from '@mantine/core';
 import node from '../../Node';
 
 const VolumeControl = () => {
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [volume, setVolume] = useState(50);
-  const volumeRef = useRef(null);
   
+  // Initial volume fetch could be added here if the backend supports it
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (volumeRef.current && !volumeRef.current.contains(event.target)) {
-        setShowVolumeSlider(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    // Emit initial volume when component mounts
+    node.emit('set_volume', [volume]);
   }, []);
-
-  const toggleVolumeSlider = () => {
-    setShowVolumeSlider(!showVolumeSlider);
-  };
-
-  const handleVolumeChange = (e) => {
-    const newVolume = parseInt(e.target.value);
+  
+  const handleVolumeChange = (newVolume) => {
     setVolume(newVolume);
     node.emit('set_volume', [newVolume]);
   };
 
   const getVolumeIcon = () => {
     // Using class names that match Font Awesome
-    if (volume <= 0) return 'fa-volume-off';
+    if (volume <= 0) return 'fa-volume-mute';
     if (volume <= 30) return 'fa-volume-down';
     if (volume <= 70) return 'fa-volume-down';
     return 'fa-volume-up';
   };
 
   return (
-    <div className="dropdown" ref={volumeRef}>
-      <button 
-        onClick={toggleVolumeSlider} 
-        className="transparent circle"
-        aria-label="Volume Control"
-        aria-haspopup="true"
-        aria-expanded={showVolumeSlider}
-      >
-        <i className={`fa-solid ${getVolumeIcon()} amber-text`}></i>
-      </button>
+    <Popover
+      opened={isOpen}
+      onChange={setIsOpen}
+      position="bottom"
+      shadow="md"
+      width={420}
+      withArrow
+      trapFocus={false}
+    >
+      <Popover.Target>
+        <ActionIcon
+          variant="transparent"
+          radius="xl"
+          aria-label="Volume Control"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <i 
+            className={`fa-solid ${getVolumeIcon()}`}
+            style={{ color: 'var(--mantine-color-amber-6)' }}
+          ></i>
+        </ActionIcon>
+      </Popover.Target>
       
-      {showVolumeSlider && (
-        <div className="menu volume-menu">
-          <div className="item">
-            <input 
-              type="range" 
-              min="0" 
-              max="100" 
-              value={volume} 
-              onChange={handleVolumeChange} 
-              className="volume-slider" 
-              style={{ width: '100%', margin: '8px 0' }}
+      <Popover.Dropdown>
+        <Box p="md">
+          <Stack align="center" gap="sm">
+            <Slider
+              value={volume}
+              onChange={handleVolumeChange}
+              min={0}
+              max={100}
+              step={5}
+              color="amber"
+              label={(value) => `${value}%`}
+              labelAlwaysOn
+              size="lg"
+              w="100%"
+              thumbSize={22}
+              styles={{
+                track: { height: 8 },
+                thumb: { 
+                  borderWidth: 2,
+                  backgroundColor: 'var(--mantine-color-dark-7)',
+                  borderColor: 'var(--mantine-color-amber-filled)'
+                },
+                markLabel: {
+                  fontSize: rem(10),
+                  color: 'var(--mantine-color-dimmed)'
+                },
+                mark: {
+                  width: 4,
+                  height: 4,
+                  borderRadius: 4,
+                  borderColor: 'var(--mantine-color-amber-filled)'
+                }
+              }}
             />
-            <div className="text-center">{volume}%</div>
-          </div>
-        </div>
-      )}
-    </div>
+          </Stack>
+        </Box>
+      </Popover.Dropdown>
+    </Popover>
   );
 };
 

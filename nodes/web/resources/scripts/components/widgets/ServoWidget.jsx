@@ -71,10 +71,28 @@ const ServoWidget = ({ servoId, position: savedPosition, speed: savedSpeed, i })
       }
     });
     
+    // Add button flash event listener
+    const handleButtonFlash = (event) => {
+      const { control } = event.detail;
+      // Check if this is a flashable control that affects our servo
+      const servoElement = document.querySelector(`[data-servo-id="${servoId}"]`);
+      if (servoElement) {
+        servoElement.classList.add('button-flash');
+        setTimeout(() => {
+          servoElement.classList.remove('button-flash');
+        }, 300);
+      }
+    };
+    
+    window.addEventListener('gamepad_button_flash', handleButtonFlash);
+    
     // Request servo data on mount
     node.emit('SCAN', []);
     
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      window.removeEventListener('gamepad_button_flash', handleButtonFlash);
+    };
   }, [servoId]);
 
   // Handle position updates
@@ -103,7 +121,7 @@ const ServoWidget = ({ servoId, position: savedPosition, speed: savedSpeed, i })
   };
   
   return (
-    <div className="simple-slider-container">
+    <div className="simple-slider-container" data-servo-id={servoId}>
       <Slider
         value={position}
         min={min}

@@ -2,6 +2,47 @@
 
 This document outlines the technical debt accumulated during the prototyping phase and proposes structured approaches to address each issue. The goal is to transform the codebase from a prototype to a production-quality system with consistent patterns, robust error handling, and improved maintainability.
 
+## Immediate Action Items
+
+### Replace Eyes Widget HTTP Proxy with Native Dora Events
+
+**Priority:** Medium  
+**Estimated Effort:** 3-4 hours
+
+Currently, the WALL-E Eyes Widget uses an HTTP proxy endpoint to communicate with the eye displays. This is a temporary solution that should be replaced with a proper Dora event flow.
+
+#### Required Changes:
+
+1. Create a new `play_gif` output event in the web node
+   ```yaml
+   outputs:
+     - play_gif
+   ```
+
+2. Add corresponding `play_gif` input event to the eyes node
+   ```yaml
+   inputs:
+     play_gif: web/play_gif
+   ```
+
+3. Implement input handler in the eyes node:
+   - Create `/eyes/eyes/inputs/play_gif.py` 
+   - Implement a handler that communicates with both eye displays
+   - Use direct HTTP requests from the Python code (no CORS issues there)
+
+4. Update the frontend widget:
+   - Replace proxy endpoint calls with a WebSocket emission
+   - Send the `play_gif` event with the filename as data
+
+5. Update dataflow.yml:
+   - Connect the events between web and eyes nodes
+
+This approach will:
+- Maintain a cleaner architecture by respecting the dataflow design
+- Remove the need for the proxy endpoint
+- Make the system more maintainable
+- Allow for future enhancements like queueing images or synchronizing eye displays
+
 ## 1. ✅ Inconsistent Naming Conventions
 
 ### Issue (RESOLVED)
