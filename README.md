@@ -88,20 +88,23 @@ flowchart LR
 2. Activate the environment: `source .venv/bin/activate`
 3. Install dependencies: `uv pip install -e .`
 
-### Building Firmware
+### Building and Running
+
 Use the provided Makefile targets:
 ```bash
-# Run all nodes
+# Run all nodes using uv for dependency management
 make run
-# or
-dora run dataflow.yml --name wall-e-dora
 
-# Build web resources
-make web/build
+# Build web resources (runs in background to rebuild on changes)
+make web/build-watch
+
+# Build tracks firmware
+make tracks/build
+
+# Flash tracks firmware (requires device path in Makefile)
+make tracks/flash
 
 # Build and flash tracks firmware
-make tracks/build
-make tracks/flash
 make tracks/update
 ```
 

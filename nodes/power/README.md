@@ -107,19 +107,19 @@ The power node connects to the Dora framework with these data flows:
 #### Inputs
 | Input ID | Source           | Description               |
 |----------|------------------|---------------------------|
-| tick     | dora/timer/secs/10 | Regular update trigger |
+| tick     | dora/timer/secs/10 | Regular update trigger    |
 
 #### Outputs
 | Output ID      | Destination | Description                        |
-|----------------|------------|------------------------------------|
-| voltage        | web        | Battery voltage measurement        |
-| current        | web        | Battery current measurement        |
-| power          | web        | Power consumption in watts         |
-| soc            | web        | Battery state of charge (%)        |
-| runtime        | web        | Estimated remaining runtime        |
-| capacity       | web        | Estimated battery capacity (Ah)    |
-| discharge_rate | web        | Battery discharge rate (%/hr)      |
-| shutdown       | web        | Shutdown signal at low battery     |
+|----------------|-------------|------------------------------------|
+| voltage        | web         | Battery voltage measurement (Volts)|
+| current        | web         | Battery current measurement (Amps) |
+| power          | web         | Power consumption in watts         |
+| soc            | web         | Battery state of charge (%)        |
+| runtime        | web         | Estimated remaining runtime (secs) |
+| capacity       | web         | Estimated battery capacity (Ah)    |
+| discharge_rate | web         | Battery discharge rate (%/hr)      |
+| shutdown       | web         | Shutdown signal at low battery     |
 
 ## Example Dataflow Configuration
 
@@ -166,37 +166,36 @@ pip install -e .
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Log Output Format
 
-The power node produces a single consolidated log line with the following format:
+The power node produces a single consolidated log line with the following format (example):
 
 ```
-Power: 11.77V (89.7%) 0.50A 5.90W | Avg: 5.14W | Runtime: 03:37 | Est.Cap: 2.50Ah | Discharge: 26.4%/hr | Time to 20%: 3.6h | Avg current: 0.45A
+Power: 11.7740V (94.4%) 0.4570A 5.3808W | Avg: 5.381W | Runtime: >24h | Est.Cap: 2.50Ah | Discharge: 12.0%/hr | (>24h)
 ```
 
 This includes:
 - Current voltage, state of charge percentage, current, and power
-- Average power consumption over time
-- Estimated runtime until reaching 20% battery threshold
+- Average power consumption over time (EMA)
+- Estimated runtime until reaching 20% battery threshold (HH:MM or >24h)
 - Estimated battery capacity in amp-hours
-- Battery discharge rate in percentage per hour
-- Time until battery reaches 20% threshold
-- Average current draw
+- Estimated battery discharge rate in percentage per hour (EMA)
+- Debug info for runtime estimation (e.g., startup, low current)
 
 ## Future Enhancements
 1. Battery health monitoring

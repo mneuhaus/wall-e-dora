@@ -34,14 +34,16 @@ graph TD
 ## Dora Node Integration
 
 ### Inputs
-- `update_setting`: Receives a path and value to update a specific setting
-  - Format: `{"path": "servo.3.speed", "value": 100}`
-- `tick`: Regular timer input to broadcast all settings
+| Input ID         | Source           | Description                                      |
+|------------------|------------------|--------------------------------------------------|
+| update_setting   | web/update_setting | Receives a path and value to update a setting    |
+| tick             | dora/timer/secs/5| Regular timer input to broadcast all settings    |
 
 ### Outputs
-- `setting_updated`: Emits when a setting is updated
-  - Format: `{"path": "servo.3.speed", "value": 100}`
-- `settings`: Emits the entire configuration periodically (on tick event)
+| Output ID        | Destination | Description                                      |
+|------------------|-------------|--------------------------------------------------|
+| setting_updated  | *           | Emits when a setting is updated                  |
+| settings         | *           | Emits the entire configuration periodically      |
 
 ## Getting Started
 
@@ -61,22 +63,19 @@ mkdir -p /path/to/project/config
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
-
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
-
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
-
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Usage Examples

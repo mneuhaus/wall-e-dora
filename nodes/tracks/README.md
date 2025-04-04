@@ -84,12 +84,13 @@ graph TD
 The tracks node connects to the Dora framework with these data flows:
 
 #### Inputs
-| Input ID             | Source                | Description                     |
-|----------------------|----------------------|---------------------------------|
-| tick                 | dora/timer/millis/100 | Regular update trigger          |
-| heartbeat            | dora/timer/secs/1    | Connection maintenance signal   |
-| LEFT_ANALOG_STICK_X  | web/LEFT_ANALOG_STICK_X | Joystick X-axis input (-1 to 1) |
-| LEFT_ANALOG_STICK_Y  | web/LEFT_ANALOG_STICK_Y | Joystick Y-axis input (-1 to 1) |
+| Input ID                    | Source                         | Description                     |
+|-----------------------------|--------------------------------|---------------------------------|
+| tick                        | dora/timer/millis/33           | Regular update trigger          |
+| heartbeat                   | dora/timer/secs/1              | Connection maintenance signal   |
+| GAMEPAD_LEFT_ANALOG_STICK_X | web/GAMEPAD_LEFT_ANALOG_STICK_X| Joystick X-axis input (-1 to 1) |
+| GAMEPAD_LEFT_ANALOG_STICK_Y | web/GAMEPAD_LEFT_ANALOG_STICK_Y| Joystick Y-axis input (-1 to 1) |
+| *setting_updated*           | *config/setting_updated*       | *(Future) Setting update notification* |
 
 ## Firmware Architecture
 
@@ -126,19 +127,19 @@ make tracks/flash
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Future Enhancements

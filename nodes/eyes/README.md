@@ -38,13 +38,18 @@ graph TD
 - Follow the project's defined node architecture pattern
 
 ## Dora Node Integration
-- **Inputs**: 
-  - `TICK`: A timer event that occurs every 60 seconds to sync files
-  - `list_images`: A timer event that occurs every 10 seconds to update image lists
-  - `play_gif`: An event from the web node to display a specific image
 
-- **Outputs**: 
-  - `available_images`: A list of available images sent to the web node
+### Inputs
+| Input ID      | Source                | Description                               |
+|---------------|-----------------------|-------------------------------------------|
+| TICK          | dora/timer/secs/60    | Trigger for periodic file synchronization |
+| list_images   | dora/timer/secs/10    | Trigger to update available image list    |
+| play_gif      | web/play_gif          | Request to display a specific image/GIF   |
+
+### Outputs
+| Output ID         | Destination | Description                               |
+|-------------------|-------------|-------------------------------------------|
+| available_images  | web         | List of available images sent to web node |
 
 ## Getting Started
 
@@ -58,22 +63,19 @@ pip install -e .
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
-
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
-
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
-
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Future Enhancements

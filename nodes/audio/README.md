@@ -95,15 +95,15 @@ The Audio node connects to the Dora framework with these data flows:
 |-----------------|----------------------|---------------------------------|
 | play_sound      | web/play_sound       | Play specified sound file       |
 | scan_sounds     | dora/timer/secs/3    | Trigger sound directory scan    |
-| volume_tick     | dora/timer/secs/1    | Trigger volume reporting        |
-| set_volume      | web/set_volume       | Set volume level (0-1.0)        |
+| set_volume      | web/set_volume       | Set volume level (0.0-1.0)      |
 | stop            | web/stop             | Stop all sound playback         |
+| *setting_updated*| *config/setting_updated* | *(Future) Setting update notification* |
 
 #### Outputs
 | Output ID         | Destination     | Description                    |
 |-------------------|----------------|--------------------------------|
 | available_sounds  | web            | List of available sound files   |
-| volume            | web            | Current volume level (0-1.0)    |
+| volume            | web            | Current volume level (0.0-1.0)  |
 
 ### Example Usage with Dora
 ```python
@@ -126,19 +126,19 @@ pip install -e .
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Future Enhancements

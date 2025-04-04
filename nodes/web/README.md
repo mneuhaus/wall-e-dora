@@ -99,32 +99,53 @@ graph TD
 The web node connects to the Dora framework with these data flows:
 
 #### Inputs
-| Input ID          | Source                | Description                     |
-|-------------------|----------------------|---------------------------------|
-| tick              | dora/timer/millis/100 | Regular UI update trigger      |
-| voltage           | power/voltage        | Battery voltage measurement     |
-| current           | power/current        | Battery current measurement     |
-| power             | power/power          | Power consumption in watts      |
-| soc               | power/soc            | Battery state of charge (%)     |
-| runtime           | power/runtime        | Estimated remaining runtime     |
-| shutdown          | power/shutdown       | Shutdown signal at low battery  |
-| available_sounds  | audio/available_sounds| List of available sound files  |
-| servo_status      | waveshare_servo/servo_status | Servo status information |
+| Input ID                 | Source                         | Description                               |
+|--------------------------|--------------------------------|-------------------------------------------|
+| tick                     | dora/timer/millis/33           | Regular UI update trigger                 |
+| voltage                  | power/voltage                  | Battery voltage measurement               |
+| current                  | power/current                  | Battery current measurement               |
+| power                    | power/power                    | Power consumption in watts                |
+| soc                      | power/soc                      | Battery state of charge (%)               |
+| runtime                  | power/runtime                  | Estimated remaining runtime (seconds)     |
+| capacity                 | power/capacity                 | Estimated battery capacity (Ah)           |
+| discharge_rate           | power/discharge_rate           | Battery discharge rate (%/hr)             |
+| shutdown                 | power/shutdown                 | Shutdown signal at low battery            |
+| available_sounds         | audio/available_sounds         | List of available sound files             |
+| servo_status             | waveshare_servo/servo_status   | Status update for a single servo          |
+| servos_list              | waveshare_servo/servos_list    | List of all discovered servos             |
+| setting_updated          | config/setting_updated         | Notification of a specific setting change |
+| settings                 | config/settings                | Broadcast of all settings                 |
+| save_gamepad_profile     | web/save_gamepad_profile       | Request to save a gamepad profile         |
+| delete_gamepad_profile   | web/delete_gamepad_profile     | Request to delete a gamepad profile       |
+| available_images         | eyes/available_images          | List of available eye images/GIFs         |
+| gamepad_profile          | web/gamepad_profile            | Response containing a specific profile    |
+| gamepad_profile_status   | web/gamepad_profile_status     | Response indicating if a profile exists   |
+| gamepad_profiles_list    | web/gamepad_profiles_list      | List of all available gamepad profiles    |
+| *camera_feed*            | *opencv-video-capture/image*   | *(Optional) Camera feed image*            |
 
 #### Outputs
-| Output ID          | Destination      | Description                     |
-|--------------------|-----------------|----------------------------------|
-| slider_input       | *               | Generic slider widget value      |
-| play_sound         | audio           | Sound file to play               |
-| set_volume         | audio           | Volume level to set              |
-| stop               | audio           | Stop sound playback              |
-| LEFT_ANALOG_STICK_X| tracks          | X-axis movement control          |
-| LEFT_ANALOG_STICK_Y| tracks          | Y-axis movement control          |
-| set_servo          | waveshare_servo | Servo position command           |
-| wiggle             | waveshare_servo | Trigger servo test movement      |
-| calibrate          | waveshare_servo | Trigger servo calibration        |
-| set_speed          | waveshare_servo | Servo speed setting              |
-| set_alias          | waveshare_servo | Set friendly name for servo      |
+| Output ID                 | Destination      | Description                               |
+|---------------------------|-----------------|-------------------------------------------|
+| play_sound                | audio           | Sound file to play                        |
+| set_volume                | audio           | Volume level to set (0.0-1.0)             |
+| stop                      | audio           | Stop sound playback                       |
+| play_gif                  | eyes            | Request to display a specific image/GIF   |
+| GAMEPAD_LEFT_ANALOG_STICK_X | tracks, waveshare_servo | Joystick X-axis input (-1 to 1)           |
+| GAMEPAD_LEFT_ANALOG_STICK_Y | tracks, waveshare_servo | Joystick Y-axis input (-1 to 1)           |
+| GAMEPAD_* (various)       | waveshare_servo | Other gamepad button/axis events          |
+| move_servo                | waveshare_servo | Move a servo to a specific position       |
+| wiggle_servo              | waveshare_servo | Trigger servo test movement               |
+| calibrate_servo           | waveshare_servo | Trigger servo calibration                 |
+| update_servo_setting      | waveshare_servo | Update a specific servo setting           |
+| update_setting            | config          | Request to update a setting in the config |
+| save_gamepad_profile      | web             | Request to save a gamepad profile         |
+| get_gamepad_profile       | web             | Request to retrieve a specific profile    |
+| check_gamepad_profile     | web             | Request to check if a profile exists      |
+| delete_gamepad_profile    | web             | Request to delete a gamepad profile       |
+| list_gamepad_profiles     | web             | Request to list all available profiles    |
+| gamepad_profile           | web             | Response containing a specific profile    |
+| gamepad_profile_status    | web             | Response indicating if a profile exists   |
+| gamepad_profiles_list     | web             | List of all available gamepad profiles    |
 
 ## Frontend Architecture
 
@@ -240,19 +261,19 @@ pnpm build
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Future Enhancements

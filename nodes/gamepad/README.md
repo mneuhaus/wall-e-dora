@@ -71,33 +71,30 @@ graph TD
 
 ### Dora Node Integration
 
-The gamepad node connects to the Dora framework with these data flows:
+The gamepad node reads raw controller events and publishes them. The `web` node consumes these raw events and emits specific `GAMEPAD_*` events for other nodes to use.
 
 #### Outputs
-| Output ID      | Destination | Description                    |
-|----------------|------------|--------------------------------|
-| gamepad_input  | web        | Controller input events        |
+| Output ID      | Destination | Description                                      |
+|----------------|-------------|--------------------------------------------------|
+| gamepad_input  | *internal*  | Raw controller input events (consumed by web node) |
 
 ### Controller Event Format
 
-Controller events are published in a standardized format:
+Raw events from this node are simple strings representing the event details (e.g., `('BUTTON', 'FACE_1', True)`). The `web` node processes these and emits structured `GAMEPAD_*` events like:
+
 ```json
 {
-  "type": "BUTTON",
-  "id": "FACE_1",
-  "value": 1,
-  "timestamp": 1647859432.123
+  "output_id": "GAMEPAD_FACE_1",
+  "data": [1],
+  "metadata": {}
 }
 ```
-
-or 
-
+or
 ```json
 {
-  "type": "AXIS",
-  "id": "LEFT_ANALOG_STICK_X",
-  "value": 0.75,
-  "timestamp": 1647859432.456
+  "output_id": "GAMEPAD_LEFT_ANALOG_STICK_X",
+  "data": [0.75],
+  "metadata": {}
 }
 ```
 
@@ -134,19 +131,19 @@ pip install -e .
 
 ## Contribution Guide
 
-- Format with [ruff](https://docs.astral.sh/ruff/):
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Future Enhancements

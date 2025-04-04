@@ -113,18 +113,23 @@ waveshare_servo/
 ## Dora Node Integration
 
 ### Inputs
-- `move_servo`: Move a servo to specified position
-- `wiggle_servo`: Wiggle a servo for identification
-- `calibrate_servo`: Calibrate a servo's position limits
-- `update_servo_setting`: Update a specific servo setting
-- `tick`: Periodic trigger for servo scanning
-- `settings`: Receive broadcast of all settings
-- `setting_updated`: Receive notification of a specific setting change
+| Input ID                 | Source                         | Description                               |
+|--------------------------|--------------------------------|-------------------------------------------|
+| tick                     | dora/timer/secs/3              | Periodic trigger for servo scanning       |
+| move_servo               | web/move_servo                 | Move a servo to specified position        |
+| wiggle_servo             | web/wiggle_servo               | Wiggle a servo for identification         |
+| calibrate_servo          | web/calibrate_servo            | Calibrate a servo's position limits       |
+| update_servo_setting     | web/update_servo_setting       | Update a specific servo setting           |
+| GAMEPAD_* (various)      | web/GAMEPAD_*                  | Gamepad button/axis events for mapping    |
+| *settings*               | *config/settings*              | *(Future) Receive broadcast of all settings* |
+| *setting_updated*        | *config/setting_updated*       | *(Future) Receive notification of setting change* |
 
 ### Outputs
-- `servo_status`: Status update for a single servo
-- `servos_list`: List of all discovered servos
-- `update_setting`: Send setting updates to config node
+| Output ID         | Destination     | Description                               |
+|-------------------|-----------------|-------------------------------------------|
+| servo_status      | web             | Status update for a single servo          |
+| servos_list       | web             | List of all discovered servos             |
+| *update_setting*  | *config*        | *(Future) Send setting updates to config* |
 
 ## Getting Started
 1. Connect the Waveshare servo controller to a USB port
@@ -155,19 +160,19 @@ waveshare_servo/
 - **Proper Error Handling**: Comprehensive error handling and logging
 
 ## Contribution Guide
-- Format with [ruff](https://docs.astral.sh/ruff/):
+- Format code:
 ```bash
-ruff check . --fix
+ruff format .
 ```
 
-- Lint with ruff:
+- Lint code:
 ```bash
 ruff check .
 ```
 
-- Test with [pytest](https://github.com/pytest-dev/pytest)
+- Test with [pytest](https://docs.pytest.org/):
 ```bash
-pytest . # Test
+pytest .
 ```
 
 ## Future Enhancements
