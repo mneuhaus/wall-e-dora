@@ -23,15 +23,27 @@ const VolumeControl = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [volume, setVolume] = useState(50);
   
-  // Initial volume fetch could be added here if the backend supports it
+  // Initial volume fetch and set up listener for volume updates
   useEffect(() => {
-    // Emit initial volume when component mounts
-    node.emit('set_volume', [volume]);
+    // Emit initial volume when component mounts (convert from percentage to float)
+    node.emit('set_volume', [volume / 100]);
+    
+    // Listen for volume updates from the backend
+    const unsubscribe = node.on('volume', (event) => {
+      if (event.value && Array.isArray(event.value) && event.value.length > 0) {
+        // Convert from float (0.0-1.0) to percentage (0-100)
+        const newVolume = Math.round(event.value[0] * 100);
+        setVolume(newVolume);
+      }
+    });
+    
+    return () => unsubscribe(); // Clean up on unmount
   }, []);
   
   const handleVolumeChange = (newVolume) => {
     setVolume(newVolume);
-    node.emit('set_volume', [newVolume]);
+    // Convert percentage (0-100) to float (0.0-1.0) for the audio node
+    node.emit('set_volume', [newVolume / 100]);
   };
 
   const getVolumeIcon = () => {
