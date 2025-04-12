@@ -15,6 +15,7 @@ const RandomSoundControl = () => {
   const timeoutRef = useRef(null);
   const [pulseEffect, setPulseEffect] = useState(false);
   const isActiveRef = useRef(false); // Reference to track active state consistently
+  const [currentSound, setCurrentSound] = useState("");
   
   // Request sounds list on mount
   useEffect(() => {
@@ -23,10 +24,19 @@ const RandomSoundControl = () => {
     node.emit('scan_sounds', []);
     
     // Listen for sounds list
-    const unsubscribe = node.on('available_sounds', (event) => {
+    const unsubscribe1 = node.on('available_sounds', (event) => {
       console.log("Received sounds list:", event);
       setSounds(event.value || []);
       setLoading(false);
+    });
+    
+    // Listen for currently playing sound
+    const unsubscribe2 = node.on('current_sound', (event) => {
+      if (event && event.value) {
+        const soundName = event.value[0] || "";
+        console.log("Current sound updated in RandomSoundControl:", soundName);
+        setCurrentSound(soundName);
+      }
     });
     
     // Set a timeout in case the server doesn't respond
@@ -36,7 +46,8 @@ const RandomSoundControl = () => {
     }, 3000);
     
     return () => {
-      unsubscribe();
+      unsubscribe1();
+      unsubscribe2();
       clearTimeout(timeout);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);

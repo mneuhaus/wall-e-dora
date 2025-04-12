@@ -47,13 +47,12 @@ def play_startup_sound(sounds_dir: str):
     except pygame.error as e:
         print(f"Error playing startup sound: {e}")
 
-
-def play_sound(sounds_dir: str, filename: str):
+def play_sound(sounds_dir: str, filename: str, node=None):
     """Play the specified sound file."""
     sound_file = os.path.join(sounds_dir, filename)
     if not os.path.exists(sound_file):
         print(f"Sound file not found: {sound_file}")
-        return
+        return False
     try:
         pygame.mixer.stop()
         sound = pygame.mixer.Sound(sound_file)
@@ -61,8 +60,15 @@ def play_sound(sounds_dir: str, filename: str):
         if channel:
             channel.play(sound)
             print(f"Playing sound: {filename}")
+            
+            # Broadcast the currently playing sound if node is provided
+            if node:
+                node.send_output("current_sound", pa.array([filename]), metadata={})
+            return True
+        return False
     except pygame.error as e:
         print(f"Error playing sound {filename}: {e}")
+        return False
 
 
 def load_volume() -> float:
@@ -101,6 +107,8 @@ def main():
         pygame.mixer.Channel(i).set_volume(vol)
     play_startup_sound(sounds_dir)
     node = Node()
+    # Track current playing sound
+    current_sound = None
     print("Audio node started")
     for event in node:
         if event["type"] == "INPUT":
@@ -114,14 +122,22 @@ def main():
                         filename = event["value"]
                 except Exception:
                     filename = event["value"]
-                play_sound(sounds_dir, filename)
+                
+                success = play_sound(sounds_dir, filename, node)
+                if success:
+                    current_sound = filename
 
             if event["id"] == "scan_sounds":
                 available = [f for f in os.listdir(sounds_dir) if f.endswith('.mp3')]
                 node.send_output("available_sounds", pa.array(available), metadata={})
+                # If a sound is playing, send it again to ensure the frontend knows about it
+                if current_sound:
+                    node.send_output("current_sound", pa.array([current_sound]), metadata={})
             elif event["id"] == "stop":
                 print("Stopping all sounds")
                 pygame.mixer.stop()
+                current_sound = None
+                node.send_output("current_sound", pa.array([""]), metadata={})
             elif event["id"] == "set_volume":
                 print('set_volume: ', event['value'])
                 try:

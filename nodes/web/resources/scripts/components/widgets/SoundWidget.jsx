@@ -7,10 +7,14 @@ import node from '../../Node';
  * @component
  * @param {Object} props - Component props
  */
+// Persistent state to track active sound across instances
+let persistentActiveSound = null;
+
 const SoundWidget = (props) => {
   const [sounds, setSounds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
+  const [activeSound, setActiveSound] = useState(persistentActiveSound);
   
   // Request sounds list on mount
   useEffect(() => {
@@ -18,9 +22,25 @@ const SoundWidget = (props) => {
     node.emit('scan_sounds', []);
     
     // Listen for sounds list
-    const unsubscribe = node.on('available_sounds', (event) => {
+    const unsubscribe1 = node.on('available_sounds', (event) => {
       setSounds(event.value || []);
       setLoading(false);
+    });
+    
+    // Listen for currently playing sound
+    const unsubscribe2 = node.on('current_sound', (event) => {
+      if (event && event.value) {
+        const soundName = event.value[0] || "";
+        console.log("Current sound updated:", soundName);
+        
+        if (soundName) {
+          setActiveSound(soundName);
+          persistentActiveSound = soundName;
+        } else {
+          setActiveSound(null);
+          persistentActiveSound = null;
+        }
+      }
     });
     
     // Set a timeout in case the server doesn't respond
@@ -29,7 +49,8 @@ const SoundWidget = (props) => {
     }, 3000);
     
     return () => {
-      unsubscribe();
+      unsubscribe1();
+      unsubscribe2();
       clearTimeout(timeout);
     };
   }, []);
@@ -82,6 +103,34 @@ const SoundWidget = (props) => {
     
     .sound-item.playing {
       background-color: rgba(255, 191, 0, 0.3);
+    }
+    
+    .sound-item.active {
+      position: relative;
+      border-left: 3px solid rgba(255, 191, 0, 0.8);
+    }
+    
+    .sound-item.active::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: rgba(255, 191, 0, 0.8);
+      animation: pulse-left 2s infinite;
+    }
+    
+    @keyframes pulse-left {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 191, 0, 0.8);
+      }
+      70% {
+        box-shadow: 0 0 8px 0 rgba(255, 191, 0, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 191, 0, 0);
+      }
     }
     
     .sound-item i {
@@ -141,7 +190,7 @@ const SoundWidget = (props) => {
           <div 
             key={sound}
             onClick={() => playSound(sound)}
-            className={`sound-item ${currentlyPlaying === sound ? 'playing' : ''}`}
+            className={`sound-item ${currentlyPlaying === sound ? 'playing' : ''} ${activeSound === sound ? 'active' : ''}`}
             role="button"
             tabIndex={0}
             onKeyPress={(e) => {
@@ -150,7 +199,7 @@ const SoundWidget = (props) => {
               }
             }}
           >
-            <i className={`fas ${currentlyPlaying === sound ? 'fa-volume-high' : 'fa-volume-up'}`}></i>
+            <i className={`fas ${activeSound === sound ? 'fa-volume-high' : (currentlyPlaying === sound ? 'fa-volume-up' : 'fa-volume-low')}`}></i>
             <span className="sound-name">{formatSoundName(sound)}</span>
           </div>
         ))
