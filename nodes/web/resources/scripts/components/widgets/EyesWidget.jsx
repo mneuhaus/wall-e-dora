@@ -114,7 +114,7 @@ const EyesWidget = (props) => {
       right: 0;
       bottom: 0;
       border: 3px solid rgba(255, 191, 0, 0.8);
-      border-radius: 8px;
+      border-radius: 50%;
       animation: pulse 2s infinite;
     }
     
