@@ -21,7 +21,7 @@ import node from '../../Node';
 
 const VolumeControl = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [volume, setVolume] = useState(50);
+  const [volume, setVolume] = useState(35);
   
   // Initial volume fetch and set up listener for volume updates
   useEffect(() => {

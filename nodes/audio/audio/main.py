@@ -35,9 +35,15 @@ def play_startup_sound(sounds_dir: str):
         if not channel:
             print("No available audio channels")
             return
+        # Save current volume
+        current_vol = channel.get_volume()
+        # Set fixed startup volume at 5%
+        channel.set_volume(0.05)
         channel.play(sound)
-        print("Playing startup sound")
+        print("Playing startup sound at 5% volume")
         time.sleep(2)
+        # Restore original volume
+        channel.set_volume(current_vol)
     except pygame.error as e:
         print(f"Error playing startup sound: {e}")
 
