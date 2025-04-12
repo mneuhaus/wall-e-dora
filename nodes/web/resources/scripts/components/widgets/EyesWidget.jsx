@@ -102,7 +102,6 @@ const EyesWidget = (props) => {
     }
     
     .gif-item.active {
-      box-shadow: 0 0 0 3px rgba(255, 191, 0, 0.8);
       position: relative;
     }
     
