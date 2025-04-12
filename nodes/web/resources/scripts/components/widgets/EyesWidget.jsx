@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Select, Group, Tooltip, ActionIcon } from '@mantine/core';
 import node from '../../Node';
 
 /**
@@ -12,6 +13,8 @@ const EyesWidget = (props) => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [sortBy, setSortBy] = useState("filename");
+  const [sortOrder, setSortOrder] = useState("asc");
   
   // Listen for available images
   useEffect(() => {
@@ -20,6 +23,16 @@ const EyesWidget = (props) => {
       console.log('Received images:', event);
       setImages(event.value || []);
       setLoading(false);
+      
+      // Update sort state from metadata if available
+      if (event.metadata) {
+        if (event.metadata.sort_by) {
+          setSortBy(event.metadata.sort_by);
+        }
+        if (event.metadata.sort_order) {
+          setSortOrder(event.metadata.sort_order);
+        }
+      }
     });
     
     // Set a timeout in case the server doesn't respond
@@ -33,6 +46,17 @@ const EyesWidget = (props) => {
     };
   }, []);
   
+  // Request images with the current sort settings
+  const requestImages = () => {
+    node.emit('list_images', [{ sort_by: sortBy, sort_order: sortOrder }]);
+    setLoading(true);
+  };
+  
+  // Update sorting when sortBy or sortOrder changes
+  useEffect(() => {
+    requestImages();
+  }, [sortBy, sortOrder]);
+  
   const formatImageName = (filename) => {
     // Remove file extension and convert special characters to spaces
     return filename
@@ -41,6 +65,17 @@ const EyesWidget = (props) => {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+  };
+  
+  // Format file size to KB or MB
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) {
+      return bytes + ' B';
+    } else if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + ' KB';
+    } else {
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
   };
 
   const handleImageSelect = (image) => {
@@ -64,15 +99,22 @@ const EyesWidget = (props) => {
       width: 100%;
       height: 100%;
       overflow-y: auto;
-      padding: 0;
+      padding: 8px;
       padding-right: 5px;
+    }
+    
+    .sort-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      width: 100%;
     }
     
     .gif-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
       gap: 10px;
-      margin-top: 10px;
     }
     
     .gif-item {
@@ -102,12 +144,25 @@ const EyesWidget = (props) => {
       object-position: center;
       border-radius: 50%;
       overflow: hidden;
+      position: relative;
     }
     
     .gif-thumbnail img {
       width: 100%;
       height: 100%;
       object-fit: contain;
+    }
+    
+    .file-size {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      font-size: 0.6rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      z-index: 1;
     }
     
     
@@ -150,13 +205,57 @@ const EyesWidget = (props) => {
     );
   }
   
+  // Toggle sort order (asc/desc)
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  };
+  
+  // Handle sort selection change
+  const handleSortChange = (value) => {
+    setSortBy(value);
+  };
+  
   return (
     <div className="gif-gallery-container">
       <style>{styles}</style>
       
       {images.length > 0 ? (
-        <div className="gif-grid">
-          {images.map(image => (
+        <>
+          <Group position="apart" mb="xs" align="center" className="sort-controls">
+            <Select
+              size="xs"
+              value={sortBy}
+              onChange={handleSortChange}
+              data={[
+                { value: 'filename', label: 'Name' },
+                { value: 'size', label: 'Size' },
+                { value: 'timestamp', label: 'Date' }
+              ]}
+              styles={{ 
+                root: { flexGrow: 1, maxWidth: '120px' },
+                input: { 
+                  color: 'var(--mantine-color-white)',
+                  backgroundColor: 'var(--mantine-color-dark-7)'
+                }
+              }}
+            />
+            <Tooltip 
+              label={sortOrder === "asc" ? "Ascending order" : "Descending order"} 
+              position="right"
+            >
+              <ActionIcon 
+                size="sm" 
+                variant="subtle"
+                color="amber"
+                onClick={toggleSortOrder}
+              >
+                <i className={`fas fa-sort-${sortOrder === "asc" ? "up" : "down"}`}></i>
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+          
+          <div className="gif-grid">
+            {images.map(image => (
             <div 
               key={image.filename}
               onClick={() => handleImageSelect(image)}
@@ -175,10 +274,12 @@ const EyesWidget = (props) => {
                   alt={image.filename}
                   loading="lazy"
                 />
+                <div className="file-size">{formatFileSize(image.size)}</div>
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       ) : (
         <div className="empty-state">
           <i className="fas fa-image" style={{ marginRight: '10px', opacity: 0.5 }}></i>

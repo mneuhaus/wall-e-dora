@@ -51,8 +51,8 @@ def broadcast_available_images(context: dict, event: dict = None):
                 "timestamp": os.path.getmtime(file_path)
             })
     
-    # Sort by filename
-    image_files.sort(key=lambda x: x["filename"])
+    # Sort files by size (smallest first)
+    image_files.sort(key=lambda x: x["size"])
     
     # Convert to Arrow array
     image_data = pa.array(image_files)
