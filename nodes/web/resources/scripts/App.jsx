@@ -32,7 +32,7 @@ import {
 } from '@mantine/core';
 
 // Import components
-import { ConnectionStatus, ServoStatus, PowerStatus } from './components/status';
+import { ConnectionStatus, ServoStatus, PowerStatus, DoorStatus } from './components/status';
 import { 
   VolumeControl as Volume,
   RandomSoundControl as RandomSound
@@ -82,6 +82,7 @@ const App = () => {
                 <Group gap="xs" wrap="nowrap">
                   <Gamepad />
                   <ServoStatus />
+                  <DoorStatus />
                   <Volume />
                   <RandomSound />
                   <Power />

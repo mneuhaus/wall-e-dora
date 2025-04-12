@@ -9,14 +9,16 @@ import ConnectionStatus from './ConnectionStatus';
 import ServoStatus from './ServoStatus';
 import GamepadStatus from './GamepadStatus';
 import PowerStatus from './PowerStatus';
+import DoorStatus from './DoorStatus';
 
 // Export components individually
-export { ConnectionStatus, ServoStatus, GamepadStatus, PowerStatus };
+export { ConnectionStatus, ServoStatus, GamepadStatus, PowerStatus, DoorStatus };
 
 // Default export for importing all at once
 export default {
   ConnectionStatus,
   ServoStatus,
   GamepadStatus,
-  PowerStatus
+  PowerStatus,
+  DoorStatus
 };
