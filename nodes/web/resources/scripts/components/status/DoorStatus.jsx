@@ -10,6 +10,7 @@
 import React, { useState, useEffect } from 'react';
 import { ActionIcon, Tooltip } from '@mantine/core';
 import { useAppContext } from '../../contexts/AppContext';
+import { statusIconStyles } from './StatusIconStyles';
 
 const DoorStatus = () => {
   const { availableServos } = useAppContext();
@@ -39,10 +40,14 @@ const DoorStatus = () => {
         variant="transparent" 
         radius="xl"
         aria-label="Door Status"
+        style={statusIconStyles.actionIcon}
       >
         <i 
           className={`fa-solid ${isOpen ? 'fa-door-open' : 'fa-door-closed'}`}
-          style={{ color: isOpen ? 'var(--mantine-color-amber-6)' : 'var(--mantine-color-gray-6)' }}
+          style={{ 
+            color: isOpen ? 'var(--mantine-color-amber-6)' : 'var(--mantine-color-gray-6)',
+            ...statusIconStyles.icon
+          }}
         ></i>
       </ActionIcon>
     </Tooltip>

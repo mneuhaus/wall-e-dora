@@ -57,29 +57,29 @@ const App = () => {
         }}
       >
         <AppShell
-          header={{ height: rem(30) }}
+          header={{ height: rem(45) }} /* Increased by 50% from 30 to 45 */
           padding={0}
           styles={{
             main: {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'auto',
-              paddingTop: rem(35),
+              paddingTop: rem(50), /* Increased from 35 to 50 */
               paddingBottom: 0,
               paddingLeft: 0,
               paddingRight: 0,
-              height: 'calc(100vh - 35px)'
+              height: 'calc(100vh - 50px)' /* Adjusted to match new header height + padding */
             }
           }}
         >
           <AppShell.Header>
-            <Container fluid px="xs" h="100%">
+            <Container fluid px="sm" h="100%">
               <Group h="100%" justify="space-between" wrap="nowrap">
                 <Box component={Link} to="/" style={{ textDecoration: 'none' }}>
-                  <Title order={4} c="amber">wall-e</Title>
+                  <Title order={3} c="amber" style={{ fontSize: rem(22) }}>wall-e</Title>
                 </Box>
                 
-                <Group gap="xs" wrap="nowrap">
+                <Group gap="md" wrap="nowrap">
                   <Gamepad />
                   <ServoStatus />
                   <DoorStatus />

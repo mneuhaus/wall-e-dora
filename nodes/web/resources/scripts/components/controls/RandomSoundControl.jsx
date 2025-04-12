@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionIcon, Tooltip } from '@mantine/core';
 import node from '../../Node';
+import { controlStyles } from '../status/controls';
 
 /**
  * RandomSoundControl - A control component that plays random sounds at random intervals
@@ -180,8 +181,12 @@ const RandomSoundControl = () => {
           disabled={isDisabled}
           aria-label="Toggle random sounds"
           className={pulseEffect ? 'pulse' : ''}
+          style={controlStyles.actionIcon}
         >
-          <i className={`fas fa-shuffle ${isActive ? 'amber-text' : ''}`}></i>
+          <i 
+            className={`fas fa-shuffle ${isActive ? 'amber-text' : ''}`}
+            style={controlStyles.icon}
+          ></i>
         </ActionIcon>
         {isActive && (
           <span 

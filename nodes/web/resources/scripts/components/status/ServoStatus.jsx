@@ -21,6 +21,7 @@ import {
 import { useAppContext } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
 import node from '../../Node';
+import { statusIconStyles } from './StatusIconStyles';
 
 const ServoStatus = () => {
   const { availableServos } = useAppContext();
@@ -65,13 +66,15 @@ const ServoStatus = () => {
           variant="transparent"
           radius="xl"
           aria-label="Servos"
+          style={statusIconStyles.actionIcon}
         >
           <i 
             className="fa-solid fa-gears" 
             style={{ 
               color: servoData.length > 0 
                 ? 'var(--mantine-color-amber-6)' 
-                : 'var(--mantine-color-gray-6)'
+                : 'var(--mantine-color-gray-6)',
+              ...statusIconStyles.icon
             }}
           ></i>
         </ActionIcon>

@@ -18,6 +18,7 @@ import {
   rem
 } from '@mantine/core';
 import node from '../../Node';
+import { controlStyles } from '../status/controls';
 
 const VolumeControl = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,10 +71,14 @@ const VolumeControl = () => {
           radius="xl"
           aria-label="Volume Control"
           onClick={() => setIsOpen(!isOpen)}
+          style={controlStyles.actionIcon}
         >
           <i 
             className={`fa-solid ${getVolumeIcon()}`}
-            style={{ color: 'var(--mantine-color-amber-6)' }}
+            style={{ 
+              color: 'var(--mantine-color-amber-6)',
+              ...controlStyles.icon
+            }}
           ></i>
         </ActionIcon>
       </Popover.Target>

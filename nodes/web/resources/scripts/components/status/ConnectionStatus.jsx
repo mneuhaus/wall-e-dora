@@ -9,6 +9,7 @@
 import React from 'react';
 import { ActionIcon, Tooltip } from '@mantine/core';
 import { useAppContext } from '../../contexts/AppContext';
+import { statusIconStyles } from './StatusIconStyles';
 
 const ConnectionStatus = () => {
   const { isConnected } = useAppContext();
@@ -23,10 +24,14 @@ const ConnectionStatus = () => {
         variant="transparent" 
         radius="xl"
         aria-label="Connection Status"
+        style={statusIconStyles.actionIcon}
       >
         <i 
           className="fa-solid fa-wifi" 
-          style={{ color: `var(--mantine-color-${isConnected ? 'green' : 'red'}-6)` }}
+          style={{ 
+            color: `var(--mantine-color-${isConnected ? 'green' : 'red'}-6)`,
+            ...statusIconStyles.icon
+          }}
         ></i>
       </ActionIcon>
     </Tooltip>

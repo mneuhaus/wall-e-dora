@@ -18,6 +18,7 @@ import {
   rem 
 } from '@mantine/core';
 import node from '../../Node';
+import { statusIconStyles } from './StatusIconStyles';
 
 const PowerStatus = () => {
   const [voltage, setVoltage] = useState('');
@@ -139,14 +140,22 @@ const PowerStatus = () => {
         <UnstyledButton
           aria-label="Battery Status"
           onClick={() => setIsOpen(!isOpen)}
-          style={{ padding: '6px 8px' }}
+          style={{ 
+            padding: '6px 8px',
+            height: rem(36),
+            display: 'flex',
+            alignItems: 'center'
+          }}
         >
           <Group spacing={4}>
             <i 
               className={`fa-solid ${getBatteryIcon()}`} 
-              style={{ color: `var(--mantine-color-${getBatteryStatusColor()}-6)` }}
+              style={{ 
+                color: `var(--mantine-color-${getBatteryStatusColor()}-6)`,
+                ...statusIconStyles.icon
+              }}
             ></i>
-            <Text size="sm" fw={500}>{soc}%</Text>
+            <Text size="md" fw={500}>{soc}%</Text>
           </Group>
         </UnstyledButton>
       </Menu.Target>

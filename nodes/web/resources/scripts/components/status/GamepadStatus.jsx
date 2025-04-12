@@ -16,6 +16,7 @@ import {
   Stack, 
   Box 
 } from '@mantine/core';
+import { statusIconStyles } from './StatusIconStyles';
 
 const GamepadStatus = () => {
   const [gamepads, setGamepads] = useState([]);
@@ -88,6 +89,7 @@ const GamepadStatus = () => {
           radius="xl"
           aria-label="Gamepads"
           onClick={() => setIsOpen(!isOpen)}
+          style={statusIconStyles.actionIcon}
         >
           <Box pos="relative">
             <i 
@@ -95,7 +97,8 @@ const GamepadStatus = () => {
               style={{ 
                 color: gamepads.length > 0 
                   ? 'var(--mantine-color-amber-6)' 
-                  : 'var(--mantine-color-gray-6)'
+                  : 'var(--mantine-color-gray-6)',
+                ...statusIconStyles.icon
               }}
             ></i>
           </Box>
