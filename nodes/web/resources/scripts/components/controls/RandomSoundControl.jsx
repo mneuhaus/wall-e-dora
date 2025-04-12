@@ -81,11 +81,11 @@ const RandomSoundControl = () => {
       // Play the sound using SoundWidget's approach
       node.emit('play_sound', [randomSound]);
       
-      // Visual feedback
+      // Visual feedback with extended duration
       setPulseEffect(true);
       setTimeout(() => {
         setPulseEffect(false);
-      }, 1000);
+      }, 3000);
     } catch (error) {
       console.error("Error playing sound:", error);
     }
@@ -125,11 +125,11 @@ const RandomSoundControl = () => {
     try {
       node.emit('play_sound', [randomSound]);
       
-      // Visual feedback
+      // Visual feedback with extended duration
       setPulseEffect(true);
       setTimeout(() => {
         setPulseEffect(false);
-      }, 1000);
+      }, 3000);
       
       // Schedule the next sound
       const minDelay = 5000;
@@ -182,9 +182,25 @@ const RandomSoundControl = () => {
   // Button is disabled if no sounds are available
   const isDisabled = loading || sounds.length === 0;
 
+  // Add glow animation with styles
+  const styles = `
+    @keyframes glow {
+      0% {
+        filter: drop-shadow(0 0 0 rgba(255, 191, 0, 0.8));
+      }
+      50% {
+        filter: drop-shadow(0 0 6px rgba(255, 191, 0, 0.8));
+      }
+      100% {
+        filter: drop-shadow(0 0 0 rgba(255, 191, 0, 0.8));
+      }
+    }
+  `;
+
   return (
     <Tooltip label={isActive ? "Turn off random sounds" : "Turn on random sounds"} withArrow position="bottom">
       <div style={{ position: 'relative' }}>
+        <style>{styles}</style>
         <ActionIcon
           variant="subtle"
           color={isActive ? "amber" : "gray"}
@@ -196,23 +212,13 @@ const RandomSoundControl = () => {
         >
           <i 
             className={`fas fa-shuffle ${isActive ? 'amber-text' : ''}`}
-            style={controlStyles.icon}
+            style={{
+              ...controlStyles.icon,
+              animation: pulseEffect && isActive ? 'glow 1s ease-in-out' : 'none',
+            }}
           ></i>
         </ActionIcon>
-        {isActive && (
-          <span 
-            style={{
-              position: 'absolute',
-              top: -5,
-              right: -5,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: '#ffc107',
-              animation: 'pulse 1s infinite alternate'
-            }}
-          />
-        )}
+        {/* Removed small circle indicator */}
       </div>
     </Tooltip>
   );
