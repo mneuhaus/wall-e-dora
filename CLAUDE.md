@@ -203,6 +203,37 @@ node_name/
 - Use Apache Arrow arrays for data passing between nodes
 - Node event loop: `for event in node: if event["type"] == "INPUT" and event["id"] == "[expected_id]": ...`
 
+### Web-to-Dora Communication Best Practices
+
+**Data Format Requirements:**
+- Web node sends data using `node.emit(output_id, data, metadata)` from JavaScript
+- Data is automatically wrapped in `pa.array(data)` by the web node before sending to Dora
+- Receiving nodes extract data using `extract_event_data()` utility which gets the first element: `data[0]`
+- **Critical**: If sending structured data (objects), send as `[{key: value}]` arrays, not JSON strings
+
+**Servo Command Example:**
+```javascript
+// ✅ CORRECT - Send object in array
+node.emit('move_servo', [{id: servoId, position: targetPosition}]);
+
+// ❌ WRONG - Don't send JSON strings
+node.emit('move_servo', [JSON.stringify({id: servoId, position: targetPosition})]);
+
+// ❌ WRONG - Don't send flat arrays expecting different parsing
+node.emit('move_servo', [servoId, targetPosition, speed]);
+```
+
+**Data Flow Chain:**
+1. JavaScript: `node.emit('move_servo', [{id: 5, position: 700}])`
+2. Web Node: Wraps in `pa.array([{id: 5, position: 700}])`
+3. Receiving Node: `extract_event_data()` returns `{id: 5, position: 700}` (first element)
+4. Handler: Uses `data.get('id')` and `data.get('position')`
+
+**Debugging Tips:**
+- Check existing working implementations (e.g., ServoDebugView.jsx) for data format patterns
+- Look for `'int' object has no attribute 'get'` errors - indicates wrong data format sent
+- Web node logs show the exact `output_id` and `data` being sent for debugging
+
 ## Python Best Practices
 - Use Python 3.12+ with type annotations
 - Follow imports order: standard library → third-party → local modules
