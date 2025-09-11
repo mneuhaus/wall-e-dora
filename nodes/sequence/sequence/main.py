@@ -85,8 +85,8 @@ def run_hands_up(node: Node):
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
     time.sleep(0.15)
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
-    # Return to neutral
-    neutral_pose(node)
+    # Return to neutral (keep eyes from this sequence)
+    neutral_pose(node, keep_eyes=True)
     print("Sequence: hands-up complete")
 
 
@@ -155,8 +155,8 @@ def run_party(node: Node):
         node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_RIGHT }]))
         time.sleep(0.12)
         node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
-    # Return to neutral
-    neutral_pose(node)
+    # Return to neutral (keep eyes from this sequence)
+    neutral_pose(node, keep_eyes=True)
     print("Sequence: party complete")
 
 
