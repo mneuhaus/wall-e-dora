@@ -62,12 +62,14 @@ def run_hands_up(node: Node):
     # Sound: joyful
     node.send_output("play_sound_sequence", pa.array(["freudiges-jubeln.mp3"]))
 
-    # Arms up (left=#2, right=#13), then back down
+    # Arms up (left=#2, right=#13), then back down (staggered to avoid overlap issues)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 820 }]))
+    time.sleep(0.15)
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 940 }]))
     time.sleep(1.2)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
-    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 720 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
+    time.sleep(0.15)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
     # Return to neutral
     neutral_pose(node)
     print("Sequence: hands-up complete")
@@ -141,15 +143,17 @@ def neutral_pose(node: Node, close_door: bool = True, keep_eyes: bool = False):
     # Door closed (optional)
     if close_door:
         node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
-    # Arms to neutral
+    # Arms to neutral (staggered)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
+    time.sleep(0.15)
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
     # Head sides to neutral one at a time (avoid collision)
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
-    time.sleep(0.12)
+    time.sleep(0.2)
     node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_NEUTRAL }]))
     # Head pivot centered
     node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+    time.sleep(0.2)
 
 
 if __name__ == "__main__":
