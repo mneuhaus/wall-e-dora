@@ -1,0 +1,11 @@
+[project]
+name = "sequence"
+version = "0.1.0"
+description = "Simple sequence executor node for wall-e-dora"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["dora-rs>=0.3.9", "pyarrow>=15.0.0"]
+
+[project.scripts]
+sequence = "sequence.main:main"
+

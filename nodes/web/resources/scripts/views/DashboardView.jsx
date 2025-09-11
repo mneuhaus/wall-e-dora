@@ -10,6 +10,7 @@ import React, { useEffect, forwardRef } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import node from '../Node';
 import EyesWidget from '../components/widgets/EyesWidget';
+import SequenceBar from '../components/widgets/SequenceBar';
 import SoundWidget from '../components/widgets/SoundWidget';
 
 const DashboardView = forwardRef((props, ref) => {
@@ -63,6 +64,7 @@ const DashboardView = forwardRef((props, ref) => {
       <div className="dashboard-grid">
         <div className="eyes-content">
           <EyesWidget />
+          <SequenceBar />
         </div>
         
         <div className="sounds-content">

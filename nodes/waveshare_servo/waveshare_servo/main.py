@@ -51,6 +51,7 @@ def process_event(event, node, scanner, config, servos, next_available_id):
         # Map event IDs to handler functions
         handlers = {
             "move_servo": lambda evt: handle_move_servo(context, evt),
+            "move_servo_sequence": lambda evt: handle_move_servo(context, evt),
             "wiggle_servo": lambda evt: handle_wiggle_servo(context, evt),
             "calibrate_servo": lambda evt: handle_calibrate_servo(context, evt),
             "update_servo_setting": lambda evt: handle_update_servo_setting(context, evt),

@@ -49,6 +49,7 @@ nodes:
       - set_volume
       - stop
       - play_gif
+      - sequence_trigger
       - GAMEPAD_LEFT_ANALOG_STICK_X
       - GAMEPAD_LEFT_ANALOG_STICK_Y
       - GAMEPAD_RIGHT_ANALOG_STICK_X
@@ -90,6 +91,7 @@ nodes:
     path: nodes/audio/audio/main.py
     inputs:
       play_sound: web/play_sound
+      play_sound_sequence: sequence/play_sound_sequence
       scan_sounds: dora/timer/secs/3
       volume_tick: dora/timer/secs/1
       set_volume: web/set_volume
@@ -116,6 +118,7 @@ nodes:
       wiggle_servo: web/wiggle_servo
       calibrate_servo: web/calibrate_servo
       update_servo_setting: web/update_servo_setting
+      move_servo_sequence: sequence/move_servo_sequence
       # Gamepad control inputs
       GAMEPAD_LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
       GAMEPAD_LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
@@ -166,3 +169,11 @@ nodes:
       play_gif: web/play_gif
     outputs:
       - available_images
+
+  - id: sequence
+    path: nodes/sequence/sequence/main.py
+    inputs:
+      trigger: web/sequence_trigger
+    outputs:
+      - play_sound_sequence
+      - move_servo_sequence

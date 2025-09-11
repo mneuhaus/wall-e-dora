@@ -112,7 +112,7 @@ def main():
     print("Audio node started")
     for event in node:
         if event["type"] == "INPUT":
-            if event["id"] == "play_sound":
+            if event["id"] in ("play_sound", "play_sound_sequence"):
                 # Assume event["value"] is a pyarrow array with the sound filename as the first element.
                 try:
                     if hasattr(event["value"], "to_pylist"):
