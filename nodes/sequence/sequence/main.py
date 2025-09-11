@@ -59,6 +59,10 @@ def main():
                 run_candy(node)
             elif seq_id == "party":
                 run_party(node)
+            elif seq_id == "neutral":
+                # Explicit neutral request: reset everything and close door
+                neutral_pose(node, close_door=True, keep_eyes=False)
+                print("Sequence: neutral complete")
             else:
                 print(f"Sequence: unknown sequence '{seq_id}'")
 
