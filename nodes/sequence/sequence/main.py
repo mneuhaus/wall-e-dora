@@ -71,8 +71,8 @@ def run_candy(node: Node):
 
 
 def run_party(node: Node):
-    # Play background music short sample
-    node.send_output("play_sound_sequence", pa.array(["background-music (1).mp3"]))
+    # Play dancing music clip (träumerisches-summen)
+    node.send_output("play_sound_sequence", pa.array(["träumerisches-summen.mp3"]))
     # Quick alternating arm bumps
     for _ in range(3):
         node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 560 }]))
@@ -86,4 +86,3 @@ def run_party(node: Node):
 
 if __name__ == "__main__":
     main()
-
