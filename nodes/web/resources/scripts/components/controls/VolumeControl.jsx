@@ -24,12 +24,9 @@ const VolumeControl = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [volume, setVolume] = useState(35);
   
-  // Initial volume fetch and set up listener for volume updates
+  // Listen for volume updates from the backend
   useEffect(() => {
-    // Emit initial volume when component mounts (convert from percentage to float)
-    node.emit('set_volume', [volume / 100]);
-    
-    // Listen for volume updates from the backend
+    // Subscribe to backend volume and reflect it in the slider (0.0–1.0 -> 0–100)
     const unsubscribe = node.on('volume', (event) => {
       if (event.value && Array.isArray(event.value) && event.value.length > 0) {
         // Convert from float (0.0-1.0) to percentage (0-100)

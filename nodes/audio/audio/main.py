@@ -107,6 +107,11 @@ def main():
         pygame.mixer.Channel(i).set_volume(vol)
     play_startup_sound(sounds_dir)
     node = Node()
+    # Immediately broadcast current volume so UI reflects persisted value
+    try:
+        node.send_output("volume", pa.array([vol]), metadata={})
+    except Exception:
+        pass
     # Track current playing sound
     current_sound = None
     print("Audio node started")
