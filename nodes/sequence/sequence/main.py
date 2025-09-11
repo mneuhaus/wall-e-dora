@@ -64,7 +64,10 @@ def run_candy(node: Node):
     node.send_output("play_gif_sequence", pa.array(["ghibli-candy.gif"]))
     # Sound: curious
     node.send_output("play_sound_sequence", pa.array(["fragendes-seufzen.mp3"]))
-    # Head tilt one side only (left head=#6)
+    # Open front door (#5). Conservative positions; adjust via config if needed.
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": 600 }]))  # open
+    time.sleep(0.5)
+    # Head tilt one side only (left head=#6), peek
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 560 }]))
     time.sleep(0.5)
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 460 }]))
@@ -73,6 +76,9 @@ def run_candy(node: Node):
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 560 }]))
     time.sleep(0.3)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
+    # Close door
+    time.sleep(0.2)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": 500 }]))  # close
     print("Sequence: candy complete")
 
 
