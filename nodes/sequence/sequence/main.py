@@ -14,8 +14,11 @@ ARM_LEFT_NEUTRAL = 0      # servo #2 (down)
 ARM_LEFT_UP = 215         # servo #2 (up)
 ARM_RIGHT_NEUTRAL = 300   # servo #13 (down)
 ARM_RIGHT_UP = 85         # servo #13 (up)
-HEAD_LEFT_NEUTRAL = 460   # servo #6
-HEAD_RIGHT_NEUTRAL = 460  # servo #4
+# Head sides (provided by user)
+HEAD_LEFT_NEUTRAL = 120   # servo #6 (down)
+HEAD_LEFT_UP = 230        # servo #6 (up)
+HEAD_RIGHT_NEUTRAL = 300  # servo #4 (down)
+HEAD_RIGHT_UP = 120       # servo #4 (up)
 HEAD_PIVOT_CENTER = 512   # servo #14
 DOOR_CLOSED = 700         # servo #5 (matches UI toggle expectations)
 DOOR_OPEN = 1023          # servo #5 (fully open)
@@ -87,7 +90,7 @@ def run_candy(node: Node):
     node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_OPEN }]))
     time.sleep(1.2)
     # Head tilt one side only (left head=#6), peek, then return
-    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 580 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_UP }]))
     time.sleep(1.0)
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
     # Left arm wiggle (#2) with larger amplitude (relative to new range)
@@ -117,19 +120,19 @@ def run_party(node: Node):
         node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 150 }]))
         time.sleep(0.15)
         node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 180 }]))
-        # Head left up (#6), then back
-        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 560 }]))
+        # Head left up (#6), then back (sequential)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_UP }]))
         time.sleep(0.18)
-        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 460 }]))
+        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
         time.sleep(0.12)
         # Arms back
         node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
         time.sleep(0.15)
         node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
-        # Head right up (#4), then back
-        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": 560 }]))
+        # Head right up (#4), then back (sequential)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_UP }]))
         time.sleep(0.18)
-        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": 460 }]))
+        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_NEUTRAL }]))
         time.sleep(0.12)
     # Return to neutral
     neutral_pose(node)
