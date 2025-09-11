@@ -126,6 +126,7 @@ The web node connects to the Dora framework with these data flows:
 #### Outputs
 | Output ID                 | Destination      | Description                               |
 |---------------------------|-----------------|-------------------------------------------|
+| slider_input              | *               | Generic UI slider event (internal/testing) |
 | play_sound                | audio           | Sound file to play                        |
 | set_volume                | audio           | Volume level to set (0.0-1.0)             |
 | stop                      | audio           | Stop sound playback                       |
@@ -138,6 +139,7 @@ The web node connects to the Dora framework with these data flows:
 | calibrate_servo           | waveshare_servo | Trigger servo calibration                 |
 | update_servo_setting      | waveshare_servo | Update a specific servo setting           |
 | update_setting            | config          | Request to update a setting in the config |
+| trigger_sequence          | sequences       | Trigger a predefined action sequence      |
 | save_gamepad_profile      | web             | Request to save a gamepad profile         |
 | get_gamepad_profile       | web             | Request to retrieve a specific profile    |
 | check_gamepad_profile     | web             | Request to check if a profile exists      |

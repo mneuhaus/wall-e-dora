@@ -91,13 +91,15 @@ graph TD
 The Audio node connects to the Dora framework with these data flows:
 
 #### Inputs
-| Input ID        | Source               | Description                     |
-|-----------------|----------------------|---------------------------------|
-| play_sound      | web/play_sound       | Play specified sound file       |
-| scan_sounds     | dora/timer/secs/3    | Trigger sound directory scan    |
-| set_volume      | web/set_volume       | Set volume level (0.0-1.0)      |
-| stop            | web/stop             | Stop all sound playback         |
-| *setting_updated*| *config/setting_updated* | *(Future) Setting update notification* |
+| Input ID            | Source                   | Description                                  |
+|---------------------|--------------------------|----------------------------------------------|
+| play_sound          | web/play_sound           | Play specified sound file                    |
+| play_sound_sequence | sequences/play_sound     | Play sound requested by a sequence           |
+| scan_sounds         | dora/timer/secs/3        | Trigger sound directory scan                 |
+| volume_tick         | dora/timer/secs/1        | Periodically publish current volume          |
+| set_volume          | web/set_volume           | Set volume level (0.0-1.0)                   |
+| stop                | web/stop                 | Stop all sound playback                      |
+| setting_updated     | config/setting_updated   | Config change notification (currently unused) |
 
 #### Outputs
 | Output ID         | Destination     | Description                    |
