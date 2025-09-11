@@ -8,6 +8,16 @@ from dora import Node
 import pyarrow as pa
 import time
 
+# Neutral/default positions (tune as needed)
+ARM_LEFT_NEUTRAL = 520    # servo #2
+ARM_RIGHT_NEUTRAL = 720   # servo #13
+HEAD_LEFT_NEUTRAL = 460   # servo #6
+HEAD_RIGHT_NEUTRAL = 460  # servo #4
+HEAD_PIVOT_CENTER = 512   # servo #14
+DOOR_CLOSED = 500         # servo #5
+DOOR_OPEN = 600           # servo #5
+DEFAULT_EYES = "realistic-orange.gif"
+
 
 def main():
     node = Node()
@@ -56,6 +66,8 @@ def run_hands_up(node: Node):
     time.sleep(1.2)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 720 }]))
+    # Return to neutral
+    neutral_pose(node)
     print("Sequence: hands-up complete")
 
 
@@ -78,7 +90,9 @@ def run_candy(node: Node):
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
     # Close door
     time.sleep(0.2)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": 500 }]))  # close
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))  # close
+    # Return to neutral
+    neutral_pose(node)
     print("Sequence: candy complete")
 
 
@@ -105,7 +119,32 @@ def run_party(node: Node):
         time.sleep(0.18)
         node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": 460 }]))
         time.sleep(0.12)
+    # Return to neutral
+    neutral_pose(node)
     print("Sequence: party complete")
+
+
+def neutral_pose(node: Node):
+    """Return the robot to a safe, neutral pose.
+
+    - Arms lowered to neutral (2,13)
+    - Head sides lowered (6 then 4) and pivot centered (14)
+    - Door closed (5)
+    - Eyes set to default
+    """
+    # Eyes back to default
+    node.send_output("play_gif_sequence", pa.array([DEFAULT_EYES]))
+    # Door closed
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
+    # Arms to neutral
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
+    # Head sides to neutral one at a time (avoid collision)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
+    time.sleep(0.12)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_NEUTRAL }]))
+    # Head pivot centered
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
 
 
 if __name__ == "__main__":
