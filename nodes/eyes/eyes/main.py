@@ -35,6 +35,19 @@ def main():
     # Broadcast available images at startup
     broadcast_available_images(context)
     
+    # Play default image after startup
+    print("Playing default startup image: realistic-orange.gif")
+    from eyes.inputs.play_gif import process_play_gif
+    import pyarrow as pa
+    
+    # Create a mock event for the default image
+    default_event = {
+        "type": "INPUT",
+        "id": "play_gif",
+        "value": pa.array(["realistic-orange.gif"])
+    }
+    process_play_gif(context, default_event)
+    
     # Main event loop
     for event in node:
         if event["type"] == "INPUT":

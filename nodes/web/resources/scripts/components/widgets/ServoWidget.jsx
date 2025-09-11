@@ -100,8 +100,8 @@ const ServoWidget = ({ servoId, position: savedPosition, speed: savedSpeed, i })
     const positionValue = parseInt(newPosition);
     setPosition(positionValue);
     
-    // Send command to servo
-    node.emit('set_servo', [parseInt(servoId), positionValue, parseInt(speed)]);
+    // Send command to servo (same format as ServoDebugView)
+    node.emit('move_servo', [{id: parseInt(servoId), position: positionValue}]);
     
     // Save position in widget settings
     if (i) {
