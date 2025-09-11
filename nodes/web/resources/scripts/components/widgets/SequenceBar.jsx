@@ -17,7 +17,7 @@ const Button = ({ id, label, title }) => (
 
 const SequenceBar = () => {
   const styles = `
-    .sequence-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+    .sequence-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 8px; }
     .sequence-bar__btn { padding: 10px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; transition: all .2s; }
     .sequence-bar__btn:hover { background: rgba(255,255,255,0.12); border-color: var(--primary); }
@@ -29,6 +29,7 @@ const SequenceBar = () => {
       <Button id="candy" label="Candy ?" />
       <Button id="party" label="Party" />
       <Button id="neutral" label="Neutral" title="Return to neutral (close door)" />
+      <Button id="wave-hello" label="Wave" />
     </div>
   );
 };

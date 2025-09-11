@@ -63,6 +63,8 @@ def main():
                 # Explicit neutral request: reset everything and close door
                 neutral_pose(node, close_door=True, keep_eyes=False)
                 print("Sequence: neutral complete")
+            elif seq_id == "wave-hello":
+                run_wave_hello(node)
             else:
                 print(f"Sequence: unknown sequence '{seq_id}'")
 
@@ -206,6 +208,44 @@ def neutral_pose(node: Node, close_door: bool = True, keep_eyes: bool = False):
     # Head pivot centered
     node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
     time.sleep(0.2)
+
+
+def run_wave_hello(node: Node):
+    """Friendly waving sequence with left arm and subtle head pivot.
+
+    Duration ~4–5s. Keeps eye image after reset. Does not force door state.
+    """
+    # Eyes & sound
+    node.send_output("play_gif_sequence", pa.array(["emotion-love.gif"]))
+    node.send_output("play_sound_sequence", pa.array(["fröhliches-piepen.mp3"]))
+
+    # Center pivot to start
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+    time.sleep(0.2)
+
+    # Wave left arm 4 times between mid and up
+    for _ in range(4):
+        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_UP }]))
+        time.sleep(0.25)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 220 }]))
+        time.sleep(0.25)
+
+    # Gentle pivot sway to add life
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_LEFT }]))
+    time.sleep(0.15)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+    time.sleep(0.15)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_RIGHT }]))
+    time.sleep(0.15)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+
+    # Return left arm to neutral
+    time.sleep(0.2)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
+
+    # Reset posture (keep eyes; do not force door closed)
+    neutral_pose(node, close_door=False, keep_eyes=True)
+    print("Sequence: wave-hello complete")
 
 
 if __name__ == "__main__":
