@@ -65,6 +65,10 @@ def main():
                 print("Sequence: neutral complete")
             elif seq_id == "wave-hello":
                 run_wave_hello(node)
+            elif seq_id == "curious-scan":
+                run_curious_scan(node)
+            elif seq_id == "peekaboo":
+                run_peekaboo(node)
             else:
                 print(f"Sequence: unknown sequence '{seq_id}'")
 
@@ -246,6 +250,87 @@ def run_wave_hello(node: Node):
     # Reset posture (keep eyes; do not force door closed)
     neutral_pose(node, close_door=False, keep_eyes=True)
     print("Sequence: wave-hello complete")
+
+
+def run_curious_scan(node: Node):
+    """Curious scan with pivot sweeps and alternating head tilts (~9s).
+
+    Arms stay neutral; keeps eyes after reset; does not change door state.
+    """
+    node.send_output("play_gif_sequence", pa.array(["ghibli-landscape.gif"]))
+    node.send_output("play_sound_sequence", pa.array(["neugieriges-miauen.mp3"]))
+
+    # Start from centered pivot
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+    time.sleep(0.2)
+
+    end_time = time.time() + 9.0
+    while time.time() < end_time:
+        # Pivot sweep L -> C -> R -> C
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_LEFT }]))
+        time.sleep(0.25)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+        time.sleep(0.25)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_RIGHT }]))
+        time.sleep(0.25)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+        time.sleep(0.25)
+
+        # Left head tilt up/down (sequential)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_UP }]))
+        time.sleep(0.22)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
+        time.sleep(0.18)
+        # Right head tilt up/down (sequential)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_UP }]))
+        time.sleep(0.22)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_NEUTRAL }]))
+        time.sleep(0.18)
+
+    # Reset posture but keep eyes
+    neutral_pose(node, close_door=False, keep_eyes=True)
+    print("Sequence: curious-scan complete")
+
+
+def run_peekaboo(node: Node):
+    """Peekaboo with door open, head peek, pivot peek, and right arm bump (~6–7s).
+
+    Leaves eyes; closes door at end.
+    """
+    node.send_output("play_gif_sequence", pa.array(["lets-go.gif"]))
+    node.send_output("play_sound_sequence", pa.array(["überraschtes-ah.mp3"]))
+
+    # Start centered and neutral heads
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_NEUTRAL }]))
+
+    # Open door fully and hold
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_OPEN }]))
+    time.sleep(1.5)
+
+    # Head-left peek up/down
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_UP }]))
+    time.sleep(0.7)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
+    time.sleep(0.3)
+
+    # Pivot peek left then center
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_LEFT }]))
+    time.sleep(0.35)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+    time.sleep(0.25)
+
+    # Friendly right arm bump
+    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 780 }]))
+    time.sleep(0.4)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
+
+    # Close door and reset (keep eyes)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
+    time.sleep(0.3)
+    neutral_pose(node, close_door=True, keep_eyes=True)
+    print("Sequence: peekaboo complete")
 
 
 if __name__ == "__main__":
