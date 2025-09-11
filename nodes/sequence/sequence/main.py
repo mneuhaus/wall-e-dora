@@ -19,7 +19,10 @@ HEAD_LEFT_NEUTRAL = 120   # servo #6 (down)
 HEAD_LEFT_UP = 230        # servo #6 (up)
 HEAD_RIGHT_NEUTRAL = 300  # servo #4 (down)
 HEAD_RIGHT_UP = 120       # servo #4 (up)
-HEAD_PIVOT_CENTER = 512   # servo #14
+# Head pivot (provided by user)
+HEAD_PIVOT_LEFT = 125     # servo #14 (left)
+HEAD_PIVOT_RIGHT = 175    # servo #14 (right)
+HEAD_PIVOT_CENTER = 150   # servo #14 (center)
 DOOR_CLOSED = 700         # servo #5 (matches UI toggle expectations)
 DOOR_OPEN = 1023          # servo #5 (fully open)
 DEFAULT_EYES = "realistic-orange.gif"
@@ -63,6 +66,8 @@ def main():
 def run_hands_up(node: Node):
     # Ensure door is closed if left open by previous actions
     node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
+    # Ensure pivot is centered before motion
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
     # Eyes: energetic
     node.send_output("play_gif_sequence", pa.array(["lets-go.gif"]))
     # Sound: joyful
@@ -86,6 +91,8 @@ def run_candy(node: Node):
     node.send_output("play_gif_sequence", pa.array(["ghibli-candy.gif"]))
     # Sound: curious
     node.send_output("play_sound_sequence", pa.array(["fragendes-seufzen.mp3"]))
+    # Keep pivot centered for peek
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
     # Open front door (#5) fully and give enough time for motion
     node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_OPEN }]))
     time.sleep(1.2)
@@ -110,6 +117,8 @@ def run_candy(node: Node):
 def run_party(node: Node):
     # Ensure door is closed if left open by previous actions
     node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
+    # Start from pivot center
+    node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
     # Eyes: dance animation
     node.send_output("play_gif_sequence", pa.array(["lets-dance.gif"]))
     # Music
@@ -134,6 +143,14 @@ def run_party(node: Node):
         time.sleep(0.18)
         node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": HEAD_RIGHT_NEUTRAL }]))
         time.sleep(0.12)
+        # Gentle pivot sway left-center-right-center
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_LEFT }]))
+        time.sleep(0.12)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
+        time.sleep(0.12)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_RIGHT }]))
+        time.sleep(0.12)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 14, "position": HEAD_PIVOT_CENTER }]))
     # Return to neutral
     neutral_pose(node)
     print("Sequence: party complete")
