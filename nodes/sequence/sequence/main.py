@@ -9,8 +9,11 @@ import pyarrow as pa
 import time
 
 # Neutral/default positions (tune as needed)
-ARM_LEFT_NEUTRAL = 520    # servo #2
-ARM_RIGHT_NEUTRAL = 720   # servo #13
+# Arms (provided by user)
+ARM_LEFT_NEUTRAL = 0      # servo #2 (down)
+ARM_LEFT_UP = 215         # servo #2 (up)
+ARM_RIGHT_NEUTRAL = 300   # servo #13 (down)
+ARM_RIGHT_UP = 85         # servo #13 (up)
 HEAD_LEFT_NEUTRAL = 460   # servo #6
 HEAD_RIGHT_NEUTRAL = 460  # servo #4
 HEAD_PIVOT_CENTER = 512   # servo #14
@@ -63,9 +66,9 @@ def run_hands_up(node: Node):
     node.send_output("play_sound_sequence", pa.array(["freudiges-jubeln.mp3"]))
 
     # Arms up (left=#2, right=#13), then back down (staggered to avoid overlap issues)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 820 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_UP }]))
     time.sleep(0.15)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 940 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_UP }]))
     time.sleep(1.2)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
     time.sleep(0.15)
@@ -87,11 +90,13 @@ def run_candy(node: Node):
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 580 }]))
     time.sleep(1.0)
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": HEAD_LEFT_NEUTRAL }]))
-    # Left arm wiggle (#2) with larger amplitude
+    # Left arm wiggle (#2) with larger amplitude (relative to new range)
     time.sleep(0.4)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 600 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 120 }]))
     time.sleep(0.5)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 480 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
+    time.sleep(0.4)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 80 }]))
     time.sleep(0.5)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
     # Leave door open for treats and keep candy eyes visible
@@ -108,17 +113,19 @@ def run_party(node: Node):
     node.send_output("play_sound_sequence", pa.array(["träumerisches-summen.mp3"]))
     # Alternate arms and head sides (never raise both head sides simultaneously)
     for _ in range(3):
-        # Arms bump
-        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 560 }]))
-        node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 800 }]))
+        # Arms bump (use user-provided ranges)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 150 }]))
+        time.sleep(0.15)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 180 }]))
         # Head left up (#6), then back
         node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 560 }]))
         time.sleep(0.18)
         node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 460 }]))
         time.sleep(0.12)
         # Arms back
-        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
-        node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 720 }]))
+        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
+        time.sleep(0.15)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
         # Head right up (#4), then back
         node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": 560 }]))
         time.sleep(0.18)
