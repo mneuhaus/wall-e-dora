@@ -45,42 +45,60 @@ def main():
 
 
 def run_hands_up(node: Node):
-    # Play a short celebratory clip
+    # Eyes: energetic
+    node.send_output("play_gif_sequence", pa.array(["lets-go.gif"]))
+    # Sound: joyful
     node.send_output("play_sound_sequence", pa.array(["freudiges-jubeln.mp3"]))
 
-    # Raise both arms (IDs may need adjustment per rig)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 1023 }]))
+    # Arms up (left=#2, right=#13), then back down
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 820 }]))
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 940 }]))
-    time.sleep(1.5)
-    # Return to neutral
-    node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 413 }]))
+    time.sleep(1.2)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 720 }]))
     print("Sequence: hands-up complete")
 
 
 def run_candy(node: Node):
-    # Curious tone
+    # Eyes: candy motif
+    node.send_output("play_gif_sequence", pa.array(["ghibli-candy.gif"]))
+    # Sound: curious
     node.send_output("play_sound_sequence", pa.array(["fragendes-seufzen.mp3"]))
-    # Small arm wiggle
-    node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 500 }]))
-    time.sleep(0.4)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 420 }]))
+    # Head tilt one side only (left head=#6)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 560 }]))
+    time.sleep(0.5)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 460 }]))
+    # Small left arm wiggle (#2)
+    time.sleep(0.2)
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 560 }]))
     time.sleep(0.3)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 460 }]))
+    node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
     print("Sequence: candy complete")
 
 
 def run_party(node: Node):
-    # Play dancing music clip (träumerisches-summen)
+    # Eyes: dance animation
+    node.send_output("play_gif_sequence", pa.array(["lets-dance.gif"]))
+    # Music
     node.send_output("play_sound_sequence", pa.array(["träumerisches-summen.mp3"]))
-    # Quick alternating arm bumps
+    # Alternate arms and head sides (never raise both head sides simultaneously)
     for _ in range(3):
-        node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 560 }]))
+        # Arms bump
+        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 560 }]))
         node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 800 }]))
-        time.sleep(0.25)
-        node.send_output("move_servo_sequence", pa.array([{ "id": 12, "position": 460 }]))
+        # Head left up (#6), then back
+        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 560 }]))
+        time.sleep(0.18)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 460 }]))
+        time.sleep(0.12)
+        # Arms back
+        node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
         node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": 720 }]))
-        time.sleep(0.25)
+        # Head right up (#4), then back
+        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": 560 }]))
+        time.sleep(0.18)
+        node.send_output("move_servo_sequence", pa.array([{ "id": 4, "position": 460 }]))
+        time.sleep(0.12)
     print("Sequence: party complete")
 
 

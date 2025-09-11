@@ -167,6 +167,7 @@ nodes:
       TICK: dora/timer/secs/60
       list_images: dora/timer/secs/10
       play_gif: web/play_gif
+      play_gif_sequence: sequence/play_gif_sequence
     outputs:
       - available_images
 

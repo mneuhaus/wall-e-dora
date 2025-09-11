@@ -59,8 +59,8 @@ def main():
             elif event["id"] == "list_images":
                 process_list_images(context, event)
                 
-            # Handle play_gif event from web node
-            elif event["id"] == "play_gif":
+            # Handle play_gif events (from web or sequence)
+            elif event["id"] in ("play_gif", "play_gif_sequence"):
                 process_play_gif(context, event)
 
 
