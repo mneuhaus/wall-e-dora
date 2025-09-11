@@ -14,8 +14,8 @@ ARM_RIGHT_NEUTRAL = 720   # servo #13
 HEAD_LEFT_NEUTRAL = 460   # servo #6
 HEAD_RIGHT_NEUTRAL = 460  # servo #4
 HEAD_PIVOT_CENTER = 512   # servo #14
-DOOR_CLOSED = 500         # servo #5
-DOOR_OPEN = 600           # servo #5
+DOOR_CLOSED = 700         # servo #5 (matches UI toggle expectations)
+DOOR_OPEN = 1023          # servo #5 (fully open)
 DEFAULT_EYES = "realistic-orange.gif"
 
 
@@ -55,6 +55,8 @@ def main():
 
 
 def run_hands_up(node: Node):
+    # Ensure door is closed if left open by previous actions
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
     # Eyes: energetic
     node.send_output("play_gif_sequence", pa.array(["lets-go.gif"]))
     # Sound: joyful
@@ -77,7 +79,7 @@ def run_candy(node: Node):
     # Sound: curious
     node.send_output("play_sound_sequence", pa.array(["fragendes-seufzen.mp3"]))
     # Open front door (#5). Conservative positions; adjust via config if needed.
-    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": 600 }]))  # open
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_OPEN }]))  # open
     time.sleep(0.5)
     # Head tilt one side only (left head=#6), peek
     node.send_output("move_servo_sequence", pa.array([{ "id": 6, "position": 560 }]))
@@ -88,15 +90,14 @@ def run_candy(node: Node):
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 560 }]))
     time.sleep(0.3)
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": 520 }]))
-    # Close door
-    time.sleep(0.2)
-    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))  # close
-    # Return to neutral
-    neutral_pose(node)
+    # Leave door open for treats. Return other parts to neutral but keep door state.
+    neutral_pose(node, close_door=False)
     print("Sequence: candy complete")
 
 
 def run_party(node: Node):
+    # Ensure door is closed if left open by previous actions
+    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
     # Eyes: dance animation
     node.send_output("play_gif_sequence", pa.array(["lets-dance.gif"]))
     # Music
@@ -124,7 +125,7 @@ def run_party(node: Node):
     print("Sequence: party complete")
 
 
-def neutral_pose(node: Node):
+def neutral_pose(node: Node, close_door: bool = True):
     """Return the robot to a safe, neutral pose.
 
     - Arms lowered to neutral (2,13)
@@ -134,8 +135,9 @@ def neutral_pose(node: Node):
     """
     # Eyes back to default
     node.send_output("play_gif_sequence", pa.array([DEFAULT_EYES]))
-    # Door closed
-    node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
+    # Door closed (optional)
+    if close_door:
+        node.send_output("move_servo_sequence", pa.array([{ "id": 5, "position": DOOR_CLOSED }]))
     # Arms to neutral
     node.send_output("move_servo_sequence", pa.array([{ "id": 2, "position": ARM_LEFT_NEUTRAL }]))
     node.send_output("move_servo_sequence", pa.array([{ "id": 13, "position": ARM_RIGHT_NEUTRAL }]))
