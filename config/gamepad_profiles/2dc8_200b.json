@@ -26,18 +26,8 @@
       "isAnalog": false,
       "type": "button"
     },
-    "FACE_2": {
-      "index": 1,
-      "isAnalog": false,
-      "type": "button"
-    },
     "FACE_3": {
       "index": 2,
-      "isAnalog": false,
-      "type": "button"
-    },
-    "FACE_4": {
-      "index": 3,
       "isAnalog": false,
       "type": "button"
     },
@@ -62,15 +52,14 @@
       "type": "axis"
     },
     "LEFT_SHOULDER": {
-      "index": 4,
+      "index": 5,
       "isAnalog": false,
       "type": "button"
     },
     "LEFT_SHOULDER_BOTTOM": {
       "index": 6,
       "isAnalog": true,
-      "type": "button",
-      "input_range": "unipolar"
+      "type": "button"
     },
     "RIGHT_ANALOG_BUTTON": {
       "index": 11,
@@ -88,15 +77,14 @@
       "type": "axis"
     },
     "RIGHT_SHOULDER": {
-      "index": 5,
+      "index": 4,
       "isAnalog": false,
       "type": "button"
     },
     "RIGHT_SHOULDER_BOTTOM": {
       "index": 7,
       "isAnalog": true,
-      "type": "button",
-      "input_range": "unipolar"
+      "type": "button"
     },
     "SELECT": {
       "index": 9,
