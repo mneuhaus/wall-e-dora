@@ -178,3 +178,4 @@ nodes:
     outputs:
       - play_sound_sequence
       - move_servo_sequence
+      - play_gif_sequence
