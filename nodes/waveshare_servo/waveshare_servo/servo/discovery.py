@@ -1,48 +1,54 @@
 """Servo discovery utility for the Waveshare Servo Node."""
 
-import time
 from typing import Set
 
+from .sdk import COMM_SUCCESS
 
-def discover_servos(serial_conn) -> Set[int]:
+# Error bits that indicate the servo is overloaded/stressed but still responsive
+# We still want to discover these servos
+ERRBIT_OVERLOAD = 32
+
+
+def discover_servos(port_handler, packet_handler) -> Set[int]:
     """Discover connected servos by pinging a range of possible IDs.
 
-    Sends a PING command using the SCS protocol format to IDs 1 through 15.
+    A servo is considered discovered if the ping communication succeeds,
+    even if the servo reports non-fatal error flags (like overload).
 
     Args:
-        serial_conn: An open PySerial connection object.
+        port_handler: An open SDK PortHandler instance.
+        packet_handler: An SDK PacketHandler instance.
 
     Returns:
         A set containing the IDs of the servos that responded to the ping.
-        Returns an empty set if the serial connection is invalid or no servos respond.
     """
-    if not serial_conn or not serial_conn.is_open:
+    if not port_handler or not port_handler.is_open:
+        print("Discovery: port not open")
         return set()
 
-    # Scanning with minimal logging
-    discovered_servos = set()
-    
-    # Only try SCS protocol format as it was used in previous implementation
-    for id in range(1, 16):  # Limit to likely servo IDs (1-15)
-        try:
-            # SCS protocol format for ping (based on previous implementation)
-            cmd = bytearray([0xFF, 0xFF, id, 2, 1])
-            checksum = (~sum(cmd[2:]) & 0xFF)
-            cmd.append(checksum)
-            
-            # Send quietly without logging every attempt
-            serial_conn.write(cmd)
-            serial_conn.flush()
-            time.sleep(0.05)  # Short wait for response
-            response = serial_conn.read(serial_conn.in_waiting)
-            
-            # Check response
-            if response and len(response) > 0:
-                discovered_servos.add(id)
-        except Exception as e:
-            print(f"Error while pinging servo {id}: {e}")
+    try:
+        if not port_handler.ser or not port_handler.ser.is_open:
+            print("Discovery: underlying serial closed")
+            return set()
+        port_handler.ser.reset_input_buffer()
+        port_handler.is_using = False
+    except Exception as e:
+        print(f"Discovery: pre-scan cleanup failed: {e}")
+        return set()
 
-    # Only print results when explicitly needed
-    # Logging now happens at the caller level with change detection
-        
+    discovered_servos = set()
+
+    for servo_id in range(1, 16):
+        try:
+            port_handler.is_using = False
+            model_num, result, error = packet_handler.ping(port_handler, servo_id)
+            if result == COMM_SUCCESS:
+                # Servo responded - consider it discovered regardless of error flags
+                # Error flags (overload, overheat, etc.) mean the servo has issues
+                # but is still physically connected and communicating
+                discovered_servos.add(servo_id)
+        except Exception as e:
+            print(f"Error while pinging servo {servo_id}: {e}")
+            port_handler.is_using = False
+
     return discovered_servos
