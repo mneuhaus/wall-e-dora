@@ -43,7 +43,7 @@ import { GamepadStatus as Gamepad } from './components/status';
 const Power = PowerStatus;
 
 // Import views
-import { DashboardView as Dashboard, GamepadView, ServoDebugView as ServoDebug } from './views';
+import { DashboardView as Dashboard, GamepadView, ServoDebugView as ServoDebug, ServoDiagnosticsOverviewView as ServoDiagnosticsOverview } from './views';
 
 const App = () => {
   const dashboardRef = useRef(null);
@@ -97,6 +97,7 @@ const App = () => {
               <Route path="/" element={<Dashboard ref={dashboardRef} />} />
               <Route path="/gamepad/:index" element={<GamepadView />} />
               <Route path="/servo/:id" element={<ServoDebug />} />
+              <Route path="/servos/diagnostics" element={<ServoDiagnosticsOverview />} />
             </Routes>
           </AppShell.Main>
         </AppShell>

@@ -1,262 +1,99 @@
-"""Unit tests for the waveshare_servo node components."""
+"""Focused tests for the current Waveshare servo node modules."""
 
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from waveshare_servo.main import (
-    ConfigHandler,
-    Servo,
-    ServoManager,
-    ServoScanner,
-    ServoSettings,
-    run,
-)
+from waveshare_servo.config.handler import ConfigHandler
+from waveshare_servo.outputs.servo_diagnostics import broadcast_servo_diagnostics
+from waveshare_servo.outputs.servo_status import broadcast_servo_status
+from waveshare_servo.outputs.servos_list import broadcast_servos_list
+from waveshare_servo.servo.models import ServoModel, ServoSettings
 
 
-class TestServoSettings:
-    """Tests for the ServoSettings data class."""
+def test_servo_model_lookup_recognizes_sc_series() -> None:
+    """Known SC-series model numbers should map to friendly metadata."""
+    model = ServoModel.from_model_number(15)
 
-    def test_settings_defaults(self):
-        """Test default settings."""
-        settings = ServoSettings(id=2)
-        assert settings.id == 2
-        assert settings.alias == ""
-        assert settings.min_pulse == 500
-        assert settings.max_pulse == 2500
-        assert settings.speed == 1000
-        assert settings.calibrated is False
-        assert settings.position == 0
-        assert settings.invert is False
-
-    def test_to_dict(self):
-        """Test conversion to dictionary."""
-        settings = ServoSettings(id=3, alias="Head")
-        settings_dict = settings.to_dict()
-        assert settings_dict["id"] == 3
-        assert settings_dict["alias"] == "Head"
+    assert model.name == "SC15"
+    assert model.series == "SC"
+    assert model.max_position == 1023
 
 
-class TestServoScanner:
-    """Tests for the ServoScanner class (port finding, connection, discovery)."""
+def test_servo_settings_transport_dict_normalizes_gamepad_config() -> None:
+    """Transport payloads should keep a stable nested gamepad_config shape."""
+    settings = ServoSettings(id=3, gamepad_config={"mode": "toggle", "invert": True})
 
-    @patch("serial.tools.list_ports.comports")
-    def test_find_servo_port(self, mock_comports):
-        """Test finding servo port."""
-        # Mock port with USB-Serial in description
-        mock_port = MagicMock()
-        mock_port.device = "/dev/ttyUSB0"
-        mock_port.description = "USB-Serial Controller"
-        mock_comports.return_value = [mock_port]
+    payload = settings.to_transport_dict()
 
-        scanner = ServoScanner()
-        port = scanner.find_servo_port()
-        assert port == "/dev/ttyUSB0"
-
-    @patch("serial.Serial")
-    @patch.object(ServoScanner, "find_servo_port", return_value="/dev/ttyUSB0")
-    def test_connect(self, mock_find_port, mock_serial):
-        """Test connection to servo controller."""
-        mock_serial.return_value.is_open = True
-        scanner = ServoScanner()
-        result = scanner.connect()
-        assert result is True
-        mock_serial.assert_called_once_with("/dev/ttyUSB0", 115200, timeout=0.5)
-
-    @patch.object(ServoScanner, "connect", return_value=True)
-    def test_discover_servos(self, mock_connect):
-        """Test servo discovery."""
-        scanner = ServoScanner()
-        scanner.serial_conn = MagicMock()
-
-        # Mock responses for two servos
-        scanner.serial_conn.readline.side_effect = [
-            b"OK\r\n",  # ID 1
-            b"\r\n",  # ID 2 (no response)
-            b"OK\r\n",  # ID 3
-        ]
-
-        # Mock the range function to only check a few IDs
-        original_range = range
-        try:
-            # Replace global range function temporarily
-            __builtins__["range"] = lambda *args: [1, 2, 3]
-            result = scanner.discover_servos()
-        finally:
-            # Restore original range function
-            __builtins__["range"] = original_range
-
-        assert result == {1, 3}  # IDs 1 and 3 should be found
+    assert payload["id"] == 3
+    assert payload["gamepad_config"] == {
+        "control": "",
+        "type": "",
+        "mode": "toggle",
+        "invert": True,
+        "multiplier": 1.0,
+        "isAnalog": False,
+    }
 
 
-class TestServo:
-    """Tests for the Servo class (command sending, movement, etc.)."""
+def test_config_handler_get_all_servo_ids_and_delete() -> None:
+    """Config helpers should return sorted IDs and delete persisted entries."""
+    handler = ConfigHandler.__new__(ConfigHandler)
+    handler.cached_settings = {"9": {}, "2": {}, "invalid": {}}
+    handler._save_settings = MagicMock()
 
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.serial_conn = MagicMock()
-        self.settings = ServoSettings(id=2, alias="Test Servo")
-        self.servo = Servo(self.serial_conn, self.settings)
+    assert handler.get_all_servo_ids() == [2, 9]
 
-    def test_send_command(self):
-        """Test sending commands to servo."""
-        self.serial_conn.readline.return_value = b"OK\r\n"
-        response = self.servo.send_command("PING")
-        assert response == "OK"
-        self.serial_conn.write.assert_called_once_with(b"#2PING\r\n")
+    handler.delete_servo_settings(2)
 
-    def test_move(self):
-        """Test moving servo to position."""
-        self.serial_conn.readline.return_value = b"OK\r\n"
-        result = self.servo.move(1500)
-        assert result is True
-        self.serial_conn.write.assert_called_once_with(b"#2P1500T1000\r\n")
-        assert self.servo.settings.position == 1500
-
-    def test_move_clamping(self):
-        """Test that move clamps values to min/max range."""
-        self.serial_conn.readline.return_value = b"OK\r\n"
-        # Try to move beyond max_pulse
-        self.servo.move(3000)
-        # Command should use max_pulse instead
-        self.serial_conn.write.assert_called_once_with(b"#2P2500T1000\r\n")
-
-    def test_wiggle(self):
-        """Test wiggle functionality."""
-        self.serial_conn.readline.return_value = b"OK\r\n"
-        with patch("time.sleep"):
-            result = self.servo.wiggle()
-        assert result is True
-        # Should have multiple write calls for the wiggle sequence
-        assert self.serial_conn.write.call_count > 3
+    assert "2" not in handler.cached_settings
+    handler._save_settings.assert_called_once()
 
 
-class TestConfigHandler:
-    """Tests for the ConfigHandler class (settings management)."""
+def test_broadcast_servo_status_uses_structured_arrow_payload() -> None:
+    """Single-servo status updates should be sent as object arrays, not JSON strings."""
+    node = MagicMock()
+    servo = MagicMock()
+    servo.settings = ServoSettings(id=4, alias="Head", model_name="SC09")
 
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.node = MagicMock()
-        self.config = ConfigHandler(self.node)
+    broadcast_servo_status(node, 4, {4: servo})
 
-    def test_get_servo_path(self):
-        """Test generating config paths."""
-        assert self.config.get_servo_path(2) == "servo.2"
-        assert self.config.get_servo_path(3, "alias") == "servo.3.alias"
-
-    def test_update_setting(self):
-        """Test updating settings."""
-        self.config.update_setting("servo.2.alias", "Head")
-        self.node.send_output.assert_called_once()
-        args = self.node.send_output.call_args[0]
-        assert args[0] == "update_setting"
-
-        # Create a mock to simulate PyArrow array
-        mock_array = MagicMock()
-        mock_array.as_py.return_value = [
-            json.dumps({"path": "servo.2.alias", "value": "Head"})
-        ]
-        self.node.send_output.return_value = mock_array
-
-        # Extract the data from PyArrow array
-        array = self.node.send_output.return_value
-        data_json = array.as_py()[0]
-        data = json.loads(data_json)
-        assert data["path"] == "servo.2.alias"
-        assert data["value"] == "Head"
-
-    def test_handle_settings_updated(self):
-        """Test handling settings updates."""
-        # Test updating a specific property
-        result = self.config.handle_settings_updated("servo.2.alias", "Head")
-        assert result is True
-        assert self.config.cached_settings[2]["alias"] == "Head"
-
-        # Test updating a whole servo object
-        servo_settings = {"id": 3, "alias": "Arm", "speed": 2000}
-        result = self.config.handle_settings_updated("servo.3", servo_settings)
-        assert result is True
-        assert self.config.cached_settings[3] == servo_settings
+    output_id, payload = node.send_output.call_args.args
+    assert output_id == "servo_status"
+    assert payload.to_pylist()[0]["id"] == 4
+    assert payload.to_pylist()[0]["model_name"] == "SC09"
 
 
-class TestServoManager:
-    """Tests for the ServoManager class (orchestration logic)."""
-
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.node = MagicMock()
-        with patch.object(ServoScanner, "connect", return_value=False):
-            self.manager = ServoManager(self.node)
-            self.manager.scanner = MagicMock()
-            self.manager.config = MagicMock()
-
-    def test_broadcast_servo_status(self):
-        """Test broadcasting servo status."""
-        # Create a mock servo
-        settings = ServoSettings(id=2, alias="Test")
-        servo = MagicMock()
-        servo.settings = settings
-        self.manager.servos = {2: servo}
-
-        # Test the broadcast
-        self.manager.broadcast_servo_status(2)
-        self.node.send_output.assert_called_once()
-        args = self.node.send_output.call_args[0]
-        assert args[0] == "servo_status"
-
-    def test_handle_move_servo(self):
-        """Test handling move servo command."""
-        # Create a mock servo
-        servo = MagicMock()
-        servo.move.return_value = True
-        settings = ServoSettings(id=2)
-        servo.settings = settings
-        self.manager.servos = {2: servo}
-
-        # Test the move handler
-        result = self.manager.handle_move_servo(2, 1500)
-        assert result is True
-        servo.move.assert_called_once_with(1500)
-
-        # Verify config update
-        self.manager.config.update_servo_setting.assert_called_once_with(
-            2, "position", 1500
-        )
-
-    def test_process_event_move_servo(self):
-        """Test processing move_servo event."""
-        # Mock handle_move_servo
-        self.manager.handle_move_servo = MagicMock(return_value=True)
-
-        # Create test event with mock PyArrow array
-        mock_array = MagicMock()
-        mock_array.as_py.return_value = [json.dumps({"id": 2, "position": 1500})]
-
-        event = {"id": "move_servo", "type": "INPUT", "data": mock_array}
-
-        # Process the event
-        self.manager.process_event(event)
-        self.manager.handle_move_servo.assert_called_once_with(2, 1500)
-
-
-def test_run():
-    """Test the main run function of the node."""
-    # Create mock node and manager
+def test_broadcast_servos_list_filters_unresponsive_servos() -> None:
+    """Only responsive servos should be included in the list broadcast."""
     node = MagicMock()
 
-    # Mock the node to return a single event then stop
-    mock_event = {"id": "scan_servos", "type": "INPUT", "data": MagicMock()}
-    node.__iter__.return_value = [mock_event]
+    responsive = MagicMock()
+    responsive.is_responsive.return_value = True
+    responsive.settings = ServoSettings(id=1, alias="Alpha")
 
-    # Mock the ServoManager
-    with patch.object(ServoManager, "initialize"), patch.object(
-        ServoManager, "process_event"
-    ), patch.object(ServoManager, "scan_for_servos"), patch(
-        "time.time", side_effect=[0, 11]
-    ):  # Trigger scan (11-0 > 10)
-        run(node)
+    silent = MagicMock()
+    silent.is_responsive.return_value = False
+    silent.settings = ServoSettings(id=2, alias="Beta")
 
-        # Verify manager was initialized and event processed
-        ServoManager.initialize.assert_called_once()
-        ServoManager.process_event.assert_called_once_with(mock_event)
-        # Verify scan was triggered by timer
-        assert ServoManager.scan_for_servos.call_count == 1
+    broadcast_servos_list(node, {1: responsive, 2: silent})
+
+    output_id, payload = node.send_output.call_args.args
+    assert output_id == "servos_list"
+    assert payload.to_pylist() == [responsive.settings.to_transport_dict()]
+
+
+def test_broadcast_servo_diagnostics_accepts_bulk_payloads() -> None:
+    """Diagnostics broadcasts should support one-to-many comparison payloads."""
+    node = MagicMock()
+
+    broadcast_servo_diagnostics(
+        node,
+        [
+            {"id": 1, "alias": "Left", "model": {"name": "SC09"}},
+            {"id": 2, "alias": "Right", "model": {"name": "SC15"}},
+        ],
+    )
+
+    output_id, payload = node.send_output.call_args.args
+    assert output_id == "servo_diagnostics"
+    assert [entry["id"] for entry in payload.to_pylist()] == [1, 2]

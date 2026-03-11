@@ -35,9 +35,9 @@ graph TD
 
     PowerNode -- "voltage, current, power, soc, runtime" --> WebNode
     AudioNode -- "available_sounds, volume" --> WebNode
-    ServoNode -- "servo_status" --> WebNode
+    ServoNode -- "servo_status, servos_list, servo_diagnostics" --> WebNode
     WebNode -- "play_sound, set_volume" --> AudioNode
-    WebNode -- "set_servo, calibrate, wiggle" --> ServoNode
+    WebNode -- "move_servo, calibrate, wiggle, diagnostics, clone, reset" --> ServoNode
     WebNode -- "joystick inputs" --> TracksNode
     GamepadNode -- "controller events" --> WebNode
 
@@ -66,6 +66,8 @@ graph TD
 
 ### Widget System
 - Support servo control widgets with position sliders
+- Provide a servo diagnostics panel with live telemetry and EEPROM config details
+- Provide a multi-servo diagnostics overview for side-by-side comparison
 - Implement joystick control widgets with servo assignment
 - Provide sound playback widgets with volume control
 - Include power monitoring widgets showing voltage, current, and battery status
@@ -111,8 +113,9 @@ The web node connects to the Dora framework with these data flows:
 | discharge_rate           | power/discharge_rate           | Battery discharge rate (%/hr)             |
 | shutdown                 | power/shutdown                 | Shutdown signal at low battery            |
 | available_sounds         | audio/available_sounds         | List of available sound files             |
-| servo_status             | waveshare_servo/servo_status   | Status update for a single servo          |
+| servo_status             | waveshare_servo/servo_status   | Live status update for a single servo     |
 | servos_list              | waveshare_servo/servos_list    | List of all discovered servos             |
+| servo_diagnostics        | waveshare_servo/servo_diagnostics | On-demand diagnostics payload for one or more servos |
 | setting_updated          | config/setting_updated         | Notification of a specific setting change |
 | settings                 | config/settings                | Broadcast of all settings                 |
 | save_gamepad_profile     | web/save_gamepad_profile       | Request to save a gamepad profile         |
@@ -136,7 +139,11 @@ The web node connects to the Dora framework with these data flows:
 | GAMEPAD_* (various)       | waveshare_servo | Other gamepad button/axis events          |
 | move_servo                | waveshare_servo | Move a servo to a specific position       |
 | wiggle_servo              | waveshare_servo | Trigger servo test movement               |
-| calibrate_servo           | waveshare_servo | Trigger servo calibration                 |
+| calibrate_servo           | waveshare_servo | Trigger servo auto-calibration            |
+| read_servo_diagnostics    | waveshare_servo | Request diagnostics for one servo or all attached servos |
+| clone_servo               | waveshare_servo | Clone settings from one servo to another  |
+| factory_reset_servo       | waveshare_servo | Factory reset a servo to hardware defaults|
+| detach_servo              | waveshare_servo | Disable servo torque                      |
 | update_servo_setting      | waveshare_servo | Update a specific servo setting           |
 | update_setting            | config          | Request to update a setting in the config |
 | trigger_sequence          | sequences       | Trigger a predefined action sequence      |

@@ -1,21 +1,20 @@
 """Serial connection manager and servo discovery for the Waveshare Servo Node."""
 
+from __future__ import annotations
+
 import time
-from typing import Optional, Set
+from typing import Set
 
-from .port_finder import find_servo_port
 from .discovery import discover_servos
-from .sdk import PortHandler, PacketHandler
-
-BAUDRATE = 1000000
-PROTOCOL_END = 1
+from .port_finder import find_servo_port
+from .registers import DEFAULT_BAUDRATE, PROTOCOL_END
+from .sdk import PacketHandler, PortHandler
 
 
 class ServoScanner:
     """Manages the serial connection and performs servo discovery."""
 
     def __init__(self):
-        """Initialize the ServoScanner."""
         self.port = None
         self.port_handler = None
         self.packet_handler = None
@@ -28,11 +27,7 @@ class ServoScanner:
         return None
 
     def connect(self) -> bool:
-        """Establish a serial connection to the servo controller.
-
-        Returns:
-            True if the connection was successful, False otherwise.
-        """
+        """Establish a serial connection to the servo controller."""
         try:
             if self.port_handler and self.port_handler.is_open:
                 return True
@@ -46,32 +41,27 @@ class ServoScanner:
             self.packet_handler = PacketHandler(PROTOCOL_END)
 
             if not self.port_handler.openPort():
-                print("Failed to open port")
+                print("Failed to open servo port")
                 return False
 
-            if not self.port_handler.setBaudRate(BAUDRATE):
-                print("Failed to set baud rate")
+            if not self.port_handler.setBaudRate(DEFAULT_BAUDRATE):
+                print("Failed to set servo baud rate")
                 self.port_handler.closePort()
                 return False
 
             time.sleep(0.1)
             return True
-        except Exception as e:
-            print(f"Failed to connect to servo controller: {e}")
+        except Exception as exc:
+            print(f"Failed to connect to servo controller: {exc}")
             return False
 
-    def disconnect(self):
-        """Close the serial connection if it's open."""
+    def disconnect(self) -> None:
+        """Close the serial connection if it is open."""
         if self.port_handler and self.port_handler.is_open:
             self.port_handler.closePort()
 
     def discover_servos(self) -> Set[int]:
-        """Discover all connected servos by pinging them.
-
-        Returns:
-            A set of IDs of the discovered servos.
-        """
+        """Discover all connected servos by pinging them."""
         if not self.connect():
             return set()
-
         return discover_servos(self.port_handler, self.packet_handler)

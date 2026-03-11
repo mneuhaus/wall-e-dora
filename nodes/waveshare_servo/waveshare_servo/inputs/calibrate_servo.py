@@ -1,64 +1,56 @@
-"""Handler for the 'calibrate_servo' input event."""
+"""Handler for the `calibrate_servo` input event."""
+
+from __future__ import annotations
 
 import traceback
-from typing import Dict, Any
-import sys
-import os
+from typing import Any, Dict
 
-# Add the parent directory to the path for imports if needed
-current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-parent_dir = os.path.dirname(os.path.dirname(current_dir))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-
-from waveshare_servo.utils.event_processor import extract_event_data
 from waveshare_servo.outputs.servo_status import broadcast_servo_status
+from waveshare_servo.utils.event_processor import extract_event_data
+
 
 
 def handle_calibrate_servo(context: Dict[str, Any], event: Dict[str, Any]) -> bool:
-    """Handle incoming 'calibrate_servo' event.
-
-    Extracts the servo ID from the event data and calls the `calibrate_servo`
-    function to perform the calibration.
-
-    Args:
-        context: The node context dictionary.
-        event: The Dora input event dictionary.
-
-    Returns:
-        True if the calibration was successful, False otherwise.
-    """
+    """Extract the requested servo ID and run auto-calibration."""
     try:
         data, error = extract_event_data(event)
         if data:
             servo_id = data.get("id")
             if servo_id is not None:
-                return calibrate_servo(context, servo_id)
-    except Exception as e:
-        print(f"Error processing calibrate_servo event: {e}")
+                return calibrate_servo(context, int(servo_id))
+    except Exception as exc:
+        print(f"Error processing calibrate_servo event: {exc}")
         traceback.print_exc()
     return False
 
 
+
 def calibrate_servo(context: Dict[str, Any], servo_id: int) -> bool:
-    """Calibrate a specific servo by testing its min/max positions.
-
-    Args:
-        context: The node context dictionary.
-        servo_id: The ID of the servo to calibrate.
-
-    Returns:
-        True if the calibration was successful, False otherwise.
-    """
+    """Auto-calibrate a servo using stall detection."""
     node = context["node"]
     config = context["config"]
     servos = context["servos"]
-    
-    if servo_id in servos:
-        servo = servos[servo_id]
-        if servo.calibrate():
-            # Update calibration status in config
-            config.update_servo_setting(servo_id, "calibrated", True)
-            broadcast_servo_status(node, servo_id, servos)
-            return True
-    return False
+
+    servo = servos.get(servo_id)
+    if servo is None:
+        return False
+
+    print(f"Starting auto-calibration for servo {servo_id}")
+    limits = servo.auto_calibrate()
+    if not limits:
+        print(f"Auto-calibration failed for servo {servo_id}")
+        return False
+
+    min_limit, max_limit = limits
+    servo.settings.min_pulse = min_limit
+    servo.settings.max_pulse = max_limit
+    servo.settings.calibrated = True
+
+    center = (min_limit + max_limit) // 2
+    servo.move(center)
+    servo.read_status()
+    config.update_servo_settings(servo.settings)
+    broadcast_servo_status(node, servo_id, servos)
+
+    print(f"Auto-calibration complete for servo {servo_id}: {min_limit}-{max_limit}")
+    return True

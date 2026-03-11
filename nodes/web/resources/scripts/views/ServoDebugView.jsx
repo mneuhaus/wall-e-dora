@@ -1,16 +1,16 @@
 /**
  * ServoDebugView Component
- * 
+ *
  * A comprehensive interface for debugging and configuring a single servo.
  * Provides intuitive controls for position, speed, calibration, and advanced configuration.
- * 
+ *
  * Features:
  * - Visual circular position control
  * - Real-time status monitoring
  * - Servo calibration tools
  * - Gamepad control mapping
  * - Configuration management
- * 
+ *
  * @component
  */
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -19,21 +19,23 @@ import node from '../Node';
 import gamepads from '../Gamepads';
 import { CircularSliderWithChildren } from 'react-circular-slider-svg';
 import { keyframes, css } from '@emotion/css';
+import { findServoInPayload, normalizeDiagnosticsPayload, normalizeServoList } from '../utils/servoData';
+import { useAppContext } from '../contexts/AppContext';
 
 // Mantine imports
-import { 
-  Container, 
-  Paper, 
-  Title, 
-  Text, 
-  Group, 
-  Stack, 
-  Button, 
-  TextInput, 
+import {
+  Container,
+  Paper,
+  Title,
+  Text,
+  Group,
+  Stack,
+  Button,
+  TextInput,
   NumberInput,
   Select,
-  Slider, 
-  Badge, 
+  Slider,
+  Badge,
   ActionIcon,
   Divider,
   Grid,
@@ -76,8 +78,9 @@ const useFlashAnimation = () => {
 const ServoDebugView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { availableServos } = useAppContext();
   const [servo, setServo] = useState(null);
-  
+
   // Initialize the flash animation
   useFlashAnimation();
   const [position, setPosition] = useState(0);
@@ -95,13 +98,17 @@ const ServoDebugView = () => {
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [openedModal, setOpenedModal] = useState(null); // For tracking which modal is open
+  const [diagnostics, setDiagnostics] = useState(null);
+  const [isDiagnosticsLoading, setIsDiagnosticsLoading] = useState(false);
+  const [diagnosticsError, setDiagnosticsError] = useState('');
+  const [cloneTargetId, setCloneTargetId] = useState('');
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [isControlActive, setIsControlActive] = useState(false); // Track if attached control is active
   const controlFlashTimeout = useRef(null);
   const positionUpdateTimeout = useRef(null);
-  
+
   // Monitor isControlActive state changes
   useEffect(() => {
     console.log(`isControlActive changed to: ${isControlActive}`);
@@ -112,12 +119,12 @@ const ServoDebugView = () => {
     setToastMessage(message);
     setToastType(type);
     setIsToastVisible(true);
-    
+
     setTimeout(() => {
       setIsToastVisible(false);
     }, 3000);
   };
-  
+
   // Map BeerCSS toast types to Mantine colors
   const getToastColor = (type) => {
     switch (type) {
@@ -127,22 +134,22 @@ const ServoDebugView = () => {
       default: return 'amber';
     }
   };
-  
+
   // Helper function to map servo position to UI angle (0-300 degrees)
   const mapServoToUI = useCallback((servoPos, servoMin, servoMax) => {
     // Validate inputs to prevent NaN
     if (servoPos === null || servoPos === undefined || typeof servoPos !== 'number' || isNaN(servoPos)) {
       return 0;
     }
-    
+
     if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
       servoMin = 0; // Default min
     }
-    
+
     if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
       servoMax = 1023; // Default max
     }
-    
+
     // Ensure min and max are valid
     if (servoMin < 0) servoMin = 0;
     if (servoMax > 1023) servoMax = 1023;
@@ -150,34 +157,34 @@ const ServoDebugView = () => {
       servoMin = 0;
       servoMax = 1023;
     }
-    
+
     // Make sure servo position is within bounds
     if (servoPos < servoMin) servoPos = servoMin;
     if (servoPos > servoMax) servoPos = servoMax;
-    
+
     // Map servo position (min-max) to UI angle (0-300 degrees)
     const range = servoMax - servoMin;
     if (range === 0) return 0; // Avoid division by zero
-    
+
     return Math.round(300 * ((servoPos - servoMin) / range));
   }, []);
-  
+
   // Helper function to map UI angle to servo position
   const mapUIToServo = useCallback((uiPos, servoMin, servoMax) => {
     // Validate inputs to prevent NaN
     if (uiPos === null || uiPos === undefined || typeof uiPos !== 'number' || isNaN(uiPos)) {
       return 0;
     }
-    
+
     // Get current servo range, default to 0-1023 if invalid
     if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
       servoMin = 0;
     }
-    
+
     if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
       servoMax = 1023;
     }
-    
+
     // Ensure min and max are valid and min < max
     if (servoMin < 0) servoMin = 0;
     if (servoMax > 1023) servoMax = 1023;
@@ -185,7 +192,7 @@ const ServoDebugView = () => {
       servoMin = 0;
       servoMax = 1023;
     }
-    
+
     // Map UI angle (0-300 degrees) to servo position (min-max)
     // 300 degrees = full range from min to max
     const range = servoMax - servoMin;
@@ -198,13 +205,13 @@ const ServoDebugView = () => {
       setTimeout(() => setSliderReady(true), 50);
     }
   }, [displayPosition, sliderReady]);
-  
+
   // Initialize modal data when opened
   useEffect(() => {
     // If gamepad modal is opened, initialize with existing config if available
     if (openedModal === 'gamepad' && servo?.gamepad_config) {
       const config = servo.gamepad_config;
-      
+
       // Set values from existing config
       setAttachIndex(config.control || '');
       setControlType(config.type || '');
@@ -217,96 +224,96 @@ const ServoDebugView = () => {
   // Super simple gamepad control listener
   useEffect(() => {
     if (!servo?.attached_control) return;
-    
+
     const controlName = servo.attached_control;
     console.log(`Setting up simple listener for GAMEPAD_${controlName}`);
-    
+
     // Create a super simple, direct event handler
     function handleGamepadButtonPress(event) {
       // Log every event for debugging
       console.log(`GAMEPAD EVENT: ${controlName}`, event);
-      
+
       // Just flash for any event
       setIsControlActive(true);
-      
+
       // Set a timeout to turn it off
       setTimeout(() => {
         setIsControlActive(false);
       }, 1000);
     }
-    
+
     // Add direct event listener
     window.addEventListener(`GAMEPAD_${controlName}`, handleGamepadButtonPress);
-    
+
     // Also listen via node for redundancy
     const nodeListener = node.on(`GAMEPAD_${controlName}`, handleGamepadButtonPress);
-    
+
     // Test the flashing right away (for debugging)
     console.log("Testing control flash animation...");
     setIsControlActive(true);
     setTimeout(() => setIsControlActive(false), 1000);
-    
+
     // Clean up
     return () => {
       window.removeEventListener(`GAMEPAD_${controlName}`, handleGamepadButtonPress);
       if (nodeListener) nodeListener();
     };
   }, [servo?.attached_control]);
-  
+
   useEffect(() => {
     // Function to process servo data (reused for both event types)
     const processServoData = (servoInfo) => {
       if (!servoInfo) return;
-      
+
       // Create a safe copy of the servo data that preserves gamepad_config when modal is open
       const updatedServoData = { ...servoInfo };
-      
+
       // If the gamepad modal is open, preserve the current gamepad config
       // to prevent websocket updates from overwriting the unsaved changes
       if (openedModal === 'gamepad' && servo?.gamepad_config) {
         updatedServoData.gamepad_config = servo.gamepad_config;
         updatedServoData.attached_control = servo.attached_control;
       }
-      
+
       // Update the servo state with our protected data
       setServo(updatedServoData);
-      
+
       // Get min/max pulse values from servo data or use defaults
       let servoMinPulse = 0;
       let servoMaxPulse = 1023;
-      
-      if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null && 
+
+      if (servoInfo.min_pulse !== undefined && servoInfo.min_pulse !== null &&
           !isNaN(servoInfo.min_pulse) && servoInfo.min_pulse >= 0) {
         servoMinPulse = Number(servoInfo.min_pulse);
       }
-      
-      if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null && 
+
+      if (servoInfo.max_pulse !== undefined && servoInfo.max_pulse !== null &&
           !isNaN(servoInfo.max_pulse) && servoInfo.max_pulse <= 1023) {
         servoMaxPulse = Number(servoInfo.max_pulse);
       }
-      
+
       // Ensure min < max
       if (servoMaxPulse <= servoMinPulse) {
         servoMinPulse = 0;
         servoMaxPulse = 1023;
       }
-      
+
       // Update state with the min/max values
       setMin(servoMinPulse);
       setMax(servoMaxPulse);
-      
+
       // Get current servo position with validation
       let servoPosition = 0;
       if (servoInfo.position !== undefined && servoInfo.position !== null && !isNaN(servoInfo.position)) {
         servoPosition = Number(servoInfo.position);
       }
-      
+
       // Set raw position value
       setPosition(servoPosition);
-      
+
       // Map servo position to UI range (0-300 degrees) using actual min/max
       const uiPosition = mapServoToUI(servoPosition, servoMinPulse, servoMaxPulse);
-      
+
       // Validate before setting
       if (typeof uiPosition === 'number' && !isNaN(uiPosition)) {
         setDisplayPosition(uiPosition);
@@ -321,79 +328,96 @@ const ServoDebugView = () => {
           setTimeout(() => setSliderReady(true), 50);
         }
       }
-      
+
       // Set speed - IMPORTANT: This needs to work on page load
       if (servoInfo.speed !== undefined && servoInfo.speed !== null) {
         setSpeed(Number(servoInfo.speed));
       } else {
         setSpeed(1000); // Default speed
       }
-      
+
       // Update alias input if it's empty and the servo has an alias
       // and alias modal is not open to prevent overwriting unsaved changes
       if (aliasInput === '' && servoInfo.alias && openedModal !== 'alias') {
         setAliasInput(servoInfo.alias);
       }
     };
-    
+
     // Listen for servo updates
     const unsubscribe = node.on('servo_status', (event) => {
-      const servoData = event.value || [];
-      // Check if we're getting a single servo or an array
-      const servoInfo = Array.isArray(servoData) ? 
-                        servoData.find(s => s.id === parseInt(id)) : 
-                        (servoData.id === parseInt(id) ? servoData : null);
-      
+      const servoInfo = findServoInPayload(event?.value, id);
+
       if (servoInfo) {
         processServoData(servoInfo);
       }
     });
-    
+
     // Listen for servos_list for full servo info
     const listUnsubscribe = node.on('servos_list', (event) => {
-      const servosList = event.value || [];
-      const currentServo = servosList.find(s => s.id === parseInt(id));
+      const servosList = normalizeServoList(event?.value);
+      const currentServo = servosList.find((servoInfo) => servoInfo.id === parseInt(id));
       if (currentServo) {
         // Use the same processor function for consistency
         processServoData(currentServo);
       }
     });
-    
+
     // No need to manually request scan, it happens automatically on timer
-    
+
     return () => {
       unsubscribe();
       listUnsubscribe();
     };
   }, [id, mapServoToUI, aliasInput]);
-  
+
+  useEffect(() => {
+    const unsubscribe = node.on('servo_diagnostics', (event) => {
+      const payloads = normalizeDiagnosticsPayload(event?.value);
+      const payload = payloads.find((entry) => entry.id === parseInt(id, 10));
+
+      if (!payload) {
+        return;
+      }
+
+      setDiagnostics(payload);
+      setIsDiagnosticsLoading(false);
+      setDiagnosticsError(
+        payload.model || payload.status || payload.config
+          ? ''
+          : 'The servo responded, but no diagnostics payload was returned.'
+      );
+    });
+
+    return unsubscribe;
+  }, [id]);
+
   const handlePositionChange = (newPosition) => {
     // Validate that newPosition is a valid number
-    if (newPosition === null || newPosition === undefined || 
+    if (newPosition === null || newPosition === undefined ||
         typeof newPosition !== 'number' || isNaN(newPosition)) {
       return;
     }
-    
+
     // Ensure slider is marked as ready
     if (!sliderReady) {
       setSliderReady(true);
     }
-    
+
     // Update display position immediately for responsive UI
     setDisplayPosition(newPosition);
-    
+
     // Validate min and max before passing to mapUIToServo
     let servoMin = min;
     let servoMax = max;
-    
+
     if (servoMin === null || servoMin === undefined || typeof servoMin !== 'number' || isNaN(servoMin)) {
       servoMin = 0; // Default min
     }
-    
+
     if (servoMax === null || servoMax === undefined || typeof servoMax !== 'number' || isNaN(servoMax)) {
       servoMax = 1023; // Default max
     }
-    
+
     // Ensure min/max are valid
     if (servoMin < 0) servoMin = 0;
     if (servoMax > 1023) servoMax = 1023;
@@ -401,18 +425,18 @@ const ServoDebugView = () => {
       servoMin = 0;
       servoMax = 1023;
     }
-    
+
     // Map UI range (0-300) to servo range (min-max)
     const servoPosition = mapUIToServo(newPosition, servoMin, servoMax);
-    
+
     // Validate servoPosition before setting it
-    if (servoPosition === null || servoPosition === undefined || 
+    if (servoPosition === null || servoPosition === undefined ||
         typeof servoPosition !== 'number' || isNaN(servoPosition)) {
       return;
     }
-    
+
     setPosition(servoPosition);
-    
+
     // Debounce servo commands
     clearTimeout(positionUpdateTimeout.current);
     positionUpdateTimeout.current = setTimeout(() => {
@@ -423,12 +447,12 @@ const ServoDebugView = () => {
       }]);
     }, 50);
   };
-  
+
   const handleSpeedChange = (newSpeed) => {
     setSpeed(newSpeed);
     // Don't update the server on every change, only when done dragging
   };
-  
+
   const handleSpeedChangeComplete = (newSpeed) => {
     // Update servo setting format only when slider interaction is complete
     node.emit('update_servo_setting', [{
@@ -438,7 +462,7 @@ const ServoDebugView = () => {
     }]);
     showToast(`Speed set to ${newSpeed}`);
   };
-  
+
   const handleWiggle = () => {
     setIsTesting(true);
     // Updated wiggle_servo command format
@@ -446,62 +470,62 @@ const ServoDebugView = () => {
       id: parseInt(id)
     }]);
     showToast('Testing servo motion...');
-    
+
     // Auto-disable testing mode after 3 seconds
     setTimeout(() => {
       setIsTesting(false);
     }, 3000);
   };
-  
+
   const handleCalibrate = () => {
     // Ask for confirmation before calibrating
     if (!window.confirm('Are you sure you want to calibrate this servo? This will find the physical limits of the servo\'s range of motion.')) {
       return; // User canceled
     }
-    
+
     setIsCalibrating(true);
     // Updated calibrate_servo command format
     node.emit('calibrate_servo', [{
       id: parseInt(id)
     }]);
     showToast('Calibrating servo range...', 'info');
-    
+
     // Auto-disable calibration mode after 3 seconds
     setTimeout(() => {
       setIsCalibrating(false);
       showToast('Calibration complete!');
     }, 3000);
   };
-  
+
   // handleChangeId function removed as it's rarely needed
-  
+
   const handleSetAlias = () => {
     if (aliasInput.trim() === '') return;
-    
+
     const servoId = parseInt(id);
     const trimmedAlias = aliasInput.trim();
-    
+
     // Update local state immediately to prevent UI flicker
     const updatedServo = { ...servo };
     updatedServo.alias = trimmedAlias;
     setServo(updatedServo);
-    
+
     // Use the servo-specific setting update endpoint
     node.emit('update_servo_setting', [{
       id: servoId,
       property: "alias",
       value: trimmedAlias
     }]);
-    
+
     showToast(`Alias set to "${trimmedAlias}"`);
   };
-  
+
   const handleAttachServo = () => {
     if (!attachIndex || !controlType || !controlMode) return;
-    
+
     // Determine if this control should be handled as an analog value
     const isAnalogControl = controlMode === 'absolute' || controlMode === 'relative';
-    
+
     // Build gamepad configuration object with all needed parameters
     const gamepadConfig = {
       control: attachIndex,
@@ -511,17 +535,17 @@ const ServoDebugView = () => {
       multiplier: multiplier,
       isAnalog: isAnalogControl // Explicitly tag analog controls
     };
-    
+
     // Log the configuration for debugging
     console.log(`Setting gamepad config for ${attachIndex}:`, gamepadConfig);
-    
+
     // Also update the local servo state immediately to prevent UI flicker
     // and ensure UI consistency even if websocket updates are delayed
     const updatedServo = { ...servo };
     updatedServo.gamepad_config = gamepadConfig;
     updatedServo.attached_control = attachIndex;
     setServo(updatedServo);
-    
+
     // Update the gamepad config (this will be merged with any existing data)
     // Send both updates in quick succession
     node.emit('update_servo_setting', [{
@@ -529,45 +553,113 @@ const ServoDebugView = () => {
       property: "gamepad_config",
       value: gamepadConfig
     }]);
-    
+
     // Also set the attached_control for backward compatibility
     node.emit('update_servo_setting', [{
       id: parseInt(id),
       property: "attached_control",
       value: attachIndex
     }]);
-    
+
     showToast(`Attached to gamepad control: ${attachIndex} (${controlMode} mode)`);
   };
-  
-  const handleResetServo = () => {
-    if (window.confirm('Are you sure you want to reset this servo to factory defaults? This will remove all calibration settings and aliases.')) {
-      // Reset servo settings to defaults
-      const servoId = parseInt(id);
-      const defaultSettings = {
-        min_pulse: 0,
-        max_pulse: 1023,
-        speed: 1000,
-        calibrated: false,
-        alias: "",
-        invert: false,
-        attached_control: "",
-        gamepad_config: {}
-      };
-      
-      // Update each setting to default
-      for (const [prop, value] of Object.entries(defaultSettings)) {
-        node.emit('update_servo_setting', [{
-          id: servoId,
-          property: prop,
-          value: value
-        }]);
-      }
-      
-      showToast('Servo reset to factory defaults', 'info');
-    }
+
+  const handleReadDiagnostics = () => {
+    setDiagnostics(null);
+    setDiagnosticsError('');
+    setIsDiagnosticsLoading(true);
+    setOpenedModal('diagnostics');
+    node.emit('read_servo_diagnostics', [{ id: parseInt(id, 10) }]);
   };
-  
+
+  const handleCloneServo = () => {
+    const targetId = Number.parseInt(cloneTargetId, 10);
+    const sourceId = Number.parseInt(id, 10);
+
+    if (!Number.isInteger(targetId)) {
+      showToast('Choose a target servo first', 'error');
+      return;
+    }
+
+    if (targetId === sourceId) {
+      showToast('Choose a different target servo', 'error');
+      return;
+    }
+
+    node.emit('clone_servo', [{ source_id: sourceId, target_id: targetId }]);
+    showToast(`Cloning EEPROM settings to servo #${targetId}`, 'info');
+  };
+
+  const handleResetServo = () => {
+    const servoId = Number.parseInt(id, 10);
+
+    if (!window.confirm('Are you sure you want to factory-reset this servo? This writes hardware defaults to the servo EEPROM.')) {
+      return;
+    }
+
+    if (!window.confirm('Final confirmation: the servo will disappear from this page and may return with a new ID. Continue?')) {
+      return;
+    }
+
+    node.emit('factory_reset_servo', [{ id: servoId }]);
+    showToast('Factory reset requested. The servo may briefly disappear and return with a new ID.', 'info');
+    navigate('/');
+  };
+
+  const currentDiagnostics = diagnostics && Number.parseInt(diagnostics.id, 10) === parseInt(id, 10)
+    ? diagnostics
+    : null;
+
+  const cloneOptions = (availableServos || [])
+    .filter((candidate) => candidate.id !== parseInt(id, 10))
+    .map((candidate) => ({
+      value: String(candidate.id),
+      label: candidate.alias ? `${candidate.alias} (#${candidate.id})` : `Servo #${candidate.id}`
+    }));
+
+  const formatDiagnosticLabel = (key) => key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const formatDiagnosticValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.join(' ');
+    }
+
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? value : value.toFixed(2);
+    }
+
+    if (value === null || value === undefined || value === '') {
+      return 'N/A';
+    }
+
+    return String(value);
+  };
+
+  const diagnosticsModel = currentDiagnostics?.model || (servo?.model_name
+    ? { name: servo.model_name, model_number: servo.model_number }
+    : null);
+
+  const diagnosticsStatus = currentDiagnostics?.status || (servo
+    ? {
+        position: servo.position,
+        load: servo.load,
+        voltage: servo.voltage,
+        temperature: servo.temperature,
+        moving: servo.moving,
+      }
+    : null);
+
+  const diagnosticsConfigEntries = currentDiagnostics?.config
+    ? Object.entries(currentDiagnostics.config)
+    : [];
+
+
   const loadingView = (
     <Container size="lg" py="md">
       <Paper p="md" radius="md" withBorder={true}>
@@ -580,7 +672,7 @@ const ServoDebugView = () => {
           </Group>
         </Group>
         <Stack align="center" p="xl">
-          <Box 
+          <Box
             sx={{
               width: rem(48),
               height: rem(48),
@@ -599,18 +691,22 @@ const ServoDebugView = () => {
       </Paper>
     </Container>
   );
-  
+
   if (!servo) {
     return loadingView;
   }
-  
+
   // Create custom servo status object to handle special rendering for attached control
   const servoStatus = {
-    'Voltage': servo.voltage ? `${servo.voltage.toFixed(1)}V` : 'N/A',
+    'Model': servo.model_name || (servo.model_number ? `Model ${servo.model_number}` : 'Unknown'),
+    'Voltage': Number.isFinite(servo.voltage) ? `${servo.voltage.toFixed(1)}V` : 'N/A',
+    'Temperature': Number.isFinite(servo.temperature) ? `${servo.temperature}°C` : 'N/A',
+    'Load': Number.isFinite(servo.load) ? `${servo.load}` : 'N/A',
+    'Moving': servo.moving ? 'Yes' : 'No',
     'Min Pulse': servo.min_pulse !== undefined ? servo.min_pulse : 'Not calibrated',
     'Max Pulse': servo.max_pulse !== undefined ? servo.max_pulse : 'Not calibrated'
   };
-  
+
   return (
     <Container size="lg" py="md">
       {/* Toast notification */}
@@ -622,9 +718,9 @@ const ServoDebugView = () => {
           withCloseButton
           withBorder={true}
           pos="fixed"
-          style={{ 
-            top: rem(16), 
-            right: rem(16), 
+          style={{
+            top: rem(16),
+            right: rem(16),
             zIndex: 1000,
             animation: 'fadeIn 0.3s'
           }}
@@ -639,7 +735,7 @@ const ServoDebugView = () => {
           {toastMessage}
         </Notification>
       )}
-      
+
       <Paper radius="md" withBorder={true} p={0}>
         {/* Header Section */}
         <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', height: '45px' }}>
@@ -654,10 +750,10 @@ const ServoDebugView = () => {
             </Group>
             <Group spacing="xs">
               <Tooltip label="Test Servo">
-                <ActionIcon 
-                  color="amber" 
+                <ActionIcon
+                  color="amber"
                   variant={isTesting ? "filled" : "subtle"}
-                  radius="xl" 
+                  radius="xl"
                   onClick={handleWiggle}
                   disabled={isTesting}
                 >
@@ -665,10 +761,10 @@ const ServoDebugView = () => {
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Calibrate Servo">
-                <ActionIcon 
-                  color="amber" 
+                <ActionIcon
+                  color="amber"
                   variant={isCalibrating ? "filled" : "subtle"}
-                  radius="xl" 
+                  radius="xl"
                   onClick={handleCalibrate}
                   disabled={isCalibrating}
                 >
@@ -677,30 +773,51 @@ const ServoDebugView = () => {
               </Tooltip>
               <Divider orientation="vertical" mx={2} />
               <Tooltip label="Edit Alias">
-                <ActionIcon 
-                  color="amber" 
-                  variant="subtle" 
-                  radius="xl" 
+                <ActionIcon
+                  color="amber"
+                  variant="subtle"
+                  radius="xl"
                   onClick={() => setOpenedModal('alias')}
                 >
                   <i className="fa-solid fa-tag"></i>
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Gamepad Mapping">
-                <ActionIcon 
-                  color="amber" 
-                  variant="subtle" 
-                  radius="xl" 
+                <ActionIcon
+                  color="amber"
+                  variant="subtle"
+                  radius="xl"
                   onClick={() => setOpenedModal('gamepad')}
                 >
                   <i className="fa-solid fa-gamepad"></i>
                 </ActionIcon>
               </Tooltip>
+              <Tooltip label="Read Diagnostics">
+                <ActionIcon
+                  color="amber"
+                  variant={openedModal === 'diagnostics' ? "filled" : "subtle"}
+                  radius="xl"
+                  onClick={handleReadDiagnostics}
+                >
+                  <i className="fa-solid fa-circle-info"></i>
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Diagnostics Overview">
+                <ActionIcon
+                  component={Link}
+                  to="/servos/diagnostics"
+                  color="amber"
+                  variant="subtle"
+                  radius="xl"
+                >
+                  <i className="fa-solid fa-table-columns"></i>
+                </ActionIcon>
+              </Tooltip>
               <Tooltip label="Advanced Settings">
-                <ActionIcon 
-                  color="amber" 
-                  variant="subtle" 
-                  radius="xl" 
+                <ActionIcon
+                  color="amber"
+                  variant="subtle"
+                  radius="xl"
                   onClick={() => setOpenedModal('advanced')}
                 >
                   <i className="fa-solid fa-cog"></i>
@@ -709,7 +826,7 @@ const ServoDebugView = () => {
             </Group>
           </Group>
         </Box>
-        
+
         <Box p={0}>
           <Grid gutter={5} style={{ margin: 0 }}>
             {/* Control Section */}
@@ -725,12 +842,12 @@ const ServoDebugView = () => {
                   {/* Render slider when it's ready */}
                   {sliderReady ? (
                     <CircularSliderWithChildren
-                      size={234} 
+                      size={234}
                       minValue={0}
                       maxValue={300}
                       startAngle={0}
                       endAngle={300}
-                      handleSize={14} 
+                      handleSize={14}
                       handle1={{
                         value: displayPosition,
                         onChange: handlePositionChange
@@ -741,7 +858,7 @@ const ServoDebugView = () => {
                       handleColor="#FFB300"
                       trackColor="rgba(255, 179, 0, 0.05)"
                     >
-                      <div 
+                      <div
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -754,14 +871,14 @@ const ServoDebugView = () => {
                         }}
                       >
                         <Text size="xl" fw={700} c="amber" lh={1}>
-                          {typeof displayPosition === 'number' && !isNaN(displayPosition) ? 
-                            `${displayPosition}°` : 
+                          {typeof displayPosition === 'number' && !isNaN(displayPosition) ?
+                            `${displayPosition}°` :
                             '0°'
                           }
                         </Text>
                         <Text size="sm" c="dimmed" lh={1} mb={3}>angle</Text>
-                        <Badge color="amber" variant="light" size="xs" radius="sm" px={5} py={1} 
-                          sx={{ 
+                        <Badge color="amber" variant="light" size="xs" radius="sm" px={5} py={1}
+                          sx={{
                             boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
                             background: "rgba(255, 179, 0, 0.1)",
                             border: "1px solid rgba(255, 179, 0, 0.3)"
@@ -773,13 +890,13 @@ const ServoDebugView = () => {
                       </div>
                     </CircularSliderWithChildren>
                   ) : (
-                    <Box 
-                      style={{ 
-                        width: 234, 
-                        height: 234, 
-                        display: 'flex', 
+                    <Box
+                      style={{
+                        width: 234,
+                        height: 234,
+                        display: 'flex',
                         flexDirection: 'column',
-                        alignItems: 'center', 
+                        alignItems: 'center',
                         justifyContent: 'center',
                         border: '3px solid rgba(255, 179, 0, 0.3)',
                         borderRadius: '50%',
@@ -788,7 +905,7 @@ const ServoDebugView = () => {
                         boxShadow: '0 0 15px rgba(255, 179, 0, 0.2)'
                       }}
                     >
-                      <Box 
+                      <Box
                         sx={{
                           width: rem(24),
                           height: rem(24),
@@ -805,14 +922,14 @@ const ServoDebugView = () => {
                 </Box>
               </Stack>
             </Grid.Col>
-          
+
             {/* Info Section */}
             <Grid.Col span={6} p={5}>
               {/* Speed slider section */}
               <Box w="100%" style={{ marginBottom: '15px', marginTop: '8px', paddingLeft: '10px', paddingRight: '10px' }}>
                 <Group justify="space-between" mb={1}>
                   <Text fw={500} style={{ fontSize: '0.75rem' }}>Speed</Text>
-                  <Badge color="amber" variant="filled" size="xs" 
+                  <Badge color="amber" variant="filled" size="xs"
                     style={{
                       boxShadow: "0 0 4px rgba(255, 179, 0, 0.4)",
                       border: "1px solid rgba(255, 179, 0, 0.6)"
@@ -845,9 +962,9 @@ const ServoDebugView = () => {
                 <Table striped highlightOnHover withTableBorder>
                   <Table.Tbody>
                     {/* Custom Attached Control row with animation */}
-                    <Table.Tr 
+                    <Table.Tr
                       style={isControlActive ? {
-                        backgroundColor: "rgba(255, 179, 0, 0.3)", 
+                        backgroundColor: "rgba(255, 179, 0, 0.3)",
                         transition: "background-color 0.5s",
                         position: "relative",
                         zIndex: 10
@@ -856,10 +973,10 @@ const ServoDebugView = () => {
                       <Table.Td style={{ fontWeight: 500, color: 'var(--mantine-color-dimmed)', fontSize: '0.75rem', padding: '1px 6px' }}>
                         Attached Control
                       </Table.Td>
-                      <Table.Td style={{ 
-                        color: isControlActive ? 'var(--mantine-color-amber-9)' : 'var(--mantine-color-amber-filled)', 
-                        textAlign: 'right', 
-                        fontSize: '0.75rem', 
+                      <Table.Td style={{
+                        color: isControlActive ? 'var(--mantine-color-amber-9)' : 'var(--mantine-color-amber-filled)',
+                        textAlign: 'right',
+                        fontSize: '0.75rem',
                         padding: '1px 6px',
                         fontWeight: isControlActive ? 600 : 400,
                         transition: 'color 0.2s, font-weight 0.2s'
@@ -888,7 +1005,7 @@ const ServoDebugView = () => {
                         )}
                       </Table.Td>
                     </Table.Tr>
-                    
+
                     {/* Standard rows for other properties */}
                     {Object.entries(servoStatus).map(([key, value]) => (
                       <Table.Tr key={key}>
@@ -916,7 +1033,7 @@ const ServoDebugView = () => {
                     ))}
                   </Table.Tbody>
                 </Table>
-                
+
                 {servo.properties && Object.keys(servo.properties).length > 0 && (
                   <>
                     <Text fw={500} c="amber" mt="xs" mb="xs" size="xs">Advanced Properties</Text>
@@ -937,8 +1054,98 @@ const ServoDebugView = () => {
           </Grid>
         </Box>
       </Paper>
-      
+
       {/* Modals */}
+      <Modal
+        opened={openedModal === 'diagnostics'}
+        onClose={() => setOpenedModal(null)}
+        title={<Text fw={600} c="amber">Servo Diagnostics</Text>}
+        size="xl"
+        centered
+        overlayProps={{
+          color: 'rgb(0, 0, 0)',
+          opacity: 0.55,
+          blur: 3,
+        }}
+      >
+        <Stack spacing="md">
+          <Group justify="space-between" align="center">
+            <Text size="sm" c="dimmed">
+              Read model info, live telemetry, and EEPROM/SRAM configuration from the servo.
+            </Text>
+            <Button
+              size="xs"
+              color="amber"
+              variant="light"
+              onClick={handleReadDiagnostics}
+              loading={isDiagnosticsLoading}
+            >
+              Refresh
+            </Button>
+          </Group>
+
+          {diagnosticsError && (
+            <Text size="sm" c="red">{diagnosticsError}</Text>
+          )}
+
+          {isDiagnosticsLoading && (
+            <Text size="sm" c="dimmed">Reading diagnostics from servo #{id}...</Text>
+          )}
+
+          {diagnosticsModel && (
+            <Box>
+              <Text fw={500} mb="xs">Model Info</Text>
+              <Table striped withTableBorder>
+                <Table.Tbody>
+                  {Object.entries(diagnosticsModel).map(([key, value]) => (
+                    <Table.Tr key={key}>
+                      <Table.Td>{formatDiagnosticLabel(key)}</Table.Td>
+                      <Table.Td>{formatDiagnosticValue(value)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Box>
+          )}
+
+          {diagnosticsStatus && (
+            <Box>
+              <Text fw={500} mb="xs">Live Telemetry</Text>
+              <Table striped withTableBorder>
+                <Table.Tbody>
+                  {Object.entries(diagnosticsStatus).map(([key, value]) => (
+                    <Table.Tr key={key}>
+                      <Table.Td>{formatDiagnosticLabel(key)}</Table.Td>
+                      <Table.Td>{formatDiagnosticValue(value)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Box>
+          )}
+
+          {diagnosticsConfigEntries.length > 0 ? (
+            <Box>
+              <Text fw={500} mb="xs">Full Config</Text>
+              <Table striped withTableBorder>
+                <Table.Tbody>
+                  {diagnosticsConfigEntries.map(([key, value]) => (
+                    <Table.Tr key={key}>
+                      <Table.Td>{formatDiagnosticLabel(key)}</Table.Td>
+                      <Table.Td>{formatDiagnosticValue(value)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Box>
+          ) : (!isDiagnosticsLoading && !diagnosticsError && (
+            <Text size="sm" c="dimmed">No config payload received yet.</Text>
+          ))}
+        </Stack>
+      </Modal>
+
+
+
       {/* Alias Modal */}
       <Modal
         opened={openedModal === 'alias'}
@@ -964,16 +1171,16 @@ const ServoDebugView = () => {
             Give your servo a meaningful name to easily identify it in the servo list.
           </Text>
           <Group position="right" mt="md">
-            <Button 
-              variant="outline" 
-              color="gray" 
+            <Button
+              variant="outline"
+              color="gray"
               onClick={() => setOpenedModal(null)}
             >
               Cancel
             </Button>
-            <Button 
-              variant="filled" 
-              color="amber" 
+            <Button
+              variant="filled"
+              color="amber"
               onClick={() => {
                 handleSetAlias();
                 setOpenedModal(null);
@@ -985,7 +1192,7 @@ const ServoDebugView = () => {
           </Group>
         </Stack>
       </Modal>
-      
+
       {/* Gamepad Mapping Modal */}
       <Modal
         opened={openedModal === 'gamepad'}
@@ -1011,7 +1218,7 @@ const ServoDebugView = () => {
       >
         <Stack spacing="md">
           <Text size="sm">Map this servo to a gamepad control for remote operation</Text>
-          
+
           {/* Control Selection */}
           <Select
             label="Gamepad Control"
@@ -1019,7 +1226,7 @@ const ServoDebugView = () => {
             value={attachIndex}
             onChange={(value) => {
               setAttachIndex(value);
-              
+
               // Determine if it's a button or axis based on the selection
               if (value && value.includes('STICK')) {
                 setControlType('axis');
@@ -1063,19 +1270,19 @@ const ServoDebugView = () => {
               ]}
             ]}
           />
-          
+
           {/* Conditional UI based on control type */}
           {attachIndex && (
             <>
               <Divider label="Control Configuration" labelPosition="center" />
-              
+
               {/* Common options */}
               <Grid>
                 <Grid.Col span={controlType === 'axis' ? 6 : 12}>
-                  <Box 
+                  <Box
                     py="xs"
                     px="md"
-                    sx={{ 
+                    sx={{
                       border: '1px solid rgba(255, 179, 0, 0.2)',
                       borderRadius: 'var(--mantine-radius-md)',
                       background: 'rgba(255, 179, 0, 0.05)'
@@ -1083,7 +1290,7 @@ const ServoDebugView = () => {
                   >
                     <Group position="apart" mb="sm">
                       <Text fw={500} size="sm">Invert Control</Text>
-                      <Switch 
+                      <Switch
                         checked={invertControl}
                         onChange={(event) => setInvertControl(event.currentTarget.checked)}
                         color="amber"
@@ -1098,21 +1305,21 @@ const ServoDebugView = () => {
                       />
                     </Group>
                     <Text size="xs" c="dimmed">
-                      {controlType === 'button' ? 
+                      {controlType === 'button' ?
                         'When inverted, button press maps to maximum position instead of minimum' :
                         'When inverted, joystick movement direction is reversed'
                       }
                     </Text>
                   </Box>
                 </Grid.Col>
-                
+
                 {/* Axis and Analog-button specific controls */}
                 {(controlType === 'axis' || controlMode === 'absolute' || controlMode === 'relative') && (
                   <Grid.Col span={6}>
-                    <Box 
+                    <Box
                       py="xs"
                       px="md"
-                      sx={{ 
+                      sx={{
                         border: '1px solid rgba(255, 179, 0, 0.2)',
                         borderRadius: 'var(--mantine-radius-md)',
                         background: 'rgba(255, 179, 0, 0.05)'
@@ -1146,7 +1353,7 @@ const ServoDebugView = () => {
                   </Grid.Col>
                 )}
               </Grid>
-              
+
               {/* Control mode selection */}
               <Box>
                 <Text fw={500} size="sm" mb="xs">Control Mode</Text>
@@ -1243,7 +1450,7 @@ const ServoDebugView = () => {
               </Box>
             </>
           )}
-          
+
           {/* Status of gamepad control attachment */}
           {servo?.attached_control && (
             <Paper p="md" withBorder={true} radius="md" bg="rgba(76, 175, 80, 0.05)">
@@ -1275,8 +1482,8 @@ const ServoDebugView = () => {
                           <Table.Td fw={500}>Inverted</Table.Td>
                           <Table.Td>{servo.gamepad_config.invert ? 'Yes' : 'No'}</Table.Td>
                         </Table.Tr>
-                        {(servo.gamepad_config.type === 'axis' || 
-                         servo.gamepad_config.mode === 'absolute' || 
+                        {(servo.gamepad_config.type === 'axis' ||
+                         servo.gamepad_config.mode === 'absolute' ||
                          servo.gamepad_config.mode === 'relative') && (
                           <Table.Tr>
                             <Table.Td fw={500}>Multiplier</Table.Td>
@@ -1290,10 +1497,10 @@ const ServoDebugView = () => {
               </Stack>
             </Paper>
           )}
-          
+
           <Group position="right" mt="md">
             {servo?.attached_control && (
-              <Button 
+              <Button
                 variant="outline"
                 color="red"
                 onClick={() => {
@@ -1302,14 +1509,14 @@ const ServoDebugView = () => {
                   updatedServo.attached_control = "";
                   updatedServo.gamepad_config = {};
                   setServo(updatedServo);
-                  
+
                   // Clear the form state as well
                   setAttachIndex("");
                   setControlType("");
                   setControlMode("");
                   setInvertControl(false);
                   setMultiplier(1);
-                  
+
                   // Then send the event to the server
                   node.emit('detach_servo', [parseInt(id)]);
                   showToast('Servo detached from gamepad control');
@@ -1320,16 +1527,16 @@ const ServoDebugView = () => {
                 Detach Control
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              color="gray" 
+            <Button
+              variant="outline"
+              color="gray"
               onClick={() => setOpenedModal(null)}
             >
               Cancel
             </Button>
-            <Button 
-              variant="filled" 
-              color="amber" 
+            <Button
+              variant="filled"
+              color="amber"
               onClick={() => {
                 handleAttachServo();
                 setOpenedModal(null);
@@ -1341,7 +1548,7 @@ const ServoDebugView = () => {
           </Group>
         </Stack>
       </Modal>
-      
+
       {/* Advanced Settings Modal */}
       <Modal
         opened={openedModal === 'advanced'}
@@ -1400,21 +1607,52 @@ const ServoDebugView = () => {
               </Grid.Col>
             </Grid>
             <Text size="xs" c="dimmed" mt={5}>
-              These values represent the absolute minimum and maximum positions 
+              These values represent the absolute minimum and maximum positions
               that the servo can move to. Valid range is 0-1023.
             </Text>
           </Box>
-          
+
+          <Divider my="md" label="Clone EEPROM Settings" labelPosition="center" color="amber" />
+
+          <Paper p="md" withBorder={true} radius="md" bg="rgba(255, 179, 0, 0.05)">
+            <Stack spacing="xs">
+              <Text size="sm" fw={500} align="center">Clone This Servo To Another Servo</Text>
+              <Text size="xs" c="dimmed" align="center">
+                Copies hardware EEPROM settings such as PID values, angle limits, dead zones, and protection thresholds.
+              </Text>
+              <Select
+                label="Target Servo"
+                placeholder="Choose another connected servo"
+                value={cloneTargetId}
+                onChange={(value) => setCloneTargetId(value || '')}
+                data={cloneOptions}
+              />
+              <Button
+                variant="light"
+                color="amber"
+                onClick={() => {
+                  handleCloneServo();
+                  setOpenedModal(null);
+                }}
+                disabled={!cloneTargetId}
+                fullWidth
+                leftSection={<i className="fa-solid fa-clone"></i>}
+                mt="xs"
+              >
+                Clone To Target Servo
+              </Button>
+            </Stack>
+          </Paper>
+
           <Divider my="md" label="Danger Zone" labelPosition="center" color="red" />
-          
+
           <Paper p="md" withBorder={true} radius="md" bg="rgba(244, 67, 54, 0.05)" style={{ border: '1px dashed rgba(244, 67, 54, 0.3)' }}>
             <Stack spacing="xs">
-              <Text size="sm" c="red" fw={500} align="center">Reset Servo Configuration</Text>
+              <Text size="sm" c="red" fw={500} align="center">Hardware Factory Reset</Text>
               <Text size="xs" c="dimmed" align="center">
-                This will reset all servo settings to factory defaults including calibration, 
-                range values, alias, and gamepad mappings.
+                This writes factory defaults to the servo EEPROM. The servo will drop off the bus, return as ID 1, and WALL-E-DORA may immediately assign it a new ID.
               </Text>
-              <Button 
+              <Button
                 variant="outline"
                 color="red"
                 onClick={() => {
@@ -1425,15 +1663,15 @@ const ServoDebugView = () => {
                 leftSection={<i className="fa-solid fa-rotate-left"></i>}
                 mt="xs"
               >
-                Reset to Factory Defaults
+                Run Hardware Factory Reset
               </Button>
             </Stack>
           </Paper>
-          
+
           <Group position="right" mt="md">
-            <Button 
-              variant="outline" 
-              color="gray" 
+            <Button
+              variant="outline"
+              color="gray"
               onClick={() => setOpenedModal(null)}
             >
               Close
@@ -1441,7 +1679,7 @@ const ServoDebugView = () => {
           </Group>
         </Stack>
       </Modal>
-      
+
       {/* CSS is now handled through Mantine's styling system */}
     </Container>
   );

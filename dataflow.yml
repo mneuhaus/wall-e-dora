@@ -37,6 +37,7 @@ nodes:
       available_sounds: audio/available_sounds
       servo_status: waveshare_servo/servo_status
       servos_list: waveshare_servo/servos_list
+      servo_diagnostics: waveshare_servo/servo_diagnostics
       setting_updated: config/setting_updated
       settings: config/settings
       save_gamepad_profile: web/save_gamepad_profile
@@ -77,6 +78,10 @@ nodes:
       - wiggle_servo
       - calibrate_servo
       - update_servo_setting
+      - detach_servo
+      - read_servo_diagnostics
+      - clone_servo
+      - factory_reset_servo
       - update_setting
       - save_gamepad_profile
       - get_gamepad_profile
@@ -118,6 +123,10 @@ nodes:
       wiggle_servo: web/wiggle_servo
       calibrate_servo: web/calibrate_servo
       update_servo_setting: web/update_servo_setting
+      detach_servo: web/detach_servo
+      read_servo_diagnostics: web/read_servo_diagnostics
+      clone_servo: web/clone_servo
+      factory_reset_servo: web/factory_reset_servo
       move_servo_sequence: sequence/move_servo_sequence
       # Gamepad control inputs
       GAMEPAD_LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
@@ -146,6 +155,7 @@ nodes:
     outputs:
       - servo_status
       - servos_list
+      - servo_diagnostics
 
   # - id: opencv-video-capture
   #   build: pip install opencv-video-capture

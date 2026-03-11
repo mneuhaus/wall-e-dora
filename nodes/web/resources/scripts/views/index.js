@@ -9,13 +9,15 @@
 import DashboardView from './DashboardView';
 import GamepadView from './GamepadView';
 import ServoDebugView from './ServoDebugView';
+import ServoDiagnosticsOverviewView from './ServoDiagnosticsOverviewView';
 
 // Export components individually
-export { DashboardView, GamepadView, ServoDebugView };
+export { DashboardView, GamepadView, ServoDebugView, ServoDiagnosticsOverviewView };
 
 // Default export for importing all at once
 export default {
   DashboardView,
   GamepadView,
-  ServoDebugView
+  ServoDebugView,
+  ServoDiagnosticsOverviewView,
 };

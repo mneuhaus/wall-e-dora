@@ -22,6 +22,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
 import node from '../../Node';
 import { statusIconStyles } from './StatusIconStyles';
+import { normalizeServoList } from '../../utils/servoData';
 
 const ServoStatus = () => {
   const { availableServos } = useAppContext();
@@ -31,8 +32,9 @@ const ServoStatus = () => {
   // Direct connection to node events for more reliable updates
   useEffect(() => {
     const unsubscribe = node.on('servo_status', (event) => {
-      if (event && event.value) {
-        setServos(event.value);
+      const nextServos = normalizeServoList(event?.value);
+      if (nextServos.length > 0) {
+        setServos(nextServos);
       }
     });
     
@@ -81,6 +83,27 @@ const ServoStatus = () => {
       </Menu.Target>
       
       <Menu.Dropdown>
+        <Menu.Item
+          component={Link}
+          to="/servos/diagnostics"
+          leftSection={
+            <i
+              className="fa-solid fa-table-columns"
+              style={{ color: 'var(--mantine-color-amber-6)' }}
+            ></i>
+          }
+          rightSection={servoData.length > 0 ? <Badge color="amber" size="xs" variant="light">{servoData.length}</Badge> : null}
+        >
+          <div>
+            <Text size="sm" style={{ lineHeight: 1.2 }}>Diagnostics Overview</Text>
+            <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
+              Compare all attached servos side by side
+            </Text>
+          </div>
+        </Menu.Item>
+
+        <Menu.Divider />
+
         {servoData.length > 0 ? (
           servoData.map(servo => (
             <Menu.Item
@@ -98,7 +121,9 @@ const ServoStatus = () => {
                 <Text size="sm" style={{ lineHeight: 1.2 }}>
                   {servo.alias ? `${servo.alias} (#${servo.id})` : `Servo #${servo.id}`}
                 </Text>
-                <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>Position: {servo.position || 0}</Text>
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.2 }}>
+                  Position: {servo.position || 0} · Temp: {Number.isFinite(servo.temperature) ? `${servo.temperature}°C` : 'N/A'} · Load: {Number.isFinite(servo.load) ? servo.load : 'N/A'}
+                </Text>
               </div>
             </Menu.Item>
           ))
