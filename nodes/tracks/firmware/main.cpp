@@ -5,12 +5,12 @@
 #include "hardware/pwm.h"
 #include "pico/time.h"
 
-// GPIO Pin definitions (adjust if different)
-#define LEFT_VCC_PIN  2
-#define LEFT_DIR_PIN  4
-#define LEFT_PWM_PIN  3
-#define RIGHT_VCC_PIN 6
-#define RIGHT_DIR_PIN 8
+// GPIO Pin definitions for Xiao Seeed RP2040
+// Left motor: D0 (GPIO26) = PWM, D1 (GPIO27) = DIR
+// Right motor: D4 (GPIO6) = DIR, D5 (GPIO7) = PWM
+#define LEFT_DIR_PIN  27
+#define LEFT_PWM_PIN  26
+#define RIGHT_DIR_PIN 6
 #define RIGHT_PWM_PIN 7
 
 #define PWM_WRAP_VALUE 1000 // Max PWM duty cycle value
@@ -23,25 +23,19 @@ static int clamp_pwm_duty(int duty) {
     return duty;
 }
 
-// Initialize GPIO and PWM for one track
-static void init_track(uint vcc_pin, uint dir_pin, uint pwm_pin, uint *slice, uint *channel, int initial_duty) {
-    // VCC Enable Pin
-    gpio_init(vcc_pin);
-    gpio_set_dir(vcc_pin, GPIO_OUT);
-    gpio_put(vcc_pin, 1); // Enable motor driver VCC
-
+// Initialize GPIO and PWM for one track (2-pin: DIR + PWM)
+static void init_track(uint dir_pin, uint pwm_pin, uint *slice, uint *channel, int initial_duty) {
     // Direction Pin
     gpio_init(dir_pin);
     gpio_set_dir(dir_pin, GPIO_OUT);
-    // Initial direction doesn't strictly matter here as it's set per command
 
     // PWM Pin
     gpio_set_function(pwm_pin, GPIO_FUNC_PWM);
     *slice = pwm_gpio_to_slice_num(pwm_pin);
     *channel = pwm_gpio_to_channel(pwm_pin);
-    pwm_set_wrap(*slice, PWM_WRAP_VALUE); // Set PWM frequency wrap value
-    pwm_set_chan_level(*slice, *channel, initial_duty); // Set initial duty cycle
-    pwm_set_enabled(*slice, true); // Enable PWM slice
+    pwm_set_wrap(*slice, PWM_WRAP_VALUE);
+    pwm_set_chan_level(*slice, *channel, initial_duty);
+    pwm_set_enabled(*slice, true);
 }
 
 // Process incoming serial commands
@@ -113,9 +107,9 @@ int main() {
     uint slice_num_left, chan_left;
     uint slice_num_right, chan_right;
 
-    // Initialize tracks - VCC is enabled inside init_track now
-    init_track(LEFT_VCC_PIN, LEFT_DIR_PIN, LEFT_PWM_PIN, &slice_num_left, &chan_left, 0);
-    init_track(RIGHT_VCC_PIN, RIGHT_DIR_PIN, RIGHT_PWM_PIN, &slice_num_right, &chan_right, 0);
+    // Initialize tracks (2-pin: DIR + PWM per motor)
+    init_track(LEFT_DIR_PIN, LEFT_PWM_PIN, &slice_num_left, &chan_left, 0);
+    init_track(RIGHT_DIR_PIN, RIGHT_PWM_PIN, &slice_num_right, &chan_right, 0);
 
     printf("Track Controller Initialized. Waiting for commands...\n");
 

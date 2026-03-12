@@ -15,7 +15,7 @@ tracks/build:
 
 tracks/flash:
 	@echo "Flashing tracks firmware..."
-	python3 nodes/tracks/scripts/flash_firmware.py /dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00
+	python3 nodes/tracks/scripts/flash_firmware.py /dev/serial/by-id/usb-Raspberry_Pi_Pico_4250305031363913-if00
 
 tracks/update: tracks/build tracks/flash
 	@echo "Tracks firmware updated (build and flash complete)."

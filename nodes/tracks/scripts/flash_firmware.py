@@ -18,6 +18,7 @@ import sys
 import subprocess
 import os
 import time
+from typing import Optional
 
 def find_usb_details(device_path: str) -> tuple[Optional[str], Optional[str]]:
     """Use udevadm to find the USB bus and device number for a serial device path.

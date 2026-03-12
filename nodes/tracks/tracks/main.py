@@ -17,7 +17,7 @@ import math # Import math for abs
 import serial # Explicitly import serial exceptions if needed
 
 # --- Configuration ---
-SERIAL_PORT = '/dev/serial/by-id/usb-Raspberry_Pi_Pico_E6612483CB1A9621-if00'
+SERIAL_PORT = '/dev/serial/by-id/usb-Raspberry_Pi_Pico_4250305031363913-if00'
 BAUD_RATE = 115200
 COMMAND_SCALE = 100.0 # Scale joystick (-1..1) to Pico command range (-100..100)
 
