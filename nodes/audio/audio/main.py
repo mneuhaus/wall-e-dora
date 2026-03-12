@@ -138,7 +138,7 @@ def main():
                 # If a sound is playing, send it again to ensure the frontend knows about it
                 if current_sound:
                     node.send_output("current_sound", pa.array([current_sound]), metadata={})
-            elif event["id"] == "stop":
+            elif event["id"] in ("stop", "stop_sequence"):
                 print("Stopping all sounds")
                 pygame.mixer.stop()
                 current_sound = None

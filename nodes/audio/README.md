@@ -99,6 +99,7 @@ The Audio node connects to the Dora framework with these data flows:
 | volume_tick         | dora/timer/secs/1        | Periodically publish current volume          |
 | set_volume          | web/set_volume           | Set volume level (0.0-1.0)                   |
 | stop                | web/stop                 | Stop all sound playback                      |
+| stop_sequence       | sequence/stop_sequence   | Stop scene audio during sequence interruption |
 | setting_updated     | config/setting_updated   | Config change notification (currently unused) |
 
 #### Outputs

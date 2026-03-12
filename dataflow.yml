@@ -101,6 +101,7 @@ nodes:
       volume_tick: dora/timer/secs/1
       set_volume: web/set_volume
       stop: web/stop
+      stop_sequence: sequence/stop_sequence
       setting_updated: config/setting_updated
     outputs:
       - available_sounds
@@ -184,8 +185,10 @@ nodes:
   - id: sequence
     path: nodes/sequence/sequence/main.py
     inputs:
+      tick: dora/timer/millis/50
       trigger: web/sequence_trigger
     outputs:
+      - stop_sequence
       - play_sound_sequence
       - move_servo_sequence
       - play_gif_sequence
