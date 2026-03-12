@@ -622,13 +622,9 @@ def main():
                     # Fix for json-in-string format for servo status updates
                     if event_value and len(event_value) == 1 and isinstance(event_value[0], str):
                         try:
-                            # Check if it's a JSON string
-                            if event_value[0].startswith('[{') or event_value[0].startswith('{'):
-                                parsed_value = json.loads(event_value[0])
-                                # Update the event_data with properly parsed value
-                                event_value = parsed_value
-                                event_data["value"] = parsed_value
-                                logging.info(f"Fixed JSON-in-string format for servo_status")
+                            parsed_value = json.loads(event_value[0])
+                            event_value = parsed_value
+                            event_data["value"] = parsed_value
                         except json.JSONDecodeError as e:
                             logging.error(f"Failed to parse servo_status JSON string: {e}")
 
@@ -663,36 +659,15 @@ def main():
                         # Fix for json-in-string format: if the first item is a string containing JSON
                         if len(event_value) == 1 and isinstance(event_value[0], str):
                             try:
-                                # Case 1: String starts with an array of objects marker
-                                if event_value[0].startswith('[{') or event_value[0].startswith('[{'):
-                                    # Log the raw string for debugging
-                                    logging.info(f"Raw servos_list JSON array string: {event_value[0][:200]}...")
-
-                                    # Parse the JSON string into a proper list of objects
-                                    parsed_value = json.loads(event_value[0])
-                                    if isinstance(parsed_value, list):
-                                        # Update the event data with properly parsed value
-                                        event_value = parsed_value
-                                        event_data["value"] = parsed_value
-                                        logging.info(f"Successfully parsed servos_list array. Now contains {len(parsed_value)} servos.")
-                                    else:
-                                        logging.error(f"Parsed servos_list JSON is not a list. Got type: {type(parsed_value)}")
-
-                                # Case 2: String starts with a single object marker (handle single servo case)
-                                elif event_value[0].startswith('{'):
-                                    logging.info(f"Raw servos_list single JSON object: {event_value[0][:200]}...")
-
-                                    # Parse the JSON string into a single object
-                                    parsed_value = json.loads(event_value[0])
-                                    if isinstance(parsed_value, dict):
-                                        # Create a list with this single servo
-                                        event_value = [parsed_value]
-                                        event_data["value"] = [parsed_value]
-                                        logging.info(f"Successfully parsed single servo JSON into a list. ID: {parsed_value.get('id')}")
-                                    else:
-                                        logging.error(f"Parsed servos_list JSON object is not a dict. Got type: {type(parsed_value)}")
+                                parsed_value = json.loads(event_value[0])
+                                if isinstance(parsed_value, list):
+                                    event_value = parsed_value
+                                    event_data["value"] = parsed_value
+                                elif isinstance(parsed_value, dict):
+                                    event_value = [parsed_value]
+                                    event_data["value"] = [parsed_value]
                             except json.JSONDecodeError as e:
-                                logging.error(f"Failed to parse servos_list JSON string: {e}, string was: {event_value[0][:100]}...")
+                                logging.error(f"Failed to parse servos_list JSON string: {e}")
 
                         # Log the servo IDs
                         try:

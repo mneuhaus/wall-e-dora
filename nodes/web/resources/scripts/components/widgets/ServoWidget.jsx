@@ -4,6 +4,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { useGridContext } from '../../contexts/GridContext';
 import Slider from 'rc-slider';
 import { updateWidgetSettings } from '../../utils/settingsManager';
+import { findServoInPayload } from '../../utils/servoData';
 
 /**
  * ServoWidget - A grid widget for controlling a single servo motor
@@ -49,25 +50,14 @@ const ServoWidget = ({ servoId, position: savedPosition, speed: savedSpeed, i })
   // Listen for servo updates from WebSocket
   useEffect(() => {
     const unsubscribe = node.on('servo_status', (event) => {
-      if (event && event.value) {
-        const servos = event.value || [];
-        
-        // Ensure we're comparing the same types
-        const targetId = parseInt(servoId);
-        
-        // Flexible matching with type conversion
-        const servo = servos.find(s => {
-          const currentId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
-          return currentId === targetId;
-        });
-        
-        if (servo) {
-          setServoInfo(servo);
-          setPosition(servo.position || 0);
-          setSpeed(servo.speed || 100);
-          setMin(servo.min_pos !== undefined ? servo.min_pos : 0);
-          setMax(servo.max_pos !== undefined ? servo.max_pos : 180);
-        }
+      const servo = findServoInPayload(event?.value, servoId);
+
+      if (servo) {
+        setServoInfo(servo);
+        setPosition(servo.position || 0);
+        setSpeed(servo.speed || 100);
+        setMin(servo.min_pos !== undefined ? servo.min_pos : 0);
+        setMax(servo.max_pos !== undefined ? servo.max_pos : 180);
       }
     });
     

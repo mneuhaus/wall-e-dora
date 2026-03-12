@@ -67,7 +67,7 @@ describe('ServoWidget', () => {
     expect(screen.getByTestId('mock-slider')).toHaveAttribute('data-value', '120');
   });
 
-  test('emits set_servo event when position changes', async () => {
+  test('emits move_servo event when position changes', async () => {
     // Render the widget
     renderWithProviders(<ServoWidget servoId={1} />);
     
@@ -80,8 +80,18 @@ describe('ServoWidget', () => {
     const slider = screen.getByTestId('mock-slider');
     fireEvent.click(slider); // This will call the onChange with value+10
     
-    // Check if set_servo was called with the right parameters
-    expect(node.emit).toHaveBeenCalledWith('set_servo', [1, 100, 50]);
+    // Check if move_servo was called with the right payload format
+    expect(node.emit).toHaveBeenCalledWith('move_servo', [{ id: 1, position: 100 }]);
+  });
+
+  test('updates from single-servo status payloads', async () => {
+    renderWithProviders(<ServoWidget servoId={1} />);
+
+    act(() => {
+      node.__triggerEvent('servo_status', { value: { ...mockAvailableServos[0], position: 135 } });
+    });
+
+    expect(screen.getByTestId('mock-slider')).toHaveAttribute('data-value', '135');
   });
 
   test('displays position value when in edit mode', async () => {

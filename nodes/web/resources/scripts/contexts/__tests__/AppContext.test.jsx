@@ -86,6 +86,39 @@ describe('AppContext', () => {
     expect(getByTestId('servo-2')).toHaveTextContent('2: 45');
   });
 
+  test('merges single-servo status payloads', () => {
+    const { getByTestId } = render(
+      <AppProvider>
+        <TestConsumer />
+      </AppProvider>
+    );
+
+    act(() => {
+      node.__triggerEvent('servo_status', { value: { id: 7, position: 123 } });
+    });
+
+    expect(getByTestId('servo-count')).toHaveTextContent('1');
+    expect(getByTestId('servo-7')).toHaveTextContent('7: 123');
+  });
+
+  test('filters malformed servo entries from list payloads', () => {
+    const { getByTestId, queryByTestId } = render(
+      <AppProvider>
+        <TestConsumer />
+      </AppProvider>
+    );
+
+    act(() => {
+      node.__triggerEvent('servos_list', {
+        value: [{ id: 1, position: 90 }, '[]', null, { position: 12 }],
+      });
+    });
+
+    expect(getByTestId('servo-count')).toHaveTextContent('1');
+    expect(getByTestId('servo-1')).toHaveTextContent('1: 90');
+    expect(queryByTestId('servo-undefined')).not.toBeInTheDocument();
+  });
+
   test('requests servo status on mount', () => {
     render(
       <AppProvider>

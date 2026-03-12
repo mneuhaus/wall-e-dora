@@ -5,6 +5,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { useGridContext } from '../../contexts/GridContext';
 import { ServoSelector as ServoSelect } from '../common/inputs';
 import { updateWidgetSettings } from '../../utils/settingsManager';
+import { findServoInPayload } from '../../utils/servoData';
 
 /**
  * JoystickWidget - A grid widget that provides joystick control for two servos
@@ -140,36 +141,16 @@ const JoystickWidget = ({
   // Listen for servo updates from WebSocket
   useEffect(() => {
     const unsubscribe = node.on('servo_status', (event) => {
-      if (event && event.value) {
-        const servos = event.value || [];
-        
-        // Update X servo
-        if (xServoId) {
-          const targetXId = parseInt(xServoId);
-          const xServo = servos.find(s => {
-            const currentId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
-            return currentId === targetXId;
-          });
-          
-          if (xServo) {
-            setXServoInfo(xServo);
-            setXPosition(xServo.position || 90);
-          }
-        }
-        
-        // Update Y servo
-        if (yServoId) {
-          const targetYId = parseInt(yServoId);
-          const yServo = servos.find(s => {
-            const currentId = typeof s.id === 'string' ? parseInt(s.id) : s.id;
-            return currentId === targetYId;
-          });
-          
-          if (yServo) {
-            setYServoInfo(yServo);
-            setYPosition(yServo.position || 90);
-          }
-        }
+      const xServo = findServoInPayload(event?.value, xServoId);
+      if (xServo) {
+        setXServoInfo(xServo);
+        setXPosition(xServo.position || 90);
+      }
+
+      const yServo = findServoInPayload(event?.value, yServoId);
+      if (yServo) {
+        setYServoInfo(yServo);
+        setYPosition(yServo.position || 90);
       }
     });
     

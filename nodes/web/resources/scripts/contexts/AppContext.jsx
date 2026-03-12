@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import node from '../Node';
+import { normalizeServoList } from '../utils/servoData';
 
 // Create the context
 const AppContext = createContext(null);
@@ -23,50 +24,37 @@ export function AppProvider({ children }) {
   // Listen for servo status updates
   useEffect(() => {
     const unsubscribeStatus = node.on('servo_status', (event) => {
-      if (event && event.value) {
-        const servoData = event.value;
-        console.log("Received servo_status update:", servoData);
-        
-        // Check if we received a single servo or an array
-        if (Array.isArray(servoData)) {
-          // Array update - replace the entire list
-          setAvailableServos(servoData);
-          // Legacy support
-          window.availableServos = servoData;
-        } else {
-          // Single servo update - update that servo in the list
-          setAvailableServos(prevServos => {
-            // Create a new array with updated servo
-            const updatedServos = [...prevServos];
-            const servoId = servoData.id;
-            const existingIndex = updatedServos.findIndex(s => s.id === servoId);
-            
-            if (existingIndex >= 0) {
-              // Update existing servo
-              updatedServos[existingIndex] = servoData;
-            } else {
-              // Add new servo
-              updatedServos.push(servoData);
-            }
-            
-            // Legacy support
-            window.availableServos = updatedServos;
-            return updatedServos;
-          });
-        }
+      const servoData = normalizeServoList(event?.value);
+      if (servoData.length === 0) {
+        return;
       }
+
+      console.log("Received servo_status update:", servoData);
+
+      setAvailableServos((prevServos) => {
+        const updatedServos = [...prevServos];
+
+        servoData.forEach((incomingServo) => {
+          const existingIndex = updatedServos.findIndex((servo) => servo.id === incomingServo.id);
+
+          if (existingIndex >= 0) {
+            updatedServos[existingIndex] = incomingServo;
+          } else {
+            updatedServos.push(incomingServo);
+          }
+        });
+
+        window.availableServos = updatedServos;
+        return updatedServos;
+      });
     });
     
     // Listen for servos_list updates (complete list of available servos)
     const unsubscribeList = node.on('servos_list', (event) => {
-      if (event && event.value) {
-        const servosList = event.value;
-        
-        if (Array.isArray(servosList)) {
-          setAvailableServos(servosList);
-          // Legacy support
-          window.availableServos = servosList;
-        }
+      const servosList = normalizeServoList(event?.value);
+      if (servosList.length > 0 || Array.isArray(event?.value)) {
+        setAvailableServos(servosList);
+        window.availableServos = servosList;
       }
     });
     
