@@ -6,12 +6,12 @@
 #include "pico/time.h"
 
 // GPIO Pin definitions for Xiao Seeed RP2040
-// Left motor: D0 (GPIO26) = PWM, D1 (GPIO27) = DIR
-// Right motor: D4 (GPIO6) = DIR, D5 (GPIO7) = PWM
-#define LEFT_DIR_PIN  27
-#define LEFT_PWM_PIN  26
-#define RIGHT_DIR_PIN 6
-#define RIGHT_PWM_PIN 7
+// Left motor: D0 (GPIO26) = DIR, D1 (GPIO27) = PWM
+// Right motor: D4 (GPIO6) = PWM, D5 (GPIO7) = DIR
+#define LEFT_DIR_PIN  26
+#define LEFT_PWM_PIN  27
+#define RIGHT_DIR_PIN 7
+#define RIGHT_PWM_PIN 6
 
 #define PWM_WRAP_VALUE 1000 // Max PWM duty cycle value
 #define HEARTBEAT_TIMEOUT_US 3000000 // 3 seconds
