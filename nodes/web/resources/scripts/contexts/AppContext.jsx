@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import node from '../Node';
 import { normalizeServoList } from '../utils/servoData';
 
@@ -26,6 +26,11 @@ export function AppProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
   const [gamepadProfiles, setGamepadProfiles] = useState({});
   const [cameraBackgroundEnabled, setCameraBackgroundEnabled] = useState(() => getStoredCameraBackgroundEnabled());
+  const [photos, setPhotos] = useState([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
+  const [photoCaptureFlashToken, setPhotoCaptureFlashToken] = useState(0);
+  const captureInFlightRef = useRef(false);
+  const lastCaptureAtRef = useRef(0);
 
   useEffect(() => {
     try {
@@ -119,6 +124,82 @@ export function AppProvider({ children }) {
     setCameraBackgroundEnabled((enabled) => !enabled);
   };
 
+  const refreshPhotos = async () => {
+    setPhotosLoading(true);
+    try {
+      const response = await fetch('/api/photos');
+      if (!response.ok) {
+        throw new Error(`Failed to load photos: ${response.status}`);
+      }
+      const payload = await response.json();
+      setPhotos(Array.isArray(payload.photos) ? payload.photos : []);
+    } catch (error) {
+      console.error('Failed to load photo gallery', error);
+    } finally {
+      setPhotosLoading(false);
+    }
+  };
+
+  const capturePhoto = async (source = 'ui') => {
+    if (captureInFlightRef.current) {
+      return null;
+    }
+
+    captureInFlightRef.current = true;
+    try {
+      const response = await fetch('/api/photos/capture', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ source }),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to capture photo: ${response.status}`);
+      }
+
+      const payload = await response.json();
+      if (payload?.photo) {
+        setPhotos((prev) => [payload.photo, ...prev.filter((photo) => photo.filename !== payload.photo.filename)]);
+        setPhotoCaptureFlashToken((token) => token + 1);
+        window.dispatchEvent(new CustomEvent('photo_saved', { detail: payload.photo }));
+        return payload.photo;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to capture photo', error);
+      return null;
+    } finally {
+      captureInFlightRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    refreshPhotos();
+  }, []);
+
+  useEffect(() => {
+    const handleGamepadFlash = (event) => {
+      const control = event?.detail?.control;
+      if (control !== 'FACE_1') {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastCaptureAtRef.current < 1200) {
+        return;
+      }
+
+      lastCaptureAtRef.current = now;
+      capturePhoto('gamepad');
+    };
+
+    window.addEventListener('gamepad_button_flash', handleGamepadFlash);
+    return () => {
+      window.removeEventListener('gamepad_button_flash', handleGamepadFlash);
+    };
+  }, []);
+
   // Save a gamepad profile
   const saveGamepadProfile = (profile) => {
     node.emit('save_gamepad_profile', [profile]);
@@ -150,8 +231,13 @@ export function AppProvider({ children }) {
     isConnected,
     gamepadProfiles,
     cameraBackgroundEnabled,
+    photos,
+    photosLoading,
+    photoCaptureFlashToken,
     setCameraBackgroundEnabled,
     toggleCameraBackground,
+    refreshPhotos,
+    capturePhoto,
     setServos: setAvailableServos,
     getServos: () => availableServos,
     updateWidgetsState,

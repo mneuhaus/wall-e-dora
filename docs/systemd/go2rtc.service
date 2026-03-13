@@ -1,0 +1,16 @@
+[Unit]
+Description=go2rtc USB camera streaming service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mneuhaus
+WorkingDirectory=/home/mneuhaus/wall-e-dora
+ExecStartPre=/usr/bin/v4l2-ctl -d /dev/video0 --set-ctrl=brightness=0,contrast=40,saturation=64,hue=0,white_balance_automatic=1,gamma=300,gain=64,power_line_frequency=1,sharpness=50,backlight_compensation=0,auto_exposure=3,exposure_dynamic_framerate=0,focus_automatic_continuous=1
+ExecStart=/usr/local/bin/go2rtc -c /home/mneuhaus/wall-e-dora/config/go2rtc.yaml
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

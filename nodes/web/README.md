@@ -93,7 +93,7 @@ graph TD
 - Use aiohttp for web server functionality
 - Implement WebSocket handlers for real-time communication
 - Store persistent data in JSON format
-- Serve a lightweight camera snapshot endpoint for the optional live background
+- Proxy a `go2rtc` camera stream and JPEG frame endpoint for the optional live background
 - Generate self-signed SSL certificates if not present
 - Handle multiple concurrent client connections
 - Process Dora events and translate them to UI updates
@@ -129,7 +129,7 @@ The web node connects to the Dora framework with these data flows:
 | gamepad_profiles_list    | web/gamepad_profiles_list      | List of all available gamepad profiles    |
 | *camera_feed*            | *opencv-video-capture/image*   | *(Optional) Camera feed image*            |
 
-The web server also exposes `GET /camera/snapshot.jpg` for the optional full-screen live background toggle in the UI.
+The web server also exposes `GET /camera/snapshot.jpg` and `GET /camera/stream.mjpeg` for the optional full-screen live background toggle in the UI. It also provides `GET /api/photos`, `POST /api/photos/capture`, and serves saved images under `/photos/` for the on-device photo gallery. The actual USB camera is now handled by a separate `go2rtc` systemd service, and the web node only proxies that feed over the existing HTTPS origin.
 
 #### Outputs
 | Output ID                 | Destination      | Description                               |
@@ -294,7 +294,7 @@ pytest .
 ## Future Enhancements
 1. User authentication system
 2. Remote access over internet (not just local network)
-3. Camera feed integration
+3. Native WebRTC camera background mode on top of the existing `go2rtc` service
 4. Preset position/sequence recording and playback
 5. Support for saved "poses" or movement sequences
 

@@ -7,6 +7,7 @@
 
 // Import view components
 import DashboardView from './DashboardView';
+import GalleryView from './GalleryView';
 import GamepadView from './GamepadView';
 import ServoDebugView from './ServoDebugView';
 import ServoDiagnosticsOverviewView from './ServoDiagnosticsOverviewView';
@@ -15,6 +16,7 @@ import ShowtimeView from './ShowtimeView';
 // Export components individually
 export {
   DashboardView,
+  GalleryView,
   GamepadView,
   ServoDebugView,
   ServoDiagnosticsOverviewView,
@@ -24,6 +26,7 @@ export {
 // Default export for importing all at once
 export default {
   DashboardView,
+  GalleryView,
   GamepadView,
   ServoDebugView,
   ServoDiagnosticsOverviewView,

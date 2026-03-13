@@ -12,26 +12,55 @@ const ShowtimeView = () => {
   const styles = `
     .showtime-view {
       height: 100%;
-      overflow: auto;
-      padding: 10px;
+      min-height: 100%;
+      overflow: hidden;
+      padding: 8px;
       box-sizing: border-box;
     }
 
     .showtime-view .sequence-bar {
       margin-top: 0;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      min-height: calc(100vh - 62px);
+      gap: 8px;
     }
 
     .showtime-view .sequence-bar__btn {
-      min-height: 76px;
-      font-size: 1rem;
-      border-radius: 18px;
+      min-height: 50px;
+      padding: 9px 5px;
+      font-size: 0.78rem;
+      border-radius: 14px;
+    }
+
+    .showtime-view .sequence-bar__rail {
+      gap: 8px;
+    }
+
+    @media (max-width: 359px) {
+      .showtime-view .sequence-bar {
+        grid-template-columns: 68px minmax(0, 1fr) 68px;
+      }
+
+      .showtime-view .sequence-bar__btn {
+        min-height: 48px;
+        font-size: 0.75rem;
+      }
+    }
+
+    @media (orientation: landscape) and (min-width: 560px) {
+      .showtime-view .sequence-bar {
+        min-height: calc(100vh - 58px);
+      }
+
+      .showtime-view .sequence-bar__btn {
+        min-height: 46px;
+        font-size: 0.74rem;
+      }
     }
 
     @media (min-width: 760px) {
-      .showtime-view .sequence-bar {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+      .showtime-view .sequence-bar__btn {
+        min-height: 48px;
+        font-size: 0.76rem;
       }
     }
   `;

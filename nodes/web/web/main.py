@@ -5,19 +5,23 @@ and handle real-time communication with clients and other Dora nodes.
 Manages gamepad profiles and orchestrates data flow between the UI and backend nodes.
 """
 
-from dora import Node
-import threading
 import asyncio
-import os
 import math
-import jinja2
-from aiohttp import web
+import os
+import threading
+from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+
+import aiohttp
 import aiohttp_debugtoolbar
 import json
+import jinja2
 import logging
 import pyarrow as pa
-import subprocess
 import time
+from aiohttp import web
+from dora import Node
 from handlers.gamepad_profiles import (
     GamepadProfileManager,
     handle_save_gamepad_profile,
@@ -30,11 +34,12 @@ from handlers.gamepad_profiles import (
 
 logging.basicConfig(level=logging.INFO)
 
-CAMERA_DEVICE = '/dev/video0'
-CAMERA_WIDTH = 640
-CAMERA_HEIGHT = 360
-CAMERA_TTL_SECONDS = 0.35
-CAMERA_CAPTURE_TIMEOUT_SECONDS = 4.0
+CAMERA_TTL_SECONDS = 0.25
+CAMERA_FETCH_TIMEOUT_SECONDS = 2.5
+GO2RTC_BASE_URL = os.environ.get('GO2RTC_BASE_URL', 'http://127.0.0.1:1984')
+GO2RTC_STREAM_SRC = os.environ.get('GO2RTC_STREAM_SRC', 'walle_camera')
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PHOTO_GALLERY_DIR = REPO_ROOT / 'out' / 'photos'
 camera_snapshot_lock = threading.Lock()
 camera_snapshot_bytes = None
 camera_snapshot_taken_at = 0.0
@@ -45,59 +50,42 @@ ws_clients = set()      # Set of active WebSocket client connections
 web_loop = None         # asyncio event loop for the web server thread
 
 
-def capture_camera_snapshot() -> bytes | None:
-    """Capture a single JPEG frame from the USB camera or return a recent cached one."""
+async def fetch_go2rtc_frame() -> bytes | None:
+    """Fetch a recent JPEG frame through go2rtc and cache it briefly."""
     global camera_snapshot_bytes, camera_snapshot_taken_at
 
+    now = time.monotonic()
     with camera_snapshot_lock:
-        now = time.monotonic()
         if camera_snapshot_bytes and now - camera_snapshot_taken_at <= CAMERA_TTL_SECONDS:
             return camera_snapshot_bytes
 
-        capture_path = f"/tmp/walle-camera-{os.getpid()}-{threading.get_ident()}.jpg"
-        command = [
-            'v4l2-ctl',
-            f'--device={CAMERA_DEVICE}',
-            f'--set-fmt-video=width={CAMERA_WIDTH},height={CAMERA_HEIGHT},pixelformat=MJPG',
-            '--stream-mmap=3',
-            '--stream-count=1',
-            f'--stream-to={capture_path}',
-        ]
+    frame_url = f'{GO2RTC_BASE_URL}/api/frame.jpeg?src={GO2RTC_STREAM_SRC}'
+    timeout = aiohttp.ClientTimeout(total=CAMERA_FETCH_TIMEOUT_SECONDS)
 
-        try:
-            result = subprocess.run(
-                command,
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=CAMERA_CAPTURE_TIMEOUT_SECONDS,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip() or 'camera capture command failed')
-            if not os.path.exists(capture_path):
-                raise RuntimeError('camera capture did not produce an image file')
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(frame_url) as response:
+                if response.status != 200:
+                    raise RuntimeError(f'go2rtc frame request failed: {response.status}')
+                frame = await response.read()
 
-            with open(capture_path, 'rb') as image_file:
-                frame = image_file.read()
+        if not frame.startswith(b'\xff\xd8'):
+            raise RuntimeError('go2rtc returned invalid JPEG data')
 
-            if not frame.startswith(b'\xff\xd8'):
-                raise RuntimeError('camera capture returned invalid JPEG data')
-
+        with camera_snapshot_lock:
             camera_snapshot_bytes = frame
             camera_snapshot_taken_at = now
-            return frame
-        except Exception as error:
-            logging.warning('Camera snapshot failed: %s', error)
+
+        return frame
+    except Exception as error:
+        logging.warning('Camera snapshot failed via go2rtc: %s', error)
+        with camera_snapshot_lock:
             return camera_snapshot_bytes
-        finally:
-            if os.path.exists(capture_path):
-                os.remove(capture_path)
 
 
 async def camera_snapshot(request: web.Request):
     """Serve a recent camera JPEG frame for the UI background."""
-    frame = await asyncio.to_thread(capture_camera_snapshot)
+    frame = await fetch_go2rtc_frame()
     if not frame:
         return web.Response(text='Camera unavailable', status=503)
 
@@ -110,6 +98,98 @@ async def camera_snapshot(request: web.Request):
             'Access-Control-Allow-Origin': '*',
         },
     )
+
+
+async def camera_stream(request: web.Request):
+    """Proxy the go2rtc MJPEG stream through the existing HTTPS web node."""
+    stream_url = f'{GO2RTC_BASE_URL}/api/stream.mjpeg?src={GO2RTC_STREAM_SRC}'
+    timeout = aiohttp.ClientTimeout(total=None, sock_connect=CAMERA_FETCH_TIMEOUT_SECONDS, sock_read=None)
+
+    try:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(stream_url) as upstream:
+                if upstream.status != 200:
+                    body = await upstream.text()
+                    logging.warning('go2rtc stream request failed: %s %s', upstream.status, body[:200])
+                    return web.Response(text='Camera stream unavailable', status=503)
+
+                response = web.StreamResponse(
+                    status=200,
+                    headers={
+                        'Content-Type': upstream.headers.get(
+                            'Content-Type',
+                            'multipart/x-mixed-replace; boundary=frame',
+                        ),
+                        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                        'Pragma': 'no-cache',
+                        'Access-Control-Allow-Origin': '*',
+                    },
+                )
+                await response.prepare(request)
+
+                async for chunk in upstream.content.iter_chunked(16384):
+                    await response.write(chunk)
+
+                await response.write_eof()
+                return response
+    except (aiohttp.ClientError, asyncio.TimeoutError) as error:
+        logging.warning('Camera stream proxy failed: %s', error)
+        return web.Response(text='Camera stream unavailable', status=503)
+    except ConnectionResetError:
+        logging.debug('Camera stream client disconnected')
+        return web.Response(status=499)
+
+
+def ensure_photo_gallery_dir():
+    """Ensure the on-device photo gallery directory exists."""
+    PHOTO_GALLERY_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def serialize_photo_path(photo_path: Path) -> dict:
+    """Convert a saved photo path into API-friendly metadata."""
+    stat = photo_path.stat()
+    captured_at = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat()
+    return {
+        'filename': photo_path.name,
+        'url': f'/photos/{photo_path.name}',
+        'captured_at': captured_at,
+        'size_bytes': stat.st_size,
+    }
+
+
+async def list_photos(request: web.Request):
+    """Return the current saved photo gallery."""
+    ensure_photo_gallery_dir()
+    photo_paths = sorted(
+        [path for path in PHOTO_GALLERY_DIR.iterdir() if path.suffix.lower() in {'.jpg', '.jpeg'}],
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    return web.json_response({'photos': [serialize_photo_path(path) for path in photo_paths]})
+
+
+async def capture_photo(request: web.Request):
+    """Capture a JPEG frame from go2rtc and persist it to the robot."""
+    ensure_photo_gallery_dir()
+    frame = await fetch_go2rtc_frame()
+    if not frame:
+        return web.json_response({'error': 'camera unavailable'}, status=503)
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    source = str(payload.get('source') or 'ui').strip().lower()
+    timestamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+    photo_path = PHOTO_GALLERY_DIR / f'{timestamp}-{source}-{uuid4().hex[:6]}.jpg'
+    photo_path.write_bytes(frame)
+    logging.info('Saved photo to %s', photo_path)
+
+    return web.json_response({
+        'ok': True,
+        'photo': serialize_photo_path(photo_path),
+    })
 
 
 
@@ -370,6 +450,7 @@ def start_background_webserver():
         import json
         import aiohttp
 
+        ensure_photo_gallery_dir()
         app = web.Application()
         aiohttp_debugtoolbar.setup(app, intercept_redirects=True, hosts=['127.0.0.1', '::1'])
         template_path = os.path.join(os.path.dirname(__file__), "..", "resources")
@@ -377,7 +458,11 @@ def start_background_webserver():
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
         app.router.add_get('/camera/snapshot.jpg', camera_snapshot)
+        app.router.add_get('/camera/stream.mjpeg', camera_stream)
+        app.router.add_get('/api/photos', list_photos)
+        app.router.add_post('/api/photos/capture', capture_photo)
         app.router.add_static('/resources/', path=template_path, name='resources')
+        app.router.add_static('/photos/', path=str(PHOTO_GALLERY_DIR), name='photos', show_index=False, append_version=False)
         
         # Add specific route for icons with correct MIME types
         app.router.add_static('/icons/', 

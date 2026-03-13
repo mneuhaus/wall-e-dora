@@ -18,6 +18,9 @@ const SEQUENCES = [
   { id: 'shimmy', label: 'Wackeltanz' },
 ];
 
+const LEFT_SEQUENCES = SEQUENCES.slice(0, Math.ceil(SEQUENCES.length / 2));
+const RIGHT_SEQUENCES = SEQUENCES.slice(Math.ceil(SEQUENCES.length / 2));
+
 const Button = ({ id, label, title }) => (
   <button
     className="sequence-bar__btn"
@@ -32,33 +35,48 @@ const SequenceBar = () => {
   const styles = `
     .sequence-bar {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 12px;
+      grid-template-columns: clamp(72px, 19vw, 94px) minmax(0, 1fr) clamp(72px, 19vw, 94px);
+      gap: 8px;
       width: 100%;
+      height: 100%;
+      align-items: start;
     }
-    @media (max-width: 900px) {
-      .sequence-bar { grid-template-columns: repeat(3, 1fr); }
+
+    .sequence-bar__rail {
+      display: grid;
+      gap: 8px;
+      align-content: start;
     }
-    @media (max-width: 600px) {
-      .sequence-bar { grid-template-columns: repeat(2, 1fr); }
+
+    .sequence-bar__center {
+      min-height: 100%;
+      pointer-events: none;
+    }
+
+    @media (orientation: landscape) and (min-width: 560px) {
+      .sequence-bar {
+        grid-template-columns: clamp(84px, 13vw, 112px) minmax(0, 1fr) clamp(84px, 13vw, 112px);
+      }
     }
 
     .sequence-bar__btn {
-      padding: 12px 10px;
-      min-height: 52px;
-      font-size: 0.92rem;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06);
+      padding: 9px 6px;
+      min-height: 46px;
+      font-size: 0.82rem;
+      line-height: 1.1;
+      font-weight: 600;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
       color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.88), 0 0 10px rgba(0, 0, 0, 0.35);
       cursor: pointer;
       transition: all .2s;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
     .sequence-bar__btn:hover {
-      background: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.08);
       border-color: var(--primary);
       transform: translateY(-1px);
     }
@@ -70,9 +88,17 @@ const SequenceBar = () => {
   return (
     <div className="sequence-bar">
       <style>{styles}</style>
-      {SEQUENCES.map((sequence) => (
-        <Button key={sequence.id} {...sequence} />
-      ))}
+      <div className="sequence-bar__rail sequence-bar__rail--left">
+        {LEFT_SEQUENCES.map((sequence) => (
+          <Button key={sequence.id} {...sequence} />
+        ))}
+      </div>
+      <div className="sequence-bar__center" aria-hidden="true" />
+      <div className="sequence-bar__rail sequence-bar__rail--right">
+        {RIGHT_SEQUENCES.map((sequence) => (
+          <Button key={sequence.id} {...sequence} />
+        ))}
+      </div>
     </div>
   );
 };

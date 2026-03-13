@@ -1,0 +1,8 @@
+api:
+  listen: "127.0.0.1:1984"
+
+log:
+  format: text
+
+streams:
+  walle_camera: v4l2:device?video=/dev/video0&input_format=mjpeg&video_size=640x360&framerate=30
