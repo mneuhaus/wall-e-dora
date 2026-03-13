@@ -22,7 +22,7 @@ tracks/update: tracks/build tracks/flash
 
 service/install:
 	@echo "Creating systemd service to start wall-e-dora on boot..."
-	@echo "[Unit]\nDescription=WALL-E-DORA Robot Control System\nAfter=network.target\n\n[Service]\nType=simple\nUser=$(shell whoami)\nWorkingDirectory=$(shell pwd)\nExecStart=$(shell pwd)/service_runner.sh\nRestart=on-failure\nStandardOutput=journal\nStandardError=journal\nEnvironment=\"PATH=/home/$(shell whoami)/.dora/bin:$(PATH)\"\n\n[Install]\nWantedBy=multi-user.target" > wall-e-dora.service
+	@echo "[Unit]\nDescription=WALL-E-DORA Robot Control System\nAfter=network.target\n\n[Service]\nType=simple\nUser=$(shell whoami)\nWorkingDirectory=$(shell pwd)\nExecStart=$(shell pwd)/service_runner.sh\nRestart=always\nRestartSec=5\nStandardOutput=journal\nStandardError=journal\nEnvironment=\"PATH=/home/$(shell whoami)/.dora/bin:$(PATH)\"\n\n[Install]\nWantedBy=multi-user.target" > wall-e-dora.service
 	@echo "#!/bin/bash\ncd $(shell pwd) && /home/$(shell whoami)/.dora/bin/dora run dataflow.yml --uv" > service_runner.sh
 	@chmod +x service_runner.sh
 	@sudo mv wall-e-dora.service /etc/systemd/system/

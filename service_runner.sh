@@ -27,4 +27,4 @@ DORA_PID=$!
 echo "Services started - dora PID: $DORA_PID (includes web server on port 8443)"
 
 # Wait for process to exit
-wait
+wait $DORA_PID
