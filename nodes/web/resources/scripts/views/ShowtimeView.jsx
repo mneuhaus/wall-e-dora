@@ -32,7 +32,7 @@ const ShowtimeView = () => {
     }
 
     .showtime-view .sequence-bar__rail {
-      gap: 8px;
+      gap: 4px;
     }
 
     @media (max-width: 359px) {

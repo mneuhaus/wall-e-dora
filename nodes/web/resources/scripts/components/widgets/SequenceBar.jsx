@@ -11,11 +11,13 @@ const SEQUENCES = [
   { id: 'peekaboo', label: 'Kuckuck' },
   { id: 'curious-scan', label: 'Neugierig' },
   { id: 'hands-up', label: 'Arme hoch' },
+  { id: 'pirouette', label: 'Pirouette' },
   { id: 'candy', label: 'Bonbon?' },
   { id: 'party', label: 'Party' },
   { id: 'spin-wiggle', label: 'Drehwackel' },
   { id: 'double-take', label: 'Hoppla' },
   { id: 'shimmy', label: 'Wackeltanz' },
+  { id: 'suche', label: 'Suche' },
 ];
 
 const LEFT_SEQUENCES = SEQUENCES.slice(0, Math.ceil(SEQUENCES.length / 2));
@@ -44,7 +46,7 @@ const SequenceBar = () => {
 
     .sequence-bar__rail {
       display: grid;
-      gap: 8px;
+      gap: 4px;
       align-content: start;
     }
 

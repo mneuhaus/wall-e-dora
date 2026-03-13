@@ -399,6 +399,74 @@ def build_shimmy(builder: SequenceBuilder) -> None:
 
 
 
+def build_pirouette(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.play_gif('lets-dance.gif')
+    builder.play_sound('freudiges-trällern.mp3')
+    builder.move_servo(2, 180)
+    builder.move_servo(13, 820)
+    builder.wait(0.16)
+
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, 0.55)
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(6, HEAD_LEFT_UP)
+    builder.wait(0.55)
+
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, 0.55)
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_servo(6, HEAD_LEFT_NEUTRAL)
+    builder.move_servo(4, HEAD_RIGHT_UP)
+    builder.wait(0.55)
+
+    builder.move_tracks(0, TRACK_TURN_SHIMMY, 0.18)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.move_servo(2, ARM_LEFT_UP)
+    builder.move_servo(13, ARM_RIGHT_UP)
+    builder.wait(0.18)
+
+    builder.stop_tracks(0.12)
+    builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
+    builder.wait(0.12)
+    neutral_pose(builder, keep_eyes=True)
+
+
+def build_suche(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.play_gif('ghibli-landscape.gif')
+    builder.play_sound('fragendes-seufzen.mp3')
+    builder.wait(0.15)
+
+    builder.move_tracks(0, TRACK_TURN_SHIMMY, 0.38)
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(6, HEAD_LEFT_UP)
+    builder.move_servo(2, 160)
+    builder.wait(0.38)
+    builder.stop_tracks(0.12)
+    builder.move_servo(6, HEAD_LEFT_NEUTRAL)
+    builder.wait(0.12)
+
+    builder.move_tracks(0, -TRACK_TURN_SHIMMY, 0.5)
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_servo(4, HEAD_RIGHT_UP)
+    builder.move_servo(13, 805)
+    builder.wait(0.5)
+    builder.stop_tracks(0.12)
+    builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
+    builder.wait(0.12)
+
+    builder.move_tracks(0, TRACK_TURN_SHIMMY, 0.26)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.move_servo(2, 120)
+    builder.move_servo(13, 760)
+    builder.wait(0.26)
+
+    builder.stop_tracks(0.12)
+    builder.wait(0.12)
+    neutral_pose(builder, keep_eyes=True)
+
+
 def build_idle_listen(builder: SequenceBuilder) -> None:
     builder.move_servo(5, DOOR_CLOSED)
     builder.play_sound('fragendes-seufzen.mp3')
@@ -473,6 +541,10 @@ def build_sequence_plan(seq_id: str) -> list[PlanStep] | None:
         build_double_take(builder)
     elif seq_id == 'shimmy':
         build_shimmy(builder)
+    elif seq_id == 'pirouette':
+        build_pirouette(builder)
+    elif seq_id == 'suche':
+        build_suche(builder)
     elif seq_id == 'idle-listen':
         build_idle_listen(builder)
     elif seq_id == 'idle-peek':

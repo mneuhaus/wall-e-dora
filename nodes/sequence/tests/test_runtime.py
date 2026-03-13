@@ -35,6 +35,8 @@ def test_all_sequence_plans_start_with_audio_stop() -> None:
         'spin-wiggle',
         'double-take',
         'shimmy',
+        'pirouette',
+        'suche',
         'idle-listen',
         'idle-peek',
         'idle-fidget',
@@ -47,7 +49,7 @@ def test_all_sequence_plans_start_with_audio_stop() -> None:
 
 
 def test_turning_sequences_emit_track_motion() -> None:
-    for seq_id in ['spin-wiggle', 'double-take', 'shimmy']:
+    for seq_id in ['spin-wiggle', 'double-take', 'shimmy', 'pirouette', 'suche']:
         steps = build_sequence_plan(seq_id)
         assert steps is not None
         assert any(
