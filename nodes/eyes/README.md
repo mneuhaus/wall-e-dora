@@ -11,6 +11,7 @@ graph TD
     A[Eyes Node] -->|Every 60 seconds| B[Sync files to displays]
     A -->|Every 10 seconds| C[Update available image list]
     C -->|broadcast_available_images| D[Web UI]
+    D -->|list_images event| A
     D -->|play_gif event| A
     A -->|HTTP request| E[Eye Display 1]
     A -->|HTTP request| F[Eye Display 2]
@@ -43,7 +44,8 @@ graph TD
 | Input ID      | Source                | Description                               |
 |---------------|-----------------------|-------------------------------------------|
 | TICK          | dora/timer/secs/60    | Trigger for periodic file synchronization |
-| list_images   | dora/timer/secs/10    | Trigger to update available image list    |
+| list_images   | dora/timer/secs/10    | Periodic trigger to update available image list |
+| list_images_ui | web/list_images      | On-demand request from the web UI to refresh the image list |
 | play_gif      | web/play_gif          | Request to display a specific image/GIF   |
 
 ### Outputs

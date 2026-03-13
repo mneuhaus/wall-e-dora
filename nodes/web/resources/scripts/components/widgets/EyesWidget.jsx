@@ -12,13 +12,22 @@ import node from '../../Node';
 let persistentActiveImage = null;
 
 const EyesWidget = (props) => {
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cachedImages = node.getLastEvent?.('available_images')?.value;
+  const [images, setImages] = useState(() => Array.isArray(cachedImages) ? cachedImages : []);
+  const [loading, setLoading] = useState(() => !(Array.isArray(cachedImages) && cachedImages.length > 0));
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeImage, setActiveImage] = useState(persistentActiveImage);
   
   // Listen for available images
   useEffect(() => {
+    const cachedEvent = node.getLastEvent?.('available_images');
+    if (Array.isArray(cachedEvent?.value) && cachedEvent.value.length > 0) {
+      setImages(cachedEvent.value);
+      setLoading(false);
+    }
+
+    node.emit('list_images', []);
+
     // Listen for images list
     const unsubscribe = node.on('available_images', (event) => {
       console.log('Received images:', event);

@@ -30,10 +30,87 @@ from handlers.gamepad_profiles import (
 
 logging.basicConfig(level=logging.INFO)
 
+CAMERA_DEVICE = '/dev/video0'
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 360
+CAMERA_TTL_SECONDS = 0.35
+CAMERA_CAPTURE_TIMEOUT_SECONDS = 4.0
+camera_snapshot_lock = threading.Lock()
+camera_snapshot_bytes = None
+camera_snapshot_taken_at = 0.0
+
 # Global variables (consider refactoring into a class or context)
 global_web_inputs = []  # Queue for events received from WebSocket clients
 ws_clients = set()      # Set of active WebSocket client connections
 web_loop = None         # asyncio event loop for the web server thread
+
+
+def capture_camera_snapshot() -> bytes | None:
+    """Capture a single JPEG frame from the USB camera or return a recent cached one."""
+    global camera_snapshot_bytes, camera_snapshot_taken_at
+
+    with camera_snapshot_lock:
+        now = time.monotonic()
+        if camera_snapshot_bytes and now - camera_snapshot_taken_at <= CAMERA_TTL_SECONDS:
+            return camera_snapshot_bytes
+
+        capture_path = f"/tmp/walle-camera-{os.getpid()}-{threading.get_ident()}.jpg"
+        command = [
+            'v4l2-ctl',
+            f'--device={CAMERA_DEVICE}',
+            f'--set-fmt-video=width={CAMERA_WIDTH},height={CAMERA_HEIGHT},pixelformat=MJPG',
+            '--stream-mmap=3',
+            '--stream-count=1',
+            f'--stream-to={capture_path}',
+        ]
+
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=CAMERA_CAPTURE_TIMEOUT_SECONDS,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.strip() or 'camera capture command failed')
+            if not os.path.exists(capture_path):
+                raise RuntimeError('camera capture did not produce an image file')
+
+            with open(capture_path, 'rb') as image_file:
+                frame = image_file.read()
+
+            if not frame.startswith(b'\xff\xd8'):
+                raise RuntimeError('camera capture returned invalid JPEG data')
+
+            camera_snapshot_bytes = frame
+            camera_snapshot_taken_at = now
+            return frame
+        except Exception as error:
+            logging.warning('Camera snapshot failed: %s', error)
+            return camera_snapshot_bytes
+        finally:
+            if os.path.exists(capture_path):
+                os.remove(capture_path)
+
+
+async def camera_snapshot(request: web.Request):
+    """Serve a recent camera JPEG frame for the UI background."""
+    frame = await asyncio.to_thread(capture_camera_snapshot)
+    if not frame:
+        return web.Response(text='Camera unavailable', status=503)
+
+    return web.Response(
+        body=frame,
+        content_type='image/jpeg',
+        headers={
+            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Access-Control-Allow-Origin': '*',
+        },
+    )
+
 
 
 def flush_web_inputs(node: Node, profile_manager: GamepadProfileManager):
@@ -299,6 +376,7 @@ def start_background_webserver():
         app['jinja_env'] = jinja2.Environment(loader=jinja2.FileSystemLoader(template_path))
         app.router.add_get('/', index)
         app.router.add_get('/ws', websocket_handler)
+        app.router.add_get('/camera/snapshot.jpg', camera_snapshot)
         app.router.add_static('/resources/', path=template_path, name='resources')
         
         # Add specific route for icons with correct MIME types

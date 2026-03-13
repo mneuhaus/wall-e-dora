@@ -4,7 +4,7 @@
 The Tracks Node controls the robot's movement by interfacing with motor controllers to drive the tracks, translating joystick inputs into appropriate motor commands.
 
 ## Overview
-The tracks node manages Wall-E's mobility system by communicating with a Raspberry Pi Pico (RP2040) microcontroller that directly controls the track motors. It converts high-level joystick inputs into differential drive commands suitable for controlling the robot's movement.
+The tracks node manages Wall-E's mobility system by communicating with a Raspberry Pi Pico (RP2040) microcontroller that directly controls the track motors. It converts high-level joystick inputs into differential drive commands suitable for controlling the robot's movement and also accepts short sequence-driven overrides for on-the-spot dance moves.
 
 ```mermaid
 graph TD
@@ -12,12 +12,14 @@ graph TD
         TracksNode[Tracks Node]
         SerialInterface[Serial Interface]
         JoystickHandler[Joystick Handler]
+        SequenceOverride[Sequence Override]
         CommandConverter[Command Converter]
         HeartbeatMonitor[Heartbeat Monitor]
     end
 
     subgraph "External Communication"
         WebNode[Web Node]
+        SequenceNode[Sequence Node]
         DoraTimer[Dora Timer]
     end
 
@@ -28,11 +30,14 @@ graph TD
     end
 
     WebNode -- "LEFT_ANALOG_STICK_X/Y" --> TracksNode
+    SequenceNode -- "move_tracks_sequence" --> TracksNode
     DoraTimer -- "tick, heartbeat" --> TracksNode
 
     TracksNode --> JoystickHandler
-    TracksNode --> HeartbeatMonitor
+    TracksNode --> SequenceOverride
     JoystickHandler --> CommandConverter
+    SequenceOverride --> CommandConverter
+    TracksNode --> HeartbeatMonitor
     CommandConverter --> SerialInterface
     HeartbeatMonitor --> SerialInterface
     SerialInterface <--> RP2040
@@ -48,6 +53,7 @@ graph TD
 - Implement smooth acceleration and deceleration
 - Provide emergency stop functionality
 - Support precise turning and movement control
+- Allow short sequence-controlled overrides for choreographed moves
 
 ### Hardware Interface
 - Communicate with RP2040 (Raspberry Pi Pico) microcontroller via serial
@@ -84,13 +90,14 @@ graph TD
 The tracks node connects to the Dora framework with these data flows:
 
 #### Inputs
-| Input ID                    | Source                         | Description                     |
-|-----------------------------|--------------------------------|---------------------------------|
-| tick                        | dora/timer/millis/33           | Regular update trigger          |
-| heartbeat                   | dora/timer/secs/1              | Connection maintenance signal   |
-| GAMEPAD_LEFT_ANALOG_STICK_X | web/GAMEPAD_LEFT_ANALOG_STICK_X| Joystick X-axis input (-1 to 1) |
-| GAMEPAD_LEFT_ANALOG_STICK_Y | web/GAMEPAD_LEFT_ANALOG_STICK_Y| Joystick Y-axis input (-1 to 1) |
-| *setting_updated*           | *config/setting_updated*       | *(Future) Setting update notification* |
+| Input ID                    | Source                           | Description                                |
+|----------------------------|----------------------------------|--------------------------------------------|
+| tick                       | dora/timer/millis/33             | Regular update trigger                     |
+| heartbeat                  | dora/timer/secs/1                | Connection maintenance signal              |
+| GAMEPAD_LEFT_ANALOG_STICK_X| web/GAMEPAD_LEFT_ANALOG_STICK_X  | Joystick X-axis input (-1 to 1)            |
+| GAMEPAD_LEFT_ANALOG_STICK_Y| web/GAMEPAD_LEFT_ANALOG_STICK_Y  | Joystick Y-axis input (-1 to 1)            |
+| move_tracks_sequence       | sequence/move_tracks_sequence    | Timed sequence override `{linear, angular, duration}` |
+| setting_updated            | config/setting_updated           | Setting update notification                |
 
 ## Firmware Architecture
 

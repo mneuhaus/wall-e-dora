@@ -1,6 +1,6 @@
 /**
  * Views Registry
- * 
+ *
  * Centralizes all view components for consistent imports.
  * Each view represents a full page in the application.
  */
@@ -10,9 +10,16 @@ import DashboardView from './DashboardView';
 import GamepadView from './GamepadView';
 import ServoDebugView from './ServoDebugView';
 import ServoDiagnosticsOverviewView from './ServoDiagnosticsOverviewView';
+import ShowtimeView from './ShowtimeView';
 
 // Export components individually
-export { DashboardView, GamepadView, ServoDebugView, ServoDiagnosticsOverviewView };
+export {
+  DashboardView,
+  GamepadView,
+  ServoDebugView,
+  ServoDiagnosticsOverviewView,
+  ShowtimeView,
+};
 
 // Default export for importing all at once
 export default {
@@ -20,4 +27,5 @@ export default {
   GamepadView,
   ServoDebugView,
   ServoDiagnosticsOverviewView,
+  ShowtimeView,
 };

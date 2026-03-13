@@ -56,7 +56,7 @@ def main():
                 process_tick(context, event)
             
             # Handle list_images event
-            elif event["id"] == "list_images":
+            elif event["id"] in ("list_images", "list_images_ui"):
                 process_list_images(context, event)
                 
             # Handle play_gif events (from web or sequence)

@@ -32,11 +32,29 @@ def test_all_sequence_plans_start_with_audio_stop() -> None:
         'wave-hello',
         'curious-scan',
         'peekaboo',
+        'spin-wiggle',
+        'double-take',
+        'shimmy',
     ]:
         steps = build_sequence_plan(seq_id)
         assert steps is not None
         assert steps[0].output_id == 'stop_sequence'
         assert steps[0].at == 0.0
+        assert any(step.output_id == 'move_tracks_sequence' for step in steps)
+
+
+def test_turning_sequences_emit_track_motion() -> None:
+    for seq_id in ['spin-wiggle', 'double-take', 'shimmy']:
+        steps = build_sequence_plan(seq_id)
+        assert steps is not None
+        assert any(
+            step.output_id == 'move_tracks_sequence' and step.payload[0]['angular'] != 0
+            for step in steps
+        )
+        assert any(
+            step.output_id == 'move_tracks_sequence' and step.payload[0]['angular'] == 0
+            for step in steps
+        )
 
 
 def test_new_trigger_replaces_future_steps_from_previous_sequence() -> None:

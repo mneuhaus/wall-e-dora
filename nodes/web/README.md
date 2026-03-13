@@ -63,6 +63,7 @@ graph TD
 - Support persistent layout storage between sessions
 - Implement a secure HTTPS connection
 - Include real-time status indicators for all robot subsystems
+- Offer a toggleable live camera background mode behind the mobile UI
 
 ### Widget System
 - Support servo control widgets with position sliders
@@ -92,6 +93,7 @@ graph TD
 - Use aiohttp for web server functionality
 - Implement WebSocket handlers for real-time communication
 - Store persistent data in JSON format
+- Serve a lightweight camera snapshot endpoint for the optional live background
 - Generate self-signed SSL certificates if not present
 - Handle multiple concurrent client connections
 - Process Dora events and translate them to UI updates
@@ -126,6 +128,8 @@ The web node connects to the Dora framework with these data flows:
 | gamepad_profiles_list    | web/gamepad_profiles_list      | List of all available gamepad profiles    |
 | *camera_feed*            | *opencv-video-capture/image*   | *(Optional) Camera feed image*            |
 
+The web server also exposes `GET /camera/snapshot.jpg` for the optional full-screen live background toggle in the UI.
+
 #### Outputs
 | Output ID                 | Destination      | Description                               |
 |---------------------------|-----------------|-------------------------------------------|
@@ -134,6 +138,7 @@ The web node connects to the Dora framework with these data flows:
 | set_volume                | audio           | Volume level to set (0.0-1.0)             |
 | stop                      | audio           | Stop sound playback                       |
 | play_gif                  | eyes            | Request to display a specific image/GIF   |
+| list_images               | eyes            | Request an immediate refresh of available eye images |
 | GAMEPAD_LEFT_ANALOG_STICK_X | tracks, waveshare_servo | Joystick X-axis input (-1 to 1)           |
 | GAMEPAD_LEFT_ANALOG_STICK_Y | tracks, waveshare_servo | Joystick Y-axis input (-1 to 1)           |
 | GAMEPAD_* (various)       | waveshare_servo | Other gamepad button/axis events          |

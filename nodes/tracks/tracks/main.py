@@ -1,125 +1,176 @@
-"""Main module for the Tracks Node.
+"""Tracks node entrypoint for joystick and sequence-driven movement."""
 
-Handles communication with the RP2040 microcontroller via serial port
-to control the robot's tracks based on joystick input received via Dora.
-Includes logic for easing/smoothing movement commands and sending heartbeats.
-"""
+from typing import Any
+import queue
+import threading
+import time
 
 from dora import Node
-import pyarrow as pa
 from serial import Serial
-import time
-import os
-import threading
-import queue
-import sys
-import math # Import math for abs
-import serial # Explicitly import serial exceptions if needed
+import serial
 
 # --- Configuration ---
 SERIAL_PORT = '/dev/serial/by-id/usb-Raspberry_Pi_Pico_4250305031363913-if00'
 BAUD_RATE = 115200
-COMMAND_SCALE = 100.0 # Scale joystick (-1..1) to Pico command range (-100..100)
+COMMAND_SCALE = 100.0  # Scale joystick (-1..1) to Pico command range (-100..100)
 
 # --- Joystick Mapping Configuration ---
-# Configuration for joystick axis mapping
-INVERT_Y_AXIS = False # Keep forward/backward as is
-INVERT_X_AXIS = True  # Invert left/right to fix the turning direction
-JOYSTICK_DEADZONE = 0.0 # Old script had no deadzone, set to 0.0
+INVERT_Y_AXIS = False
+INVERT_X_AXIS = True
+JOYSTICK_DEADZONE = 0.0
 
 # --- Easing Configuration ---
-EASING_ENABLED = True # Enable/disable easing
-EASING_FACTOR = 0.3  # Easing factor (0.0-1.0): lower = smoother but less responsive
-MAX_ACCEL_RATE = 20   # Maximum acceleration change per tick (prevents abrupt changes)
-# ---
+EASING_ENABLED = True
+EASING_FACTOR = 0.3
+MAX_ACCEL_RATE = 20
 
-serial_buffer = queue.Queue()
-serial_read_stop_event = threading.Event()  # To signal the reader thread to stop
+serial_buffer: queue.Queue[str] = queue.Queue()
+serial_read_stop_event = threading.Event()
 
 
-# --- Background Serial Reader ---
-def background_serial_reader(ser: Serial, stop_event: threading.Event):
-    """Continuously read lines from the serial port in a background thread.
-
-    Reads lines ending in newline characters, decodes them as UTF-8,
-    and puts them into the global `serial_buffer` queue. Handles potential
-    serial errors and stops when the `stop_event` is set.
-
-    Args:
-        ser: The PySerial Serial object.
-        stop_event: A threading.Event object to signal when to stop reading.
-    """
-    print("Serial reader thread started.")
+def background_serial_reader(ser: Serial, stop_event: threading.Event) -> None:
+    """Continuously read log lines from the RP2040 in the background."""
+    print('Serial reader thread started.')
     while not stop_event.is_set():
         try:
             if ser.in_waiting > 0:
                 try:
-                    # Use read_until, default timeout is from Serial object
                     line_bytes = ser.read_until(b'\n')
                     if line_bytes:
-                         line = line_bytes.decode('utf-8', errors='replace').strip()
-                         if line:
-                              serial_buffer.put('RP2040: ' + line)
-                except UnicodeDecodeError as ude:
-                    serial_buffer.put(f"SERIAL DECODE ERROR: {ude}")
-                except Exception as read_err:
-                    serial_buffer.put(f"SERIAL READ ERROR: {read_err}")
+                        line = line_bytes.decode('utf-8', errors='replace').strip()
+                        if line:
+                            serial_buffer.put('RP2040: ' + line)
+                except UnicodeDecodeError as error:
+                    serial_buffer.put(f'SERIAL DECODE ERROR: {error}')
+                except Exception as error:
+                    serial_buffer.put(f'SERIAL READ ERROR: {error}')
                     time.sleep(0.5)
             else:
-                # Prevent busy-waiting when no data
                 time.sleep(0.01)
-        except OSError as e:
-            serial_buffer.put(f"SERIAL OS ERROR: {e} - Port disconnected?")
-            break # Exit thread if port has a major issue
-        except Exception as e:
-            print(f"Unhandled error in serial reader: {e}")
+        except OSError as error:
+            serial_buffer.put(f'SERIAL OS ERROR: {error} - Port disconnected?')
+            break
+        except Exception as error:
+            print(f'Unhandled error in serial reader: {error}')
             time.sleep(1)
-    print("Serial reader thread finished.")
+    print('Serial reader thread finished.')
 
 
-def flush_serial_buffer():
+def flush_serial_buffer() -> None:
     """Print all messages currently queued in the serial buffer."""
     while not serial_buffer.empty():
         try:
-            line = serial_buffer.get_nowait()
-            print(line)
+            print(serial_buffer.get_nowait())
         except queue.Empty:
             break
-        except Exception as e:
-            print(f"Error getting from serial buffer: {e}")
+        except Exception as error:
+            print(f'Error getting from serial buffer: {error}')
 
 
 def start_background_thread(ser: Serial, stop_event: threading.Event) -> threading.Thread:
-    """Start the background serial reader thread.
-
-    Args:
-        ser: The PySerial Serial object.
-        stop_event: The threading.Event object to signal stopping.
-
-    Returns:
-        The started background thread object.
-    """
+    """Start the background serial reader thread."""
     thread = threading.Thread(target=background_serial_reader, args=(ser, stop_event), daemon=True)
     thread.start()
     return thread
 
-# --- Main Application ---
-def main():
-    """Main function for the Tracks Node.
 
-    Initializes the serial connection to the RP2040, starts the background
-    serial reader, and enters the Dora event loop. Processes joystick input,
-    applies optional easing, sends movement commands and heartbeats to the
-    microcontroller, and handles node shutdown.
-    """
+def send_command(ser: Serial, command: str, last_command_sent: str) -> str:
+    """Send a movement command to the RP2040 if it changed."""
+    if command == last_command_sent:
+        return last_command_sent
+
+    try:
+        print(f'Sending: {command}')
+        ser.write((command + '\n').encode('utf-8'))
+        ser.flush()
+        return command
+    except serial.SerialTimeoutException:
+        print('WARN: Serial write timeout occurred.')
+    except Exception as error:
+        print(f'ERROR: Failed to write to serial port: {error}')
+    return last_command_sent
+
+
+def extract_axis_value(value: Any, axis_name: str) -> float:
+    """Convert an incoming Arrow joystick value into a float."""
+    try:
+        value_py = value[0].as_py()
+        return float(value_py)
+    except IndexError:
+        return 0.0
+    except (ValueError, TypeError):
+        print(f'WARN: Could not convert Gamepad {axis_name} value to float. Using 0.0.')
+        return 0.0
+    except Exception as error:
+        print(f'ERROR: processing gamepad {axis_name} event: {error}')
+        return 0.0
+
+
+def extract_sequence_move(value: Any) -> tuple[int, int, float] | None:
+    """Parse a sequence-provided track move command."""
+    try:
+        values = value.to_pylist() if hasattr(value, 'to_pylist') else value
+        if not values:
+            return None
+        payload = values[0]
+        if not isinstance(payload, dict):
+            return None
+        linear = int(payload.get('linear', 0))
+        angular = int(payload.get('angular', 0))
+        duration = max(0.0, float(payload.get('duration', 0.0)))
+        return linear, angular, duration
+    except Exception as error:
+        print(f'WARN: could not parse move_tracks_sequence payload: {error}')
+        return None
+
+
+def compute_joystick_command(
+    latest_joystick_x: float,
+    latest_joystick_y: float,
+    current_linear: int,
+    current_angular: int,
+) -> tuple[int, int, int, int]:
+    """Compute the next movement command from joystick state."""
+    current_x = latest_joystick_x if abs(latest_joystick_x) > JOYSTICK_DEADZONE else 0.0
+    current_y = latest_joystick_y if abs(latest_joystick_y) > JOYSTICK_DEADZONE else 0.0
+
+    y_multiplier = -1.0 if INVERT_Y_AXIS else 1.0
+    x_multiplier = -1.0 if INVERT_X_AXIS else 1.0
+
+    target_linear = int(current_y * y_multiplier * COMMAND_SCALE)
+    target_angular = int(current_x * x_multiplier * COMMAND_SCALE)
+
+    if EASING_ENABLED:
+        linear_diff = target_linear - current_linear
+        angular_diff = target_angular - current_angular
+
+        if MAX_ACCEL_RATE > 0:
+            linear_diff = max(min(linear_diff, MAX_ACCEL_RATE), -MAX_ACCEL_RATE)
+            angular_diff = max(min(angular_diff, MAX_ACCEL_RATE), -MAX_ACCEL_RATE)
+
+        current_linear += int(linear_diff * EASING_FACTOR)
+        current_angular += int(angular_diff * EASING_FACTOR)
+        linear = current_linear
+        angular = current_angular
+    else:
+        linear = target_linear
+        angular = target_angular
+        current_linear = linear
+        current_angular = angular
+
+    return linear, angular, current_linear, current_angular
+
+
+def main() -> None:
+    """Initialize serial, then forward joystick and sequence commands to the RP2040."""
     ser = None
     reader_thread = None
     try:
-        print(f"Attempting to open serial port {SERIAL_PORT} at {BAUD_RATE} baud...")
+        print(f'Attempting to open serial port {SERIAL_PORT} at {BAUD_RATE} baud...')
         ser = Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1, write_timeout=0.5)
-        print("Serial port opened successfully.")
-    except Exception as e:
-        print(f"FATAL: Error opening serial port {SERIAL_PORT}: {e}")
+        print('Serial port opened successfully.')
+    except Exception as error:
+        print(f'FATAL: Error opening serial port {SERIAL_PORT}: {error}')
         print("Check connection, permissions (e.g., 'dialout' group), and port ID.")
         return
 
@@ -129,150 +180,113 @@ def main():
     node = Node()
     latest_joystick_x = 0.0
     latest_joystick_y = 0.0
-    last_command_sent = ""
-    
-    # Variables for easing implementation
+    last_command_sent = ''
+
     current_linear = 0
     current_angular = 0
     target_linear = 0
     target_angular = 0
 
-    print("Waiting for Dora events...")
+    sequence_linear = 0
+    sequence_angular = 0
+    sequence_override_until = 0.0
+
+    print('Waiting for Dora events...')
     try:
         for event in node:
-            if event["type"] == "INPUT":
-                event_id = event["id"]
+            event_type = event['type']
+            if event_type == 'INPUT':
+                event_id = event['id']
 
-                if event_id == "tick":
-                    flush_serial_buffer() # Print Pico messages
+                if event_id == 'tick':
+                    flush_serial_buffer()
+                    now = time.monotonic()
 
-                    # --- Apply Mapping (No Deadzone, No Inversion - matching old script) ---
-                    current_x_raw = latest_joystick_x
-                    current_y_raw = latest_joystick_y
-
-                    # Apply deadzone (effectively disabled if JOYSTICK_DEADZONE is 0.0)
-                    current_x = current_x_raw if abs(current_x_raw) > JOYSTICK_DEADZONE else 0.0
-                    current_y = current_y_raw if abs(current_y_raw) > JOYSTICK_DEADZONE else 0.0
-
-                    # Apply axis inversion (effectively disabled if flags are False)
-                    y_multiplier = -1.0 if INVERT_Y_AXIS else 1.0
-                    x_multiplier = -1.0 if INVERT_X_AXIS else 1.0
-
-                    # Calculate target velocities from joystick input
-                    target_linear = int(current_y * y_multiplier * COMMAND_SCALE)
-                    target_angular = int(current_x * x_multiplier * COMMAND_SCALE)
-                    
-                    if EASING_ENABLED:
-                        # Apply easing to smooth movement
-                        # Calculate differences between current and target values
-                        linear_diff = target_linear - current_linear
-                        angular_diff = target_angular - current_angular
-                        
-                        # Limit maximum change rate if needed
-                        if MAX_ACCEL_RATE > 0:
-                            linear_diff = max(min(linear_diff, MAX_ACCEL_RATE), -MAX_ACCEL_RATE)
-                            angular_diff = max(min(angular_diff, MAX_ACCEL_RATE), -MAX_ACCEL_RATE)
-                        
-                        # Apply easing using the easing factor
-                        current_linear += int(linear_diff * EASING_FACTOR)
-                        current_angular += int(angular_diff * EASING_FACTOR)
-                        
-                        # Set linear and angular to the eased values
-                        linear = current_linear
-                        angular = current_angular
-                    else:
-                        # No easing - direct mapping
-                        linear = target_linear
-                        angular = target_angular
+                    if now < sequence_override_until:
+                        linear = sequence_linear
+                        angular = sequence_angular
                         current_linear = linear
                         current_angular = angular
+                    else:
+                        if sequence_override_until != 0.0:
+                            sequence_override_until = 0.0
+                            sequence_linear = 0
+                            sequence_angular = 0
+                        linear, angular, current_linear, current_angular = compute_joystick_command(
+                            latest_joystick_x,
+                            latest_joystick_y,
+                            current_linear,
+                            current_angular,
+                        )
+                        target_linear = linear
+                        target_angular = angular
 
-                    cmd = f"move {linear} {angular}"
+                    last_command_sent = send_command(ser, f'move {linear} {angular}', last_command_sent)
 
-                    if cmd != last_command_sent:
-                        try:
-                            # Simplified log to match old script's effective output
-                            print(f"Sending: {cmd}")
-                            ser.write((cmd + "\n").encode("utf-8"))
-                            ser.flush()
-                            last_command_sent = cmd
-                        except serial.SerialTimeoutException:
-                            print("WARN: Serial write timeout occurred.")
-                        except Exception as write_err:
-                            print(f"ERROR: Failed to write to serial port: {write_err}")
-
-                elif event_id == "heartbeat":
-                     try:
-                         # print("Sending: heartbeat") # Reduce noise
-                         ser.write(("heartbeat\n").encode("utf-8"))
-                         ser.flush()
-                     except Exception as write_err:
-                          print(f"ERROR: Failed to write heartbeat: {write_err}")
-
-                # Robust handling of incoming joystick values
-                elif event_id == "GAMEPAD_LEFT_ANALOG_STICK_X":
+                elif event_id == 'heartbeat':
                     try:
-                        value_py = event["value"][0].as_py()
-                        try:
-                             latest_joystick_x = float(value_py)
-                        except (ValueError, TypeError):
-                             print(f"WARN: Could not convert Gamepad X value '{value_py}' (type: {type(value_py)}) to float. Using 0.0.")
-                             latest_joystick_x = 0.0
-                    except IndexError:
-                         latest_joystick_x = 0.0
-                    except Exception as e:
-                         print(f"ERROR: processing gamepad X event: {e}")
-                         latest_joystick_x = 0.0
+                        ser.write(b'heartbeat\n')
+                        ser.flush()
+                    except Exception as error:
+                        print(f'ERROR: Failed to write heartbeat: {error}')
 
-                elif event_id == "GAMEPAD_LEFT_ANALOG_STICK_Y":
-                    try:
-                        value_py = event["value"][0].as_py()
-                        try:
-                             latest_joystick_y = float(value_py)
-                        except (ValueError, TypeError):
-                             print(f"WARN: Could not convert Gamepad Y value '{value_py}' (type: {type(value_py)}) to float. Using 0.0.")
-                             latest_joystick_y = 0.0
-                    except IndexError:
-                         latest_joystick_y = 0.0
-                    except Exception as e:
-                         print(f"ERROR: processing gamepad Y event: {e}")
-                         latest_joystick_y = 0.0
+                elif event_id == 'move_tracks_sequence':
+                    move = extract_sequence_move(event['value'])
+                    if move is None:
+                        continue
 
-            elif event["type"] == "STOP":
-                print("Received STOP event. Exiting.")
+                    linear, angular, duration = move
+                    sequence_linear = linear
+                    sequence_angular = angular
+                    sequence_override_until = time.monotonic() + duration if duration > 0.0 else 0.0
+                    current_linear = linear
+                    current_angular = angular
+                    target_linear = linear
+                    target_angular = angular
+                    print(f'Sequence override: move {linear} {angular} for {duration:.2f}s')
+                    last_command_sent = send_command(ser, f'move {linear} {angular}', last_command_sent)
+
+                elif event_id == 'GAMEPAD_LEFT_ANALOG_STICK_X':
+                    latest_joystick_x = extract_axis_value(event['value'], 'X')
+
+                elif event_id == 'GAMEPAD_LEFT_ANALOG_STICK_Y':
+                    latest_joystick_y = extract_axis_value(event['value'], 'Y')
+
+            elif event_type == 'STOP':
+                print('Received STOP event. Exiting.')
                 break
-            elif event["type"] == "ERROR":
-                 print(f"Received ERROR from Dora node: {event.get('error')}")
+            elif event_type == 'ERROR':
+                print(f"Received ERROR from Dora node: {event.get('error')}")
 
     except KeyboardInterrupt:
-        print("\nKeyboard interrupt detected. Stopping...")
+        print('\nKeyboard interrupt detected. Stopping...')
     finally:
         serial_read_stop_event.set()
 
         if ser and ser.is_open:
             try:
-                # Reset the easing values to ensure immediate stop
                 current_linear = 0
                 current_angular = 0
                 target_linear = 0
                 target_angular = 0
-                
-                print("Sending stop command (move 0 0)...")
-                ser.write(("move 0 0\n").encode("utf-8"))
+
+                print('Sending stop command (move 0 0)...')
+                ser.write(b'move 0 0\n')
                 ser.flush()
                 time.sleep(0.1)
                 ser.close()
-                print("Serial port closed.")
-            except Exception as e:
-                print(f"Error sending stop command or closing serial port: {e}")
+                print('Serial port closed.')
+            except Exception as error:
+                print(f'Error sending stop command or closing serial port: {error}')
 
         if reader_thread and reader_thread.is_alive():
-            print("Waiting for serial reader thread to finish...")
+            print('Waiting for serial reader thread to finish...')
             reader_thread.join(timeout=1.0)
             if reader_thread.is_alive():
-                print("WARN: Serial reader thread did not exit cleanly.")
+                print('WARN: Serial reader thread did not exit cleanly.')
 
-        print("Application finished.")
+        print('Application finished.')
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     main()

@@ -2,6 +2,20 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import node from '../Node';
 import { normalizeServoList } from '../utils/servoData';
 
+const CAMERA_BACKGROUND_STORAGE_KEY = 'walle.camera-background-enabled';
+
+function getStoredCameraBackgroundEnabled() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    return window.localStorage.getItem(CAMERA_BACKGROUND_STORAGE_KEY) === '1';
+  } catch (error) {
+    return false;
+  }
+}
+
 // Create the context
 const AppContext = createContext(null);
 
@@ -11,6 +25,18 @@ export function AppProvider({ children }) {
   const [widgetsState, setWidgetsState] = useState({});
   const [isConnected, setIsConnected] = useState(false);
   const [gamepadProfiles, setGamepadProfiles] = useState({});
+  const [cameraBackgroundEnabled, setCameraBackgroundEnabled] = useState(() => getStoredCameraBackgroundEnabled());
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        CAMERA_BACKGROUND_STORAGE_KEY,
+        cameraBackgroundEnabled ? '1' : '0',
+      );
+    } catch (error) {
+      // Ignore storage issues on restricted browsers.
+    }
+  }, [cameraBackgroundEnabled]);
   
   // Listen for connection status
   useEffect(() => {
@@ -29,7 +55,7 @@ export function AppProvider({ children }) {
         return;
       }
 
-      console.log("Received servo_status update:", servoData);
+      console.log('Received servo_status update:', servoData);
 
       setAvailableServos((prevServos) => {
         const updatedServos = [...prevServos];
@@ -89,12 +115,16 @@ export function AppProvider({ children }) {
     setWidgetsState(state);
   };
 
+  const toggleCameraBackground = () => {
+    setCameraBackgroundEnabled((enabled) => !enabled);
+  };
+
   // Save a gamepad profile
   const saveGamepadProfile = (profile) => {
     node.emit('save_gamepad_profile', [profile]);
     
     // Update local state
-    setGamepadProfiles(prev => {
+    setGamepadProfiles((prev) => {
       const updated = { ...prev };
       updated[profile.id] = profile;
       return updated;
@@ -106,7 +136,7 @@ export function AppProvider({ children }) {
     node.emit('delete_gamepad_profile', [{ gamepad_id: gamepadId }]);
     
     // Update local state
-    setGamepadProfiles(prev => {
+    setGamepadProfiles((prev) => {
       const updated = { ...prev };
       delete updated[gamepadId];
       return updated;
@@ -119,13 +149,16 @@ export function AppProvider({ children }) {
     widgetsState,
     isConnected,
     gamepadProfiles,
+    cameraBackgroundEnabled,
+    setCameraBackgroundEnabled,
+    toggleCameraBackground,
     setServos: setAvailableServos,
     getServos: () => availableServos,
     updateWidgetsState,
     getWidgetsState: () => widgetsState,
     saveGamepadProfile,
     deleteGamepadProfile,
-    node // Provide the node instance directly
+    node, // Provide the node instance directly
   };
   
   // Store for debugging

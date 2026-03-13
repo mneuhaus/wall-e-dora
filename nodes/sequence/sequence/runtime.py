@@ -23,7 +23,10 @@ HEAD_PIVOT_RIGHT = 580    # servo #14 (right)
 HEAD_PIVOT_CENTER = 500   # servo #14 (center)
 DOOR_CLOSED = 700         # servo #5 (matches UI toggle expectations)
 DOOR_OPEN = 1023          # servo #5 (fully open)
-DEFAULT_EYES = "realistic-orange.gif"
+DEFAULT_EYES = 'realistic-orange.gif'
+TRACK_TURN_FAST = 68
+TRACK_TURN_MEDIUM = 54
+TRACK_TURN_SHIMMY = 38
 
 
 class OutputNode(Protocol):
@@ -71,6 +74,15 @@ class SequenceBuilder:
 
     def move_servo(self, servo_id: int, position: int) -> None:
         self.add('move_servo_sequence', [{'id': servo_id, 'position': position}])
+
+    def move_tracks(self, linear: int, angular: int, duration: float = 0.0) -> None:
+        self.add(
+            'move_tracks_sequence',
+            [{'linear': linear, 'angular': angular, 'duration': duration}],
+        )
+
+    def stop_tracks(self, duration: float = 0.0) -> None:
+        self.move_tracks(0, 0, duration)
 
     def play_gif(self, filename: str) -> None:
         self.add('play_gif_sequence', [filename])
@@ -271,9 +283,110 @@ def build_peekaboo(builder: SequenceBuilder) -> None:
     neutral_pose(builder, close_door=True, keep_eyes=True)
 
 
+def build_spin_wiggle(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.play_gif('lets-dance.gif')
+    builder.play_sound('freudiges-jubeln.mp3')
+    builder.move_servo(2, 210)
+    builder.move_servo(13, 780)
+    builder.wait(0.15)
+
+    builder.move_tracks(0, TRACK_TURN_FAST, 0.45)
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(6, HEAD_LEFT_UP)
+    builder.wait(0.45)
+    builder.stop_tracks(0.1)
+    builder.move_servo(6, HEAD_LEFT_NEUTRAL)
+    builder.wait(0.1)
+
+    builder.move_tracks(0, -TRACK_TURN_FAST, 0.45)
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_servo(4, HEAD_RIGHT_UP)
+    builder.wait(0.45)
+    builder.stop_tracks(0.1)
+    builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
+    builder.wait(0.1)
+
+    builder.move_tracks(0, TRACK_TURN_SHIMMY, 0.16)
+    builder.move_servo(2, ARM_LEFT_UP)
+    builder.wait(0.16)
+    builder.move_tracks(0, -TRACK_TURN_SHIMMY, 0.16)
+    builder.move_servo(13, ARM_RIGHT_UP)
+    builder.wait(0.16)
+    builder.stop_tracks(0.1)
+    builder.move_servo(2, 210)
+    builder.move_servo(13, 780)
+    builder.wait(0.1)
+    neutral_pose(builder, keep_eyes=True)
+
+
+def build_double_take(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.play_gif('lets-go.gif')
+    builder.play_sound('überraschtes-ah.mp3')
+    builder.wait(0.1)
+
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, 0.18)
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(6, HEAD_LEFT_UP)
+    builder.wait(0.18)
+    builder.stop_tracks(0.08)
+    builder.wait(0.08)
+
+    builder.move_tracks(0, -TRACK_TURN_FAST, 0.3)
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_servo(6, HEAD_LEFT_NEUTRAL)
+    builder.move_servo(4, HEAD_RIGHT_UP)
+    builder.move_servo(5, DOOR_OPEN)
+    builder.wait(0.3)
+    builder.stop_tracks(0.08)
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.wait(0.08)
+
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, 0.14)
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(2, 180)
+    builder.wait(0.14)
+    builder.stop_tracks(0.1)
+    builder.move_servo(2, ARM_LEFT_NEUTRAL)
+    builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
+    builder.wait(0.1)
+    neutral_pose(builder, keep_eyes=True)
+
+
+def build_shimmy(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.play_gif('lets-dance.gif')
+    builder.play_sound('fröhliches-piepen.mp3')
+    builder.move_servo(2, 220)
+    builder.move_servo(13, 780)
+    builder.wait(0.15)
+
+    for index in range(4):
+        builder.move_tracks(0, TRACK_TURN_SHIMMY, 0.14)
+        builder.move_servo(14, HEAD_PIVOT_LEFT)
+        builder.move_servo(2, ARM_LEFT_UP if index % 2 == 0 else 220)
+        builder.move_servo(13, 780 if index % 2 == 0 else ARM_RIGHT_UP)
+        builder.wait(0.14)
+        builder.move_tracks(0, -TRACK_TURN_SHIMMY, 0.14)
+        builder.move_servo(14, HEAD_PIVOT_RIGHT)
+        builder.move_servo(2, 220 if index % 2 == 0 else ARM_LEFT_UP)
+        builder.move_servo(13, ARM_RIGHT_UP if index % 2 == 0 else 780)
+        builder.wait(0.14)
+
+    builder.stop_tracks(0.12)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.wait(0.12)
+    neutral_pose(builder, keep_eyes=True)
+
+
 def build_sequence_plan(seq_id: str) -> list[PlanStep] | None:
     builder = SequenceBuilder()
     builder.stop_sound()
+    builder.stop_tracks()
 
     if seq_id == 'hands-up':
         build_hands_up(builder)
@@ -289,6 +402,12 @@ def build_sequence_plan(seq_id: str) -> list[PlanStep] | None:
         build_curious_scan(builder)
     elif seq_id == 'peekaboo':
         build_peekaboo(builder)
+    elif seq_id == 'spin-wiggle':
+        build_spin_wiggle(builder)
+    elif seq_id == 'double-take':
+        build_double_take(builder)
+    elif seq_id == 'shimmy':
+        build_shimmy(builder)
     else:
         return None
 
@@ -313,9 +432,9 @@ class SequenceScheduler:
 
         previous = self.active_sequence_id
         if previous:
-            print(f"Sequence: interrupt -> {previous} -> {seq_id}")
+            print(f'Sequence: interrupt -> {previous} -> {seq_id}')
         else:
-            print(f"Sequence: trigger -> {seq_id}")
+            print(f'Sequence: trigger -> {seq_id}')
 
         self._active = ActiveSequence(seq_id=seq_id, started_at=self._clock(), steps=steps)
         self.emit_due_steps(node)
@@ -334,5 +453,5 @@ class SequenceScheduler:
             self._active.next_step_index += 1
 
         if self._active.next_step_index >= len(self._active.steps):
-            print(f"Sequence: {self._active.seq_id} complete")
+            print(f'Sequence: {self._active.seq_id} complete')
             self._active = None

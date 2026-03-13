@@ -1,60 +1,46 @@
 /**
  * DashboardView Component
- * 
- * The main dashboard view that displays a fixed layout with eye and sound widgets.
- * Uses CSS Grid for reliable layout control.
- * 
+ *
+ * Main dashboard showing eyes and sounds only.
+ *
  * @component
  */
 import React, { useEffect, forwardRef } from 'react';
-import { useAppContext } from '../contexts/AppContext';
 import node from '../Node';
 import EyesWidget from '../components/widgets/EyesWidget';
-import SequenceBar from '../components/widgets/SequenceBar';
 import SoundWidget from '../components/widgets/SoundWidget';
 
 const DashboardView = forwardRef((props, ref) => {
-  const { availableServos } = useAppContext();
-
-  // Request initial servo status
   useEffect(() => {
-    // Request initial servo status
-    node.emit('SCAN', []);
-    
-    // Request sounds list
     node.emit('scan_sounds', []);
+    node.emit('list_images', []);
   }, []);
 
-  // CSS Grid styles
   const styles = `
     .dashboard-grid {
       display: grid;
-      grid-template-columns: 70% 30%;
-      grid-template-rows: 1fr;
-      grid-template-areas: 
-        "eyes-content sounds-content";
+      grid-template-columns: minmax(0, 1fr) minmax(120px, 34%);
+      gap: 10px;
       width: 100%;
       height: 100%;
       overflow: hidden;
-    }
-    
-    .eyes-content {
-      grid-area: eyes-content;
       padding: 10px;
-      display: flex;
-      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 720px) {
+      .dashboard-grid {
+        grid-template-columns: minmax(0, 58%) minmax(0, 42%);
+        gap: 8px;
+        padding: 8px;
+      }
+    }
+
+    .dashboard-panel {
+      min-width: 0;
+      min-height: 0;
       height: 100%;
       overflow: hidden;
-    }
-    
-    .sounds-content {
-      grid-area: sounds-content;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      overflow: hidden;
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
     }
   `;
 
@@ -62,12 +48,10 @@ const DashboardView = forwardRef((props, ref) => {
     <div className="dashboard-view" ref={ref} style={{ height: '100%', overflow: 'hidden' }}>
       <style>{styles}</style>
       <div className="dashboard-grid">
-        <div className="eyes-content">
+        <div className="dashboard-panel">
           <EyesWidget />
-          <SequenceBar />
         </div>
-        
-        <div className="sounds-content">
+        <div className="dashboard-panel">
           <SoundWidget />
         </div>
       </div>

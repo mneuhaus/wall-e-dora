@@ -6,6 +6,7 @@ class Node {
     this.state = {
       eventQueue: [],
       outputQueue: [],
+      lastEvents: {},
       ws: null,
       reconnectAttempts: 0,
       maxReconnectAttempts: 10,
@@ -91,6 +92,9 @@ class Node {
         }
         
         const data = JSON.parse(rawData);
+        if (data && data.id) {
+          this.state.lastEvents[data.id] = data;
+        }
         this.state.eventQueue.push(data);
       } catch (e) {
         // Silent error handling for parse issues
@@ -101,6 +105,10 @@ class Node {
   on(eventName, callback) {
     this.emitter.on(eventName, callback);
     return () => this.emitter.off(eventName, callback); // Return unsubscribe function for React useEffect
+  }
+
+  getLastEvent(eventName) {
+    return this.state.lastEvents[eventName] || null;
   }
 
   emit(output_id, data, metadata = {}) {
