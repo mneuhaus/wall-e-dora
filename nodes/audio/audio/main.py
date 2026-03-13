@@ -7,20 +7,96 @@ and responds to Dora events for playing sounds and setting volume.
 import os
 import time
 import random
+from pathlib import Path
+
 import pygame
 import pyarrow as pa
 from dora import Node
 
 
+def _build_audio_init_attempts() -> list[tuple[str | None, str | None, str]]:
+    """Return ordered mixer initialization attempts.
+
+    The robot sometimes boots without a usable default ALSA route because the
+    system default points at HDMI. Try the environment/default first, then
+    prefer the Pi headphone output explicitly, and finally fall back to a dummy
+    sink so the rest of the robot can still start.
+    """
+    attempts: list[tuple[str | None, str | None, str]] = []
+    seen: set[tuple[str | None, str | None]] = set()
+
+    def add(driver: str | None, device: str | None, label: str):
+        key = (driver, device)
+        if key in seen:
+            return
+        seen.add(key)
+        attempts.append((driver, device, label))
+
+    env_driver = os.environ.get("SDL_AUDIODRIVER") or None
+    env_device = os.environ.get("AUDIODEV") or None
+    if env_driver or env_device:
+        add(env_driver, env_device, "environment")
+
+    add(None, None, "automatic")
+
+    for device in (
+        "plughw:CARD=Headphones,DEV=0",
+        "hw:CARD=Headphones,DEV=0",
+        "plughw:2,0",
+        "hw:2,0",
+    ):
+        add("alsa", device, f"alsa:{device}")
+
+    add("pulse", None, "pulse")
+    add("dummy", None, "dummy")
+    return attempts
+
+
+def _init_mixer_with_fallback() -> tuple[bool, str]:
+    """Initialize the mixer with robust fallbacks.
+
+    Returns:
+        Tuple of ``(audio_enabled, selected_backend)``.
+    """
+    errors: list[str] = []
+
+    for driver, device, label in _build_audio_init_attempts():
+        pygame.mixer.quit()
+
+        if driver is None:
+            os.environ.pop("SDL_AUDIODRIVER", None)
+        else:
+            os.environ["SDL_AUDIODRIVER"] = driver
+
+        if device is None:
+            os.environ.pop("AUDIODEV", None)
+        else:
+            os.environ["AUDIODEV"] = device
+
+        try:
+            pygame.mixer.init()
+            print(f"Audio mixer initialized via {label}")
+            return driver != "dummy", label
+        except pygame.error as error:
+            errors.append(f"{label}: {error}")
+
+    print("Audio mixer fallback exhausted:")
+    for error in errors:
+        print(f"  - {error}")
+    raise RuntimeError("Could not initialize any audio backend")
+
+
 def setup_hardware() -> str:
     """Initialize Pygame mixer and return the path to the sounds directory."""
-    pygame.mixer.init()
+    audio_enabled, backend = _init_mixer_with_fallback()
     pygame.mixer.music.set_volume(1.0)
     for i in range(pygame.mixer.get_num_channels()):
         pygame.mixer.Channel(i).set_volume(1.0)
+    if not audio_enabled:
+        print(f"Audio running in silent fallback mode via {backend}")
     # Assume 'sounds' directory is located at nodes/audio/sounds/ relative to this file.
-    sounds_dir = os.path.join(os.path.dirname(__file__), "..", "sounds")
-    return sounds_dir
+    sounds_dir = Path(__file__).resolve().parent.parent / "sounds"
+    return str(sounds_dir)
 
 
 def play_startup_sound(sounds_dir: str):
