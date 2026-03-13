@@ -6,30 +6,35 @@ import React from 'react';
 import node from '../../Node';
 
 const SEQUENCES = [
-  { id: 'neutral', label: 'Ruhig', title: 'Zur Ruhepose' },
-  { id: 'wave-hello', label: 'Winken' },
-  { id: 'peekaboo', label: 'Kuckuck' },
-  { id: 'curious-scan', label: 'Neugierig' },
-  { id: 'hands-up', label: 'Arme hoch' },
-  { id: 'pirouette', label: 'Pirouette' },
-  { id: 'candy', label: 'Bonbon?' },
-  { id: 'party', label: 'Party' },
-  { id: 'spin-wiggle', label: 'Drehwackel' },
-  { id: 'double-take', label: 'Hoppla' },
-  { id: 'shimmy', label: 'Wackeltanz' },
-  { id: 'suche', label: 'Suche' },
+  { id: 'neutral', label: 'Ruhig', title: 'Zur Ruhepose', duration: 0.6 },
+  { id: 'wave-hello', label: 'Winken', duration: 3.4 },
+  { id: 'peekaboo', label: 'Kuckuck', duration: 4.4 },
+  { id: 'curious-scan', label: 'Neugierig', duration: 9.8 },
+  { id: 'hands-up', label: 'Arme hoch', duration: 3.7 },
+  { id: 'pirouette', label: 'Pirouette', duration: 5.5 },
+  { id: 'candy', label: 'Bonbon?', duration: 5.6 },
+  { id: 'party', label: 'Party', duration: 8.6 },
+  { id: 'spin-wiggle', label: 'Drehwackel', duration: 2.2 },
+  { id: 'double-take', label: 'Hoppla', duration: 1.6 },
+  { id: 'shimmy', label: 'Wackeltanz', duration: 1.9 },
+  { id: 'suche', label: 'Suche', duration: 2.2 },
 ];
 
 const LEFT_SEQUENCES = SEQUENCES.slice(0, Math.ceil(SEQUENCES.length / 2));
 const RIGHT_SEQUENCES = SEQUENCES.slice(Math.ceil(SEQUENCES.length / 2));
 
-const Button = ({ id, label, title }) => (
+const formatDuration = (seconds) => `${seconds.toFixed(1)}s`;
+
+const Button = ({ id, label, title, duration }) => (
   <button
     className="sequence-bar__btn"
     onClick={() => node.emit('sequence_trigger', [id])}
     title={title || label}
   >
-    {label}
+    <span className="sequence-bar__btn-content">
+      <span className="sequence-bar__label">{label}</span>
+      {duration ? <span className="sequence-bar__duration">{formatDuration(duration)}</span> : null}
+    </span>
   </button>
 );
 
@@ -76,6 +81,19 @@ const SequenceBar = () => {
       transition: all .2s;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+    }
+    .sequence-bar__btn-content {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .sequence-bar__duration {
+      font-size: 0.66rem;
+      font-weight: 500;
+      opacity: 0.82;
+      white-space: nowrap;
     }
     .sequence-bar__btn:hover {
       background: rgba(255,255,255,0.08);

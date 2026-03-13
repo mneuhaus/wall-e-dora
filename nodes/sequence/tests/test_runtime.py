@@ -48,6 +48,27 @@ def test_all_sequence_plans_start_with_audio_stop() -> None:
         assert any(step.output_id == 'move_tracks_sequence' for step in steps)
 
 
+def test_action_plans_end_with_audio_stop_and_stay_under_ten_seconds() -> None:
+    for seq_id in [
+        'hands-up',
+        'candy',
+        'party',
+        'neutral',
+        'wave-hello',
+        'curious-scan',
+        'peekaboo',
+        'spin-wiggle',
+        'double-take',
+        'shimmy',
+        'pirouette',
+        'suche',
+    ]:
+        steps = build_sequence_plan(seq_id)
+        assert steps is not None
+        assert steps[-1].output_id == 'stop_sequence'
+        assert steps[-1].at <= 10.0
+
+
 def test_turning_sequences_emit_track_motion() -> None:
     for seq_id in ['spin-wiggle', 'double-take', 'shimmy', 'pirouette', 'suche']:
         steps = build_sequence_plan(seq_id)
@@ -60,6 +81,28 @@ def test_turning_sequences_emit_track_motion() -> None:
             step.output_id == 'move_tracks_sequence' and step.payload[0]['angular'] == 0
             for step in steps
         )
+
+
+def test_pirouette_is_a_full_spin_plan() -> None:
+    steps = build_sequence_plan('pirouette')
+    assert steps is not None
+
+    turning_steps = [
+        step for step in steps
+        if step.output_id == 'move_tracks_sequence' and step.payload[0]['angular'] != 0
+    ]
+    assert len(turning_steps) >= 4
+    assert sum(step.payload[0]['duration'] for step in turning_steps) >= 4.5
+
+
+def test_double_take_includes_backdrive() -> None:
+    steps = build_sequence_plan('double-take')
+    assert steps is not None
+
+    assert any(
+        step.output_id == 'move_tracks_sequence' and step.payload[0]['linear'] < 0
+        for step in steps
+    )
 
 
 def test_scheduler_emits_sequence_state_on_start_and_completion() -> None:

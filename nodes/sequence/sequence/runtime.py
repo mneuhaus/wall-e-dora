@@ -91,7 +91,9 @@ class SequenceBuilder:
         self.add('play_sound_sequence', [filename])
 
     def build(self) -> list[PlanStep]:
-        return list(self._steps)
+        steps = list(self._steps)
+        steps.append(PlanStep(at=self._elapsed, output_id='stop_sequence', payload=[]))
+        return steps
 
 
 
@@ -180,7 +182,7 @@ def build_candy(builder: SequenceBuilder) -> None:
     builder.move_servo(13, 780)
     builder.wait(0.4)
     builder.move_servo(13, ARM_RIGHT_NEUTRAL)
-    neutral_pose(builder, close_door=False, keep_eyes=True)
+    neutral_pose(builder, keep_eyes=True)
 
 
 
@@ -190,7 +192,7 @@ def build_party(builder: SequenceBuilder) -> None:
     builder.play_gif('lets-dance.gif')
     builder.play_sound('träumerisches-summen.mp3')
 
-    while builder.elapsed < 10.0:
+    while builder.elapsed < 7.9:
         builder.move_servo(2, 220)
         builder.wait(0.15)
         builder.move_servo(13, 780)
@@ -239,7 +241,7 @@ def build_wave_hello(builder: SequenceBuilder) -> None:
     builder.move_servo(14, HEAD_PIVOT_CENTER)
     builder.wait(0.2)
     builder.move_servo(2, ARM_LEFT_NEUTRAL)
-    neutral_pose(builder, close_door=False, keep_eyes=True)
+    neutral_pose(builder, keep_eyes=True)
 
 
 
@@ -267,7 +269,7 @@ def build_curious_scan(builder: SequenceBuilder) -> None:
         builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
         builder.wait(0.18)
 
-    neutral_pose(builder, close_door=False, keep_eyes=True)
+    neutral_pose(builder, keep_eyes=True)
 
 
 
@@ -349,12 +351,12 @@ def build_double_take(builder: SequenceBuilder) -> None:
     builder.stop_tracks(0.08)
     builder.wait(0.08)
 
-    builder.move_tracks(0, -TRACK_TURN_FAST, 0.3)
+    builder.move_tracks(-24, -TRACK_TURN_FAST, 0.34)
     builder.move_servo(14, HEAD_PIVOT_RIGHT)
     builder.move_servo(6, HEAD_LEFT_NEUTRAL)
     builder.move_servo(4, HEAD_RIGHT_UP)
     builder.move_servo(5, DOOR_OPEN)
-    builder.wait(0.3)
+    builder.wait(0.34)
     builder.stop_tracks(0.08)
     builder.move_servo(5, DOOR_CLOSED)
     builder.wait(0.08)
@@ -408,26 +410,38 @@ def build_pirouette(builder: SequenceBuilder) -> None:
     builder.move_servo(13, 820)
     builder.wait(0.16)
 
-    builder.move_tracks(0, TRACK_TURN_MEDIUM, 0.55)
+    # Four longer turning phases make the pirouette read as a full spin instead
+    # of the previous partial quarter-turn.
+    turn_duration = 1.15
+
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, turn_duration)
     builder.move_servo(14, HEAD_PIVOT_LEFT)
     builder.move_servo(6, HEAD_LEFT_UP)
-    builder.wait(0.55)
+    builder.wait(turn_duration)
 
-    builder.move_tracks(0, TRACK_TURN_MEDIUM, 0.55)
-    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, turn_duration)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
     builder.move_servo(6, HEAD_LEFT_NEUTRAL)
     builder.move_servo(4, HEAD_RIGHT_UP)
-    builder.wait(0.55)
-
-    builder.move_tracks(0, TRACK_TURN_SHIMMY, 0.18)
-    builder.move_servo(14, HEAD_PIVOT_CENTER)
     builder.move_servo(2, ARM_LEFT_UP)
-    builder.move_servo(13, ARM_RIGHT_UP)
-    builder.wait(0.18)
+    builder.wait(turn_duration)
 
-    builder.stop_tracks(0.12)
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, turn_duration)
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
     builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
-    builder.wait(0.12)
+    builder.move_servo(13, ARM_RIGHT_UP)
+    builder.wait(turn_duration)
+
+    builder.move_tracks(0, TRACK_TURN_MEDIUM, turn_duration)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.move_servo(6, HEAD_LEFT_UP)
+    builder.move_servo(2, ARM_LEFT_NEUTRAL)
+    builder.wait(turn_duration)
+
+    builder.stop_tracks(0.14)
+    builder.move_servo(6, HEAD_LEFT_NEUTRAL)
+    builder.move_servo(13, ARM_RIGHT_NEUTRAL)
+    builder.wait(0.14)
     neutral_pose(builder, keep_eyes=True)
 
 
