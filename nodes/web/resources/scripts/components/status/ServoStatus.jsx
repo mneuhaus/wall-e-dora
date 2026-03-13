@@ -12,17 +12,32 @@ import {
   Menu, 
   ActionIcon, 
   Badge, 
-  Group, 
-  Text, 
-  Box, 
-  Stack, 
-  UnstyledButton 
+  Text
 } from '@mantine/core';
 import { useAppContext } from '../../contexts/AppContext';
 import { Link } from 'react-router-dom';
 import node from '../../Node';
 import { statusIconStyles } from './StatusIconStyles';
 import { normalizeServoList } from '../../utils/servoData';
+
+const mergeServoLists = (currentServos, incomingServos) => {
+  if (incomingServos.length === 0) {
+    return currentServos;
+  }
+
+  const merged = [...currentServos];
+  incomingServos.forEach((incomingServo) => {
+    const existingIndex = merged.findIndex((servo) => servo.id === incomingServo.id);
+
+    if (existingIndex >= 0) {
+      merged[existingIndex] = incomingServo;
+    } else {
+      merged.push(incomingServo);
+    }
+  });
+
+  return merged.sort((left, right) => left.id - right.id);
+};
 
 const ServoStatus = () => {
   const { availableServos } = useAppContext();
@@ -31,9 +46,16 @@ const ServoStatus = () => {
   
   // Direct connection to node events for more reliable updates
   useEffect(() => {
-    const unsubscribe = node.on('servo_status', (event) => {
+    const unsubscribeStatus = node.on('servo_status', (event) => {
       const nextServos = normalizeServoList(event?.value);
       if (nextServos.length > 0) {
+        setServos((currentServos) => mergeServoLists(currentServos, nextServos));
+      }
+    });
+
+    const unsubscribeList = node.on('servos_list', (event) => {
+      const nextServos = normalizeServoList(event?.value);
+      if (nextServos.length > 0 || Array.isArray(event?.value)) {
         setServos(nextServos);
       }
     });
@@ -41,7 +63,10 @@ const ServoStatus = () => {
     // Request servo status on mount
     node.emit('SCAN', []);
     
-    return unsubscribe;
+    return () => {
+      unsubscribeStatus();
+      unsubscribeList();
+    };
   }, []);
   
   // Use either direct event data or context data

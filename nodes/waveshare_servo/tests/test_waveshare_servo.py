@@ -1,5 +1,6 @@
 """Focused tests for the current Waveshare servo node modules."""
 
+import json
 from unittest.mock import MagicMock
 
 from waveshare_servo.config.handler import ConfigHandler
@@ -47,6 +48,41 @@ def test_config_handler_get_all_servo_ids_and_delete() -> None:
 
     assert "2" not in handler.cached_settings
     handler._save_settings.assert_called_once()
+
+
+def test_config_handler_prefers_repo_root_config_when_legacy_file_exists(tmp_path) -> None:
+    """The canonical repo-root config should win when both paths exist."""
+    handler = ConfigHandler.__new__(ConfigHandler)
+    handler.node = MagicMock()
+    handler.cached_settings = {}
+    handler.config_file_path = tmp_path / "config" / "servo.json"
+    handler.legacy_config_file_path = tmp_path / "nodes" / "config" / "servo.json"
+
+    handler.config_file_path.parent.mkdir(parents=True, exist_ok=True)
+    handler.legacy_config_file_path.parent.mkdir(parents=True, exist_ok=True)
+    handler.config_file_path.write_text(json.dumps({"5": {"id": 5, "alias": "Door"}}), encoding="utf-8")
+    handler.legacy_config_file_path.write_text(json.dumps({"5": {"id": 5, "alias": ""}}), encoding="utf-8")
+
+    handler._load_settings()
+
+    assert handler.cached_settings["5"]["alias"] == "Door"
+
+
+def test_config_handler_migrates_legacy_config_when_repo_root_is_missing(tmp_path) -> None:
+    """Legacy settings should be copied into the repo-root location once."""
+    handler = ConfigHandler.__new__(ConfigHandler)
+    handler.node = MagicMock()
+    handler.cached_settings = {}
+    handler.config_file_path = tmp_path / "config" / "servo.json"
+    handler.legacy_config_file_path = tmp_path / "nodes" / "config" / "servo.json"
+
+    handler.legacy_config_file_path.parent.mkdir(parents=True, exist_ok=True)
+    handler.legacy_config_file_path.write_text(json.dumps({"5": {"id": 5, "alias": "Door"}}), encoding="utf-8")
+
+    handler._load_settings()
+
+    assert handler.cached_settings["5"]["alias"] == "Door"
+    assert json.loads(handler.config_file_path.read_text(encoding="utf-8"))["5"]["alias"] == "Door"
 
 
 def test_broadcast_servo_status_uses_structured_arrow_payload() -> None:

@@ -46,7 +46,9 @@ import {
   Notification,
   Table,
   rem,
-  Tooltip
+  Tooltip,
+  NavLink,
+  ThemeIcon
 } from '@mantine/core';
 
 // We'll use a direct style object for the animation instead of CSS-in-JS
@@ -610,12 +612,139 @@ const ServoDebugView = () => {
     ? diagnostics
     : null;
 
+  const activeServoId = Number.parseInt(id, 10);
+
   const cloneOptions = (availableServos || [])
-    .filter((candidate) => candidate.id !== parseInt(id, 10))
+    .filter((candidate) => candidate.id !== activeServoId)
     .map((candidate) => ({
       value: String(candidate.id),
       label: candidate.alias ? `${candidate.alias} (#${candidate.id})` : `Servo #${candidate.id}`
     }));
+
+  const sidebarServos = [...(availableServos || [])];
+  if (servo && !sidebarServos.some((candidate) => candidate.id === activeServoId)) {
+    sidebarServos.push(servo);
+  }
+
+  sidebarServos.sort((left, right) => {
+    const leftAlias = left.alias?.trim().toLowerCase() || '';
+    const rightAlias = right.alias?.trim().toLowerCase() || '';
+
+    if (leftAlias && rightAlias && leftAlias !== rightAlias) {
+      return leftAlias.localeCompare(rightAlias);
+    }
+
+    if (leftAlias && !rightAlias) {
+      return -1;
+    }
+
+    if (!leftAlias && rightAlias) {
+      return 1;
+    }
+
+    return left.id - right.id;
+  });
+
+  const renderServoSidebar = () => (
+    <Paper
+      radius="md"
+      withBorder={true}
+      p="sm"
+      style={{ position: 'sticky', top: rem(8) }}
+    >
+      <Stack gap="xs">
+        <Group justify="space-between" align="flex-start">
+          <div>
+            <Text size="xs" tt="uppercase" c="dimmed" fw={700}>Connected Servos</Text>
+            <Title order={6}>Servo Navigator</Title>
+          </div>
+          <Badge color="amber" variant="light">
+            {sidebarServos.length}
+          </Badge>
+        </Group>
+
+        <Text size="xs" c="dimmed">
+          Jump between attached servos without leaving the current page.
+        </Text>
+
+        <Group grow>
+          <Button
+            component={Link}
+            to="/"
+            variant="default"
+            leftSection={<i className="fa-solid fa-table-cells-large"></i>}
+          >
+            Dashboard
+          </Button>
+          <Button
+            component={Link}
+            to="/servos/diagnostics"
+            variant="light"
+            color="amber"
+            leftSection={<i className="fa-solid fa-table-columns"></i>}
+          >
+            Overview
+          </Button>
+        </Group>
+
+        <Divider />
+
+        {sidebarServos.length === 0 ? (
+          <Text size="sm" c="dimmed">No servos connected yet.</Text>
+        ) : (
+          <Stack gap={6}>
+            {sidebarServos.map((candidate) => {
+              const isActive = candidate.id === activeServoId;
+              const candidateLabel = candidate.alias?.trim()
+                ? candidate.alias
+                : `Servo #${candidate.id}`;
+              const candidateDetails = [
+                candidate.model_name || null,
+                `#${candidate.id}`,
+                Number.isFinite(candidate.position) ? `P${candidate.position}` : null,
+              ].filter(Boolean).join(' • ');
+              const rightLabel = Number.isFinite(candidate.temperature) && candidate.temperature > 0
+                ? `${candidate.temperature}°C`
+                : candidate.moving
+                  ? 'Live'
+                  : 'Idle';
+
+              return (
+                <NavLink
+                  key={candidate.id}
+                  component={Link}
+                  to={`/servo/${candidate.id}`}
+                  active={isActive}
+                  color="amber"
+                  label={candidateLabel}
+                  description={candidateDetails}
+                  leftSection={
+                    <ThemeIcon
+                      size={28}
+                      radius="xl"
+                      variant={isActive ? 'filled' : 'light'}
+                      color="amber"
+                    >
+                      <i className="fa-solid fa-microchip"></i>
+                    </ThemeIcon>
+                  }
+                  rightSection={
+                    <Badge
+                      size="xs"
+                      color={candidate.moving ? 'green' : 'gray'}
+                      variant={isActive ? 'filled' : 'light'}
+                    >
+                      {rightLabel}
+                    </Badge>
+                  }
+                />
+              );
+            })}
+          </Stack>
+        )}
+      </Stack>
+    </Paper>
+  );
 
   const formatDiagnosticLabel = (key) => key
     .replace(/_/g, ' ')
@@ -661,39 +790,48 @@ const ServoDebugView = () => {
 
 
   const loadingView = (
-    <Container size="lg" py="md">
-      <Paper p="md" radius="md" withBorder={true}>
-        <Group justify="space-between" mb="md">
-          <Group>
-            <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
-              <i className="fa-solid fa-arrow-left"></i>
-            </ActionIcon>
-            <Title order={5}>Loading Servo Data...</Title>
-          </Group>
+    <Paper p="md" radius="md" withBorder={true}>
+      <Group justify="space-between" mb="md">
+        <Group>
+          <ActionIcon component={Link} to="/" variant="subtle" color="amber" radius="xl">
+            <i className="fa-solid fa-arrow-left"></i>
+          </ActionIcon>
+          <Title order={5}>Loading Servo Data...</Title>
         </Group>
-        <Stack align="center" p="xl">
-          <Box
-            sx={{
-              width: rem(48),
-              height: rem(48),
-              border: '4px solid rgba(255, 255, 255, 0.2)',
-              borderTop: '4px solid var(--mantine-color-amber-6)',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              '@keyframes spin': {
-                '0%': { transform: 'rotate(0deg)' },
-                '100%': { transform: 'rotate(360deg)' }
-              }
-            }}
-          ></Box>
-          <Text c="dimmed">Connecting to Servo {id}</Text>
-        </Stack>
-      </Paper>
-    </Container>
+      </Group>
+      <Stack align="center" p="xl">
+        <Box
+          sx={{
+            width: rem(48),
+            height: rem(48),
+            border: '4px solid rgba(255, 255, 255, 0.2)',
+            borderTop: '4px solid var(--mantine-color-amber-6)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            '@keyframes spin': {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' }
+            }
+          }}
+        ></Box>
+        <Text c="dimmed">Connecting to Servo {id}</Text>
+      </Stack>
+    </Paper>
   );
 
   if (!servo) {
-    return loadingView;
+    return (
+      <Container size="xl" py="md">
+        <Grid gutter="md" align="flex-start">
+          <Grid.Col span={{ base: 12, md: 4, lg: 3 }}>
+            {renderServoSidebar()}
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, md: 8, lg: 9 }}>
+            {loadingView}
+          </Grid.Col>
+        </Grid>
+      </Container>
+    );
   }
 
   // Create custom servo status object to handle special rendering for attached control
@@ -708,7 +846,7 @@ const ServoDebugView = () => {
   };
 
   return (
-    <Container size="lg" py="md">
+    <Container size="xl" py="md">
       {/* Toast notification */}
       {isToastVisible && (
         <Notification
@@ -736,7 +874,12 @@ const ServoDebugView = () => {
         </Notification>
       )}
 
-      <Paper radius="md" withBorder={true} p={0}>
+      <Grid gutter="md" align="flex-start">
+        <Grid.Col span={{ base: 12, md: 4, lg: 3 }}>
+          {renderServoSidebar()}
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 8, lg: 9 }}>
+          <Paper radius="md" withBorder={true} p={0}>
         {/* Header Section */}
         <Box py="xs" px="md" bg="rgba(255, 215, 0, 0.05)" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', height: '45px' }}>
           <Group justify="space-between">
@@ -1053,7 +1196,9 @@ const ServoDebugView = () => {
             </Grid.Col>
           </Grid>
         </Box>
-      </Paper>
+          </Paper>
+        </Grid.Col>
+      </Grid>
 
       {/* Modals */}
       <Modal

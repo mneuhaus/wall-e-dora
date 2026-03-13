@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-import os
 import traceback
+from pathlib import Path
 from typing import Any, Optional
 
 from waveshare_servo.servo.models import ServoSettings
@@ -16,22 +16,45 @@ class ConfigHandler:
     def __init__(self, node):
         self.node = node
         self.cached_settings: dict[str, dict[str, Any]] = {}
-        package_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        project_root = os.path.dirname(package_root)
-        self.config_file_path = os.path.join(project_root, "config", "servo.json")
+        config_dir = Path(__file__).resolve().parent
+        repo_root = config_dir.parents[3]
+        self.config_file_path = repo_root / "config" / "servo.json"
+        self.legacy_config_file_path = repo_root / "nodes" / "config" / "servo.json"
         print(f"Using config file path: {self.config_file_path}")
+        if self.legacy_config_file_path.exists():
+            print(f"Legacy config fallback available at: {self.legacy_config_file_path}")
         self._load_settings()
 
-    def _load_settings(self) -> None:
-        """Load settings from disk or initialize an empty config file."""
-        try:
-            config_dir = os.path.dirname(self.config_file_path)
-            os.makedirs(config_dir, exist_ok=True)
+    def _read_settings_file(self, path: Path) -> dict[str, dict[str, Any]]:
+        """Load a JSON settings file from disk."""
+        with path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
 
-            if os.path.exists(self.config_file_path):
-                with open(self.config_file_path, "r", encoding="utf-8") as handle:
-                    self.cached_settings = json.load(handle)
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected a JSON object in {path}")
+
+        return data
+
+    def _load_settings(self) -> None:
+        """Load settings from disk, preferring the repo-root config path."""
+        try:
+            self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if self.config_file_path.exists():
+                self.cached_settings = self._read_settings_file(self.config_file_path)
                 print(f"Loaded settings from {self.config_file_path}")
+                if self.legacy_config_file_path.exists():
+                    print(
+                        "Ignoring legacy settings file at "
+                        f"{self.legacy_config_file_path}; using repo-root config instead"
+                    )
+            elif self.legacy_config_file_path.exists():
+                self.cached_settings = self._read_settings_file(self.legacy_config_file_path)
+                self._save_settings()
+                print(
+                    "Migrated legacy settings from "
+                    f"{self.legacy_config_file_path} to {self.config_file_path}"
+                )
             else:
                 self.cached_settings = {}
                 self._save_settings()
@@ -44,7 +67,7 @@ class ConfigHandler:
     def _save_settings(self) -> None:
         """Persist the current settings cache to disk."""
         try:
-            with open(self.config_file_path, "w", encoding="utf-8") as handle:
+            with self.config_file_path.open("w", encoding="utf-8") as handle:
                 json.dump(self.cached_settings, handle, indent=2)
             print(f"Saved settings to {self.config_file_path}")
         except Exception as exc:
