@@ -123,6 +123,7 @@ The web node connects to the Dora framework with these data flows:
 | save_gamepad_profile     | web/save_gamepad_profile       | Request to save a gamepad profile         |
 | delete_gamepad_profile   | web/delete_gamepad_profile     | Request to delete a gamepad profile       |
 | available_images         | eyes/available_images          | List of available eye images/GIFs         |
+| sequence_state           | sequence/sequence_state       | Active/inactive state of the running sequence |
 | gamepad_profile          | web/gamepad_profile            | Response containing a specific profile    |
 | gamepad_profile_status   | web/gamepad_profile_status     | Response indicating if a profile exists   |
 | gamepad_profiles_list    | web/gamepad_profiles_list      | List of all available gamepad profiles    |

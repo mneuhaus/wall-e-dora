@@ -3,193 +3,157 @@ import { ActionIcon, Tooltip } from '@mantine/core';
 import node from '../../Node';
 import { controlStyles } from '../status/controls';
 
+const AMBIENT_SEQUENCE_IDS = ['idle-listen', 'idle-peek', 'idle-fidget'];
+const MIN_IDLE_DELAY_MS = 5000;
+const MAX_IDLE_DELAY_MS = 10000;
+const BUSY_RETRY_MIN_MS = 1800;
+const BUSY_RETRY_MAX_MS = 2800;
+
+const randomDelay = (minDelay, maxDelay) => (
+  Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay
+);
+
 /**
- * RandomSoundControl - A control component that plays random sounds at random intervals
- * 
+ * RandomSoundControl - Ambient mode that keeps WALL-E subtly alive while idle.
+ *
  * @component
  */
 const RandomSoundControl = () => {
   const [isActive, setIsActive] = useState(false);
   const [sounds, setSounds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const timeoutRef = useRef(null);
   const [pulseEffect, setPulseEffect] = useState(false);
-  const isActiveRef = useRef(false); // Reference to track active state consistently
-  const [currentSound, setCurrentSound] = useState("");
-  
-  // Request sounds list on mount
-  useEffect(() => {
-    console.log("RandomSoundControl mounted - scanning for sounds");
-    // Send the event to scan for available sounds
-    node.emit('scan_sounds', []);
-    
-    // Listen for sounds list
-    const unsubscribe1 = node.on('available_sounds', (event) => {
-      console.log("Received sounds list:", event);
-      setSounds(event.value || []);
-      setLoading(false);
-    });
-    
-    // Listen for currently playing sound
-    const unsubscribe2 = node.on('current_sound', (event) => {
-      if (event && event.value) {
-        const soundName = event.value[0] || "";
-        console.log("Current sound updated in RandomSoundControl:", soundName);
-        setCurrentSound(soundName);
-      }
-    });
-    
-    // Set a timeout in case the server doesn't respond
-    const timeout = setTimeout(() => {
-      console.log("Audio node timeout - no response received");
-      setLoading(false);
-    }, 3000);
-    
-    return () => {
-      unsubscribe1();
-      unsubscribe2();
-      clearTimeout(timeout);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      isActiveRef.current = false;
-    };
-  }, []);
-  
-  // Hook to update the ref when state changes
-  useEffect(() => {
-    isActiveRef.current = isActive;
-    console.log("isActive state changed:", isActive, "isActiveRef is now:", isActiveRef.current);
-  }, [isActive]);
-  
-  // Function to play a random sound
-  const playRandomSound = () => {
-    console.log("playRandomSound called, isActiveRef.current:", isActiveRef.current);
-    
-    if (sounds.length === 0 || !isActiveRef.current) {
-      console.log("Early return - conditions not met for playing sounds");
-      return;
-    }
-    
-    // Pick a random sound
-    const randomIndex = Math.floor(Math.random() * sounds.length);
-    const randomSound = sounds[randomIndex];
-    
-    console.log("Playing random sound:", randomSound);
-    
-    try {
-      // Play the sound using SoundWidget's approach
-      node.emit('play_sound', [randomSound]);
-      
-      // Visual feedback with extended duration
-      setPulseEffect(true);
-      setTimeout(() => {
-        setPulseEffect(false);
-      }, 3000);
-    } catch (error) {
-      console.error("Error playing sound:", error);
-    }
-    
-    // Only schedule the next sound if still active
-    if (isActiveRef.current) {
-      // Schedule the next sound with a random delay between 5-10 seconds
-      const minDelay = 5000;
-      const maxDelay = 10000;
-      const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay)) + minDelay;
-      
-      console.log(`Scheduling next sound in ${randomDelay/1000} seconds, isActiveRef.current:`, isActiveRef.current);
-      
-      timeoutRef.current = setTimeout(() => {
-        console.log("Timeout fired, isActiveRef.current:", isActiveRef.current);
-        if (isActiveRef.current) {
-          playRandomSound();
-        } else {
-          console.log("Timeout fired but component is no longer active");
-        }
-      }, randomDelay);
-    }
-  };
-  
-  // Play first random sound
-  const startRandomSounds = () => {
-    if (sounds.length === 0) return;
-    
-    console.log("Starting random sounds, setting isActiveRef.current = true");
-    isActiveRef.current = true;
-    
-    // Play a sound immediately
-    const randomIndex = Math.floor(Math.random() * sounds.length);
-    const randomSound = sounds[randomIndex];
-    console.log("Playing first random sound:", randomSound);
-    
-    try {
-      node.emit('play_sound', [randomSound]);
-      
-      // Visual feedback with extended duration
-      setPulseEffect(true);
-      setTimeout(() => {
-        setPulseEffect(false);
-      }, 3000);
-      
-      // Schedule the next sound
-      const minDelay = 5000;
-      const maxDelay = 10000;
-      const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay)) + minDelay;
-      
-      console.log(`Scheduling next sound in ${randomDelay/1000} seconds`);
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = setTimeout(() => {
-        console.log("First timeout fired, isActiveRef.current:", isActiveRef.current);
-        if (isActiveRef.current) {
-          playRandomSound();
-        }
-      }, randomDelay);
-    } catch (error) {
-      console.error("Error playing first sound:", error);
-    }
-  };
-  
-  // Stop random sounds
-  const stopRandomSounds = () => {
-    console.log("Stopping random sounds, setting isActiveRef.current = false");
-    isActiveRef.current = false;
-    
+
+  const timeoutRef = useRef(null);
+  const pulseTimeoutRef = useRef(null);
+  const isActiveRef = useRef(false);
+  const sequenceActiveRef = useRef(false);
+
+  const clearAmbientTimer = () => {
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
   };
-  
-  // Toggle active state
+
+  const triggerPulse = () => {
+    setPulseEffect(true);
+    if (pulseTimeoutRef.current) {
+      window.clearTimeout(pulseTimeoutRef.current);
+    }
+    pulseTimeoutRef.current = window.setTimeout(() => {
+      setPulseEffect(false);
+      pulseTimeoutRef.current = null;
+    }, 2200);
+  };
+
+  const scheduleAmbientAction = (minDelay = MIN_IDLE_DELAY_MS, maxDelay = MAX_IDLE_DELAY_MS) => {
+    clearAmbientTimer();
+    if (!isActiveRef.current) {
+      return;
+    }
+
+    const delay = randomDelay(minDelay, maxDelay);
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+
+      if (!isActiveRef.current) {
+        return;
+      }
+
+      if (sequenceActiveRef.current) {
+        scheduleAmbientAction(BUSY_RETRY_MIN_MS, BUSY_RETRY_MAX_MS);
+        return;
+      }
+
+      const sequenceId = AMBIENT_SEQUENCE_IDS[
+        Math.floor(Math.random() * AMBIENT_SEQUENCE_IDS.length)
+      ];
+
+      node.emit('sequence_trigger', [sequenceId], {}, { trackActivity: false });
+      triggerPulse();
+      scheduleAmbientAction();
+    }, delay);
+  };
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
+
+  useEffect(() => {
+    const cachedSequenceState = node.getLastEvent?.('sequence_state');
+    const cachedSequencePayload = Array.isArray(cachedSequenceState?.value)
+      ? cachedSequenceState.value[0]
+      : cachedSequenceState?.value;
+    sequenceActiveRef.current = Boolean(cachedSequencePayload?.active);
+
+    node.emit('scan_sounds', [], {}, { trackActivity: false });
+
+    const unsubscribeSounds = node.on('available_sounds', (event) => {
+      setSounds(event.value || []);
+      setLoading(false);
+    });
+
+    const unsubscribeActivity = node.on('user_activity', () => {
+      if (isActiveRef.current) {
+        scheduleAmbientAction();
+      }
+    });
+
+    const unsubscribeSequenceState = node.on('sequence_state', (event) => {
+      const payload = Array.isArray(event?.value) ? event.value[0] : event?.value;
+      sequenceActiveRef.current = Boolean(payload?.active);
+    });
+
+    const timeout = window.setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
+    return () => {
+      unsubscribeSounds();
+      unsubscribeActivity();
+      unsubscribeSequenceState();
+      clearAmbientTimer();
+      if (pulseTimeoutRef.current) {
+        window.clearTimeout(pulseTimeoutRef.current);
+        pulseTimeoutRef.current = null;
+      }
+      window.clearTimeout(timeout);
+      isActiveRef.current = false;
+    };
+  }, []);
+
+  const stopAmbientMode = () => {
+    isActiveRef.current = false;
+    clearAmbientTimer();
+    if (pulseTimeoutRef.current) {
+      window.clearTimeout(pulseTimeoutRef.current);
+      pulseTimeoutRef.current = null;
+    }
+    setPulseEffect(false);
+  };
+
   const toggleActive = () => {
-    const newActive = !isActive;
-    console.log("Toggle called, current:", isActive, "new:", newActive);
-    setIsActive(newActive);
-    
-    if (newActive) {
-      console.log("Starting random sound playback... Available sounds:", sounds.length);
-      startRandomSounds();
+    const nextActive = !isActiveRef.current;
+    setIsActive(nextActive);
+
+    if (nextActive) {
+      isActiveRef.current = true;
+      scheduleAmbientAction();
     } else {
-      console.log("Stopping random sound playback");
-      stopRandomSounds();
+      stopAmbientMode();
     }
   };
-  
-  // Button is disabled if no sounds are available
+
   const isDisabled = loading || sounds.length === 0;
 
-  // Add glow animation with styles
   const styles = `
     @keyframes glow {
       0% {
         filter: drop-shadow(0 0 0 rgba(255, 191, 0, 0.8));
       }
       50% {
-        filter: drop-shadow(0 0 6px rgba(255, 191, 0, 0.8));
+        filter: drop-shadow(0 0 7px rgba(255, 191, 0, 0.85));
       }
       100% {
         filter: drop-shadow(0 0 0 rgba(255, 191, 0, 0.8));
@@ -198,19 +162,22 @@ const RandomSoundControl = () => {
   `;
 
   return (
-    <Tooltip label={isActive ? "Turn off random sounds" : "Turn on random sounds"} withArrow position="bottom">
+    <Tooltip
+      label={isActive ? 'Zufallsmodus aus' : 'Zufallsmodus an'}
+      withArrow
+      position="bottom"
+    >
       <div style={{ position: 'relative' }}>
         <style>{styles}</style>
         <ActionIcon
           variant="subtle"
-          color={isActive ? "amber" : "gray"}
+          color={isActive ? 'amber' : 'gray'}
           onClick={toggleActive}
           disabled={isDisabled}
-          aria-label="Toggle random sounds"
-          className={pulseEffect ? 'pulse' : ''}
+          aria-label="Zufallsmodus umschalten"
           style={controlStyles.actionIcon}
         >
-          <i 
+          <i
             className={`fas fa-shuffle ${isActive ? 'amber-text' : ''}`}
             style={{
               ...controlStyles.icon,
@@ -218,7 +185,6 @@ const RandomSoundControl = () => {
             }}
           ></i>
         </ActionIcon>
-        {/* Removed small circle indicator */}
       </div>
     </Tooltip>
   );

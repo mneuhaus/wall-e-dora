@@ -35,6 +35,9 @@ def test_all_sequence_plans_start_with_audio_stop() -> None:
         'spin-wiggle',
         'double-take',
         'shimmy',
+        'idle-listen',
+        'idle-peek',
+        'idle-fidget',
     ]:
         steps = build_sequence_plan(seq_id)
         assert steps is not None
@@ -55,6 +58,26 @@ def test_turning_sequences_emit_track_motion() -> None:
             step.output_id == 'move_tracks_sequence' and step.payload[0]['angular'] == 0
             for step in steps
         )
+
+
+def test_scheduler_emits_sequence_state_on_start_and_completion() -> None:
+    clock = FakeClock()
+    node = FakeNode()
+    scheduler = SequenceScheduler(clock=clock)
+
+    assert scheduler.request_sequence(node, 'idle-listen') is True
+    assert any(
+        output_id == 'sequence_state' and payload == [{'id': 'idle-listen', 'active': True}]
+        for output_id, payload in node.outputs
+    )
+
+    clock.now += 5.0
+    scheduler.emit_due_steps(node)
+
+    assert any(
+        output_id == 'sequence_state' and payload == [{'id': 'idle-listen', 'active': False}]
+        for output_id, payload in node.outputs
+    )
 
 
 def test_new_trigger_replaces_future_steps_from_previous_sequence() -> None:

@@ -43,6 +43,7 @@ nodes:
       save_gamepad_profile: web/save_gamepad_profile
       delete_gamepad_profile: web/delete_gamepad_profile
       available_images: eyes/available_images
+      sequence_state: sequence/sequence_state
       # camera_feed: opencv-video-capture/image
     outputs:
       - slider_input
@@ -196,3 +197,4 @@ nodes:
       - move_servo_sequence
       - move_tracks_sequence
       - play_gif_sequence
+      - sequence_state

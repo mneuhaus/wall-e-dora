@@ -1,5 +1,14 @@
 import mitt from 'mitt';
 
+const NON_ACTIVITY_OUTPUTS = new Set([
+  'SCAN',
+  'scan_sounds',
+  'list_images',
+  'list_gamepad_profiles',
+  'get_gamepad_profile',
+  'check_gamepad_profile',
+]);
+
 class Node {
   constructor() {
     this.emitter = mitt();
@@ -10,7 +19,9 @@ class Node {
       ws: null,
       reconnectAttempts: 0,
       maxReconnectAttempts: 10,
-      reconnectInterval: 1000, // Start with 1s, will increase
+      reconnectInterval: 1000,
+      lastUserInteractionAt: Date.now(),
+      lastUserInteraction: null,
     };
     this.connectWebSocket();
     this.processEventQueue();
@@ -20,19 +31,38 @@ class Node {
     setInterval(() => {
       while (this.state.eventQueue.length > 0) {
         const event = this.state.eventQueue.shift();
-        // Use event.id as the event name if available; otherwise fallback to 'message'
         this.emitter.emit(event.id || 'message', event);
       }
     }, 100);
   }
 
-  sendOutput(output_id, data, metadata = {}) {
+  shouldTrackActivity(outputId, options = {}) {
+    if (options.trackActivity === false) {
+      return false;
+    }
+    return !NON_ACTIVITY_OUTPUTS.has(outputId);
+  }
+
+  recordUserActivity(outputId) {
+    const activity = {
+      output_id: outputId,
+      at: Date.now(),
+    };
+    this.state.lastUserInteractionAt = activity.at;
+    this.state.lastUserInteraction = activity;
+    this.emitter.emit('user_activity', activity);
+  }
+
+  sendOutput(output_id, data, metadata = {}, options = {}) {
+    if (this.shouldTrackActivity(output_id, options)) {
+      this.recordUserActivity(output_id);
+    }
+
     const message = { output_id, data, metadata };
     if (this.state.ws && this.state.ws.readyState === WebSocket.OPEN) {
       this.state.ws.send(JSON.stringify(message));
     } else {
       this.state.outputQueue.push(message);
-      // Try to reconnect if not already in process
       if (!this.state.ws || this.state.ws.readyState === WebSocket.CLOSED) {
         this.connectWebSocket();
       }
@@ -40,85 +70,95 @@ class Node {
   }
 
   connectWebSocket() {
-    // If we already have a connection or are connecting, don't try to connect again
-    if (this.state.ws && (this.state.ws.readyState === WebSocket.CONNECTING || this.state.ws.readyState === WebSocket.OPEN)) {
+    if (
+      this.state.ws
+      && (
+        this.state.ws.readyState === WebSocket.CONNECTING
+        || this.state.ws.readyState === WebSocket.OPEN
+      )
+    ) {
       return;
     }
-    
-    // Get the correct host and port
+
     const host = location.host || 'localhost:8443';
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${host}/ws`;
-    
+
     this.state.ws = new WebSocket(wsUrl);
     this.state.ws.binaryType = 'arraybuffer';
-    
+
     this.state.ws.onopen = () => {
       this.emitter.emit('connection', true);
       this.state.reconnectAttempts = 0;
       this.state.reconnectInterval = 1000;
-      
-      // Send any queued messages
+
       while (this.state.outputQueue.length > 0) {
         const message = this.state.outputQueue.shift();
         this.state.ws.send(JSON.stringify(message));
       }
-      
-      // Request servo data on successful connection
-      this.sendOutput('SCAN', []);
+
+      this.sendOutput('SCAN', [], {}, { trackActivity: false });
     };
-    
-    this.state.ws.onclose = (event) => {
+
+    this.state.ws.onclose = () => {
       this.emitter.emit('connection', false);
-      
-      // Implement exponential backoff for reconnection attempts
-      this.state.reconnectAttempts++;
-      
+      this.state.reconnectAttempts += 1;
+
       if (this.state.reconnectAttempts < this.state.maxReconnectAttempts) {
-        const delay = Math.min(30000, this.state.reconnectInterval * Math.pow(1.5, this.state.reconnectAttempts - 1));
+        const delay = Math.min(
+          30000,
+          this.state.reconnectInterval * Math.pow(1.5, this.state.reconnectAttempts - 1),
+        );
         setTimeout(() => this.connectWebSocket(), delay);
       }
     };
-    
-    this.state.ws.onerror = (error) => {
-      // No need to call close, the onclose handler will be called automatically
+
+    this.state.ws.onerror = () => {
+      // onclose handles reconnection.
     };
-    
+
     this.state.ws.addEventListener('message', (event) => {
       try {
         let rawData = event.data;
-        if (typeof rawData !== "string") {
-          rawData = new TextDecoder("utf-8").decode(new Uint8Array(rawData));
+        if (typeof rawData !== 'string') {
+          rawData = new TextDecoder('utf-8').decode(new Uint8Array(rawData));
         }
-        
+
         const data = JSON.parse(rawData);
         if (data && data.id) {
           this.state.lastEvents[data.id] = data;
         }
         this.state.eventQueue.push(data);
-      } catch (e) {
-        // Silent error handling for parse issues
+      } catch (error) {
+        // Silent parse failure to keep the UI responsive.
       }
     });
   }
 
   on(eventName, callback) {
     this.emitter.on(eventName, callback);
-    return () => this.emitter.off(eventName, callback); // Return unsubscribe function for React useEffect
+    return () => this.emitter.off(eventName, callback);
   }
 
   getLastEvent(eventName) {
     return this.state.lastEvents[eventName] || null;
   }
 
-  emit(output_id, data, metadata = {}) {
-    this.sendOutput(output_id, data, metadata);
+  getLastUserInteractionAt() {
+    return this.state.lastUserInteractionAt;
+  }
+
+  getLastUserInteraction() {
+    return this.state.lastUserInteraction;
+  }
+
+  emit(output_id, data, metadata = {}, options = {}) {
+    this.sendOutput(output_id, data, metadata, options);
   }
 }
 
 let node = new Node();
 
-// Make node available globally for advanced usage scenarios
 window.node = node;
 
 export default node;

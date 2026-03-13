@@ -94,16 +94,22 @@ class SequenceBuilder:
         return list(self._steps)
 
 
+
 def extract_sequence_id(value: Any) -> str | None:
     try:
         if hasattr(value, 'to_pylist'):
             values = value.to_pylist()
-            return values[0] if values else None
-        if isinstance(value, list):
-            return value[0] if value else None
+            value = values[0] if values else None
+        elif isinstance(value, list):
+            value = value[0] if value else None
+
+        if isinstance(value, dict):
+            sequence_id = value.get('id')
+            return sequence_id if isinstance(sequence_id, str) else None
         return value
     except Exception:
         return None
+
 
 
 def neutral_pose(
@@ -127,6 +133,7 @@ def neutral_pose(
     builder.wait(0.2)
 
 
+
 def build_hands_up(builder: SequenceBuilder) -> None:
     builder.move_servo(5, DOOR_CLOSED)
     builder.move_servo(14, HEAD_PIVOT_CENTER)
@@ -146,6 +153,7 @@ def build_hands_up(builder: SequenceBuilder) -> None:
     builder.wait(0.2)
     builder.move_servo(2, ARM_LEFT_NEUTRAL)
     neutral_pose(builder, keep_eyes=True)
+
 
 
 def build_candy(builder: SequenceBuilder) -> None:
@@ -173,6 +181,7 @@ def build_candy(builder: SequenceBuilder) -> None:
     builder.wait(0.4)
     builder.move_servo(13, ARM_RIGHT_NEUTRAL)
     neutral_pose(builder, close_door=False, keep_eyes=True)
+
 
 
 def build_party(builder: SequenceBuilder) -> None:
@@ -208,6 +217,7 @@ def build_party(builder: SequenceBuilder) -> None:
     neutral_pose(builder, keep_eyes=True)
 
 
+
 def build_wave_hello(builder: SequenceBuilder) -> None:
     builder.play_gif('emotion-love.gif')
     builder.play_sound('fröhliches-piepen.mp3')
@@ -230,6 +240,7 @@ def build_wave_hello(builder: SequenceBuilder) -> None:
     builder.wait(0.2)
     builder.move_servo(2, ARM_LEFT_NEUTRAL)
     neutral_pose(builder, close_door=False, keep_eyes=True)
+
 
 
 def build_curious_scan(builder: SequenceBuilder) -> None:
@@ -259,6 +270,7 @@ def build_curious_scan(builder: SequenceBuilder) -> None:
     neutral_pose(builder, close_door=False, keep_eyes=True)
 
 
+
 def build_peekaboo(builder: SequenceBuilder) -> None:
     builder.play_gif('lets-go.gif')
     builder.play_sound('überraschtes-ah.mp3')
@@ -281,6 +293,7 @@ def build_peekaboo(builder: SequenceBuilder) -> None:
     builder.move_servo(5, DOOR_CLOSED)
     builder.wait(0.3)
     neutral_pose(builder, close_door=True, keep_eyes=True)
+
 
 
 def build_spin_wiggle(builder: SequenceBuilder) -> None:
@@ -321,6 +334,7 @@ def build_spin_wiggle(builder: SequenceBuilder) -> None:
     neutral_pose(builder, keep_eyes=True)
 
 
+
 def build_double_take(builder: SequenceBuilder) -> None:
     builder.move_servo(5, DOOR_CLOSED)
     builder.move_servo(14, HEAD_PIVOT_CENTER)
@@ -356,6 +370,7 @@ def build_double_take(builder: SequenceBuilder) -> None:
     neutral_pose(builder, keep_eyes=True)
 
 
+
 def build_shimmy(builder: SequenceBuilder) -> None:
     builder.move_servo(5, DOOR_CLOSED)
     builder.move_servo(14, HEAD_PIVOT_CENTER)
@@ -383,6 +398,56 @@ def build_shimmy(builder: SequenceBuilder) -> None:
     neutral_pose(builder, keep_eyes=True)
 
 
+
+def build_idle_listen(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.play_sound('fragendes-seufzen.mp3')
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(6, HEAD_LEFT_UP)
+    builder.move_servo(2, 120)
+    builder.wait(0.45)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.move_servo(6, HEAD_LEFT_NEUTRAL)
+    builder.wait(0.25)
+    builder.move_servo(2, ARM_LEFT_NEUTRAL)
+    builder.wait(0.15)
+    neutral_pose(builder, keep_eyes=True)
+
+
+
+def build_idle_peek(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.play_sound('neugieriges-miauen.mp3')
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_servo(4, HEAD_RIGHT_UP)
+    builder.move_servo(13, 820)
+    builder.wait(0.4)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.move_servo(4, HEAD_RIGHT_NEUTRAL)
+    builder.wait(0.25)
+    builder.move_servo(13, ARM_RIGHT_NEUTRAL)
+    builder.wait(0.15)
+    neutral_pose(builder, keep_eyes=True)
+
+
+
+def build_idle_fidget(builder: SequenceBuilder) -> None:
+    builder.move_servo(5, DOOR_CLOSED)
+    builder.play_sound('freudiges-trällern.mp3')
+    builder.move_servo(14, HEAD_PIVOT_LEFT)
+    builder.move_servo(2, 150)
+    builder.wait(0.22)
+    builder.move_servo(14, HEAD_PIVOT_RIGHT)
+    builder.move_servo(13, 800)
+    builder.wait(0.22)
+    builder.move_servo(14, HEAD_PIVOT_CENTER)
+    builder.move_servo(2, ARM_LEFT_NEUTRAL)
+    builder.move_servo(13, ARM_RIGHT_NEUTRAL)
+    builder.wait(0.2)
+    neutral_pose(builder, keep_eyes=True)
+
+
+
 def build_sequence_plan(seq_id: str) -> list[PlanStep] | None:
     builder = SequenceBuilder()
     builder.stop_sound()
@@ -408,6 +473,12 @@ def build_sequence_plan(seq_id: str) -> list[PlanStep] | None:
         build_double_take(builder)
     elif seq_id == 'shimmy':
         build_shimmy(builder)
+    elif seq_id == 'idle-listen':
+        build_idle_listen(builder)
+    elif seq_id == 'idle-peek':
+        build_idle_peek(builder)
+    elif seq_id == 'idle-fidget':
+        build_idle_fidget(builder)
     else:
         return None
 
@@ -425,6 +496,9 @@ class SequenceScheduler:
             return None
         return self._active.seq_id
 
+    def _emit_sequence_state(self, node: OutputNode, seq_id: str, active: bool) -> None:
+        node.send_output('sequence_state', pa.array([{'id': seq_id, 'active': active}]), metadata={})
+
     def request_sequence(self, node: OutputNode, seq_id: str) -> bool:
         steps = build_sequence_plan(seq_id)
         if steps is None:
@@ -437,6 +511,7 @@ class SequenceScheduler:
             print(f'Sequence: trigger -> {seq_id}')
 
         self._active = ActiveSequence(seq_id=seq_id, started_at=self._clock(), steps=steps)
+        self._emit_sequence_state(node, seq_id, True)
         self.emit_due_steps(node)
         return True
 
@@ -453,5 +528,7 @@ class SequenceScheduler:
             self._active.next_step_index += 1
 
         if self._active.next_step_index >= len(self._active.steps):
-            print(f'Sequence: {self._active.seq_id} complete')
+            seq_id = self._active.seq_id
+            print(f'Sequence: {seq_id} complete')
             self._active = None
+            self._emit_sequence_state(node, seq_id, False)
