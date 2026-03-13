@@ -27,7 +27,7 @@ const PowerStatus = () => {
   const [runtime, setRuntime] = useState('');
   const [soc, setSoc] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [capacity, setCapacity] = useState(2.5); // Default capacity in Ah
+  const [capacity, setCapacity] = useState(2.2); // Default capacity in Ah
   const [dischargeRate, setDischargeRate] = useState(0); // % per hour
   const menuRef = useRef(null);
 

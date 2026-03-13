@@ -44,7 +44,7 @@ graph TD
 ## Hardware Requirements
 - INA226 current/voltage sensor
 - I2C connection to Raspberry Pi (bus 1)
-- 12V LiPo battery system (3S configuration)
+- 11.1V LiPo battery system (3S configuration)
 - Shunt resistor: 0.002Ω
 
 ## Functional Requirements
@@ -75,23 +75,23 @@ graph TD
 ### Battery Specifications
 | Parameter          | Value | Description              |
 |-------------------|-------|--------------------------|
-| Nominal Voltage   | 11.1V | 3S Li-ion configuration |
-| Maximum Voltage   | 12.2V | 100% calibrated threshold |
-| Minimum Voltage   | 8.0V  | 0% calibrated threshold  |
-| Capacity         | 2.5Ah | Per cell capacity        |
+| Nominal Voltage   | 11.1V | 3S LiPo configuration |
+| Maximum Voltage   | 12.6V | Fully charged pack |
+| Minimum Voltage   | 9.9V  | Practical empty floor for SoC |
+| Capacity         | 2.2Ah | Pack capacity |
 | Shutdown Threshold| 10%   | Auto shutdown trigger    |
 
 ## Technical Requirements
 
 ### Hardware Interface
 - Interface with INA226 current/voltage sensor via I2C
-- Support 3S Li-ion battery pack (11.1V nominal)
+- Support 3S LiPo battery pack (11.1V nominal)
 - Configure sensor for appropriate measurement ranges
 - Implement sensor redundancy or error detection
 
 ### Software Implementation
 - Use exponential moving averages (EMA) for stable readings
-- Implement voltage-based state of charge estimation
+- Implement LiPo-curve-based state of charge estimation with light load compensation
 - Calculate remaining runtime based on historical discharge rates with triple EMA smoothing:
   - Short-term EMA for current and power measurements
   - Medium-term EMA for discharge rate calculation
