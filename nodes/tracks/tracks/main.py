@@ -16,7 +16,7 @@ COMMAND_SCALE = 100.0  # Scale joystick (-1..1) to Pico command range (-100..100
 
 # --- Joystick Mapping Configuration ---
 INVERT_Y_AXIS = False
-INVERT_X_AXIS = True
+INVERT_X_AXIS = False
 JOYSTICK_DEADZONE = 0.0
 
 # --- Easing Configuration ---

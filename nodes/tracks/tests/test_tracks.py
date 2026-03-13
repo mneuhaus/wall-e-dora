@@ -1,37 +1,36 @@
-import pytest
+"""Tests for the tracks node command mapping."""
 
-def process_command(command: str):
-    parts = command.strip().split()
-    if len(parts) != 2:
-        print("Invalid command")
-        return
-    direction, speed = parts
-    if direction.lower() not in ["left", "right"]:
-        print("Unknown direction")
-        return
-    try:
-        speed_val = int(speed)
-    except ValueError:
-        print("Invalid speed")
-        return
-    print(f"Setting {direction} track to {speed_val}% speed")
+import sys
+from pathlib import Path
 
-def test_valid_left_command(capfd):
-    process_command("left 30")
-    out, _ = capfd.readouterr()
-    assert out.strip() == "Setting left track to 30% speed"
 
-def test_valid_right_command(capfd):
-    process_command("right 100")
-    out, _ = capfd.readouterr()
-    assert out.strip() == "Setting right track to 100% speed"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tracks'))
 
-def test_invalid_command(capfd):
-    process_command("forward 50")
-    out, _ = capfd.readouterr()
-    assert out.strip() == "Unknown direction"
+from tracks.main import compute_joystick_command  # noqa: E402
 
-def test_invalid_format(capfd):
-    process_command("left")
-    out, _ = capfd.readouterr()
-    assert out.strip() == "Invalid command"
+
+def test_positive_x_produces_positive_angular_command() -> None:
+    """Turning right on the stick should produce a right-turn command."""
+    linear, angular, _, _ = compute_joystick_command(
+        latest_joystick_x=1.0,
+        latest_joystick_y=0.0,
+        current_linear=0,
+        current_angular=0,
+    )
+
+    assert linear == 0
+    assert angular > 0
+
+
+def test_negative_x_produces_negative_angular_command() -> None:
+    """Turning left on the stick should produce a left-turn command."""
+    linear, angular, _, _ = compute_joystick_command(
+        latest_joystick_x=-1.0,
+        latest_joystick_y=0.0,
+        current_linear=0,
+        current_angular=0,
+    )
+
+    assert linear == 0
+    assert angular < 0
