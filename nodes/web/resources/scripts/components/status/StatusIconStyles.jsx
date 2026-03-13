@@ -9,8 +9,8 @@ import { rem } from '@mantine/core';
 export const statusIconStyles = {
   // Make ActionIcon larger and more touch-friendly
   actionIcon: {
-    width: rem(36),    // 50% larger than default
-    height: rem(36),   // 50% larger than default
+    width: rem(32),
+    height: rem(32),
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
@@ -18,6 +18,6 @@ export const statusIconStyles = {
   },
   // Make icon larger
   icon: {
-    fontSize: rem(20)  // 50% larger than default
+    fontSize: rem(18)
   }
 };

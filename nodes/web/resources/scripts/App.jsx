@@ -30,6 +30,7 @@ import {
   PowerStatus,
   DoorStatus,
   CameraStatus,
+  FaceTrackingStatus,
 } from './components/status';
 import {
   VolumeControl as Volume,
@@ -38,7 +39,6 @@ import {
 import { GamepadStatus as Gamepad } from './components/status';
 
 const Power = PowerStatus;
-
 import {
   DashboardView as Dashboard,
   GalleryView,
@@ -58,7 +58,7 @@ const TopNav = () => {
   ];
 
   return (
-    <Group gap={3} wrap="nowrap">
+    <Group gap={2} wrap="nowrap">
       {navItems.map((item) => (
         <Box
           key={item.to}
@@ -70,8 +70,8 @@ const TopNav = () => {
             background: item.active ? 'rgba(255, 191, 0, 0.14)' : 'transparent',
             border: item.active ? '1px solid rgba(255, 191, 0, 0.28)' : '1px solid transparent',
             borderRadius: rem(999),
-            padding: `${rem(4)} ${rem(7)}`,
-            fontSize: rem(12),
+            padding: `${rem(4)} ${rem(6)}`,
+            fontSize: rem(11),
             fontWeight: 700,
             lineHeight: 1,
             whiteSpace: 'nowrap',
@@ -84,7 +84,7 @@ const TopNav = () => {
   );
 };
 
-const CameraBackground = ({ enabled }) => {
+const CameraBackground = ({ enabled, faceTrackingState }) => {
   const [useSnapshotFallback, setUseSnapshotFallback] = useState(false);
 
   useEffect(() => {
@@ -94,8 +94,8 @@ const CameraBackground = ({ enabled }) => {
   }, [enabled]);
 
   const frameUrl = useSnapshotFallback
-    ? `/camera/snapshot.jpg?t=${Date.now()}`
-    : '/camera/stream.mjpeg';
+    ? `/camera/snapshot.jpg${faceTrackingState?.enabled ? '?annotated=1&' : '?'}t=${Date.now()}`
+    : `/camera/stream.mjpeg${faceTrackingState?.enabled ? '?annotated=1' : ''}`;
 
   return (
     <Box
@@ -112,22 +112,30 @@ const CameraBackground = ({ enabled }) => {
       }}
     >
       {enabled ? (
-        <img
-          src={frameUrl}
-          alt=""
-          onError={() => {
-            if (!useSnapshotFallback) {
-              setUseSnapshotFallback(true);
-            }
-          }}
+        <Box
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            objectPosition: 'center',
+            position: 'absolute',
+            inset: 0,
             transform: 'scale(1.015)',
+            transformOrigin: 'center center',
           }}
-        />
+        >
+          <img
+            src={frameUrl}
+            alt=""
+            onError={() => {
+              if (!useSnapshotFallback) {
+                setUseSnapshotFallback(true);
+              }
+            }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center',
+            }}
+          />
+        </Box>
       ) : null}
       <Box
         style={{
@@ -141,7 +149,7 @@ const CameraBackground = ({ enabled }) => {
 };
 
 const AppFrame = () => {
-  const { cameraBackgroundEnabled, photoCaptureFlashToken } = useAppContext();
+  const { cameraBackgroundEnabled, photoCaptureFlashToken, faceTrackingState } = useAppContext();
 
   const appStyles = `
     .camera-app {
@@ -213,7 +221,7 @@ const AppFrame = () => {
   return (
     <Box className={`camera-app ${cameraBackgroundEnabled ? 'camera-live' : ''}`}>
       <style>{appStyles}</style>
-      <CameraBackground enabled={cameraBackgroundEnabled} />
+      <CameraBackground enabled={cameraBackgroundEnabled} faceTrackingState={faceTrackingState} />
       {photoCaptureFlashToken > 0 ? (
         <Box
           key={photoCaptureFlashToken}
@@ -252,9 +260,10 @@ const AppFrame = () => {
                   <TopNav />
                 </Group>
 
-                <Group gap="md" wrap="nowrap">
+                <Group gap={4} wrap="nowrap">
                   <Gamepad />
                   <CameraStatus />
+                  <FaceTrackingStatus />
                   <ServoStatus />
                   <DoorStatus />
                   <Volume />

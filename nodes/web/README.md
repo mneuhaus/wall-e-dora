@@ -64,6 +64,7 @@ graph TD
 - Implement a secure HTTPS connection
 - Include real-time status indicators for all robot subsystems
 - Offer a toggleable live camera background mode behind the mobile UI
+- Offer a toggleable face-follow mode that gently turns WALL-E's head toward detected people
 
 ### Widget System
 - Support servo control widgets with position sliders
@@ -94,6 +95,7 @@ graph TD
 - Implement WebSocket handlers for real-time communication
 - Store persistent data in JSON format
 - Proxy a `go2rtc` camera stream and JPEG frame endpoint for the optional live background
+- Run a lightweight OpenCV face detector against the camera feed for optional head-follow mode
 - Generate self-signed SSL certificates if not present
 - Handle multiple concurrent client connections
 - Process Dora events and translate them to UI updates
@@ -129,7 +131,7 @@ The web node connects to the Dora framework with these data flows:
 | gamepad_profiles_list    | web/gamepad_profiles_list      | List of all available gamepad profiles    |
 | *camera_feed*            | *opencv-video-capture/image*   | *(Optional) Camera feed image*            |
 
-The web server also exposes `GET /camera/snapshot.jpg` and `GET /camera/stream.mjpeg` for the optional full-screen live background toggle in the UI. It also provides `GET /api/photos`, `POST /api/photos/capture`, and serves saved images under `/photos/` for the on-device photo gallery. The actual USB camera is now handled by a separate `go2rtc` systemd service, and the web node only proxies that feed over the existing HTTPS origin.
+The web server also exposes `GET /camera/snapshot.jpg` and `GET /camera/stream.mjpeg` for the optional full-screen live background toggle in the UI. It also provides `GET /api/photos`, `POST /api/photos/capture`, `GET /api/face-tracking`, `POST /api/face-tracking`, and serves saved images under `/photos/` for the on-device photo gallery. The actual USB camera is now handled by a separate `go2rtc` systemd service, and the web node only proxies that feed over the existing HTTPS origin while reusing snapshots for lightweight face-follow mode.
 
 #### Outputs
 | Output ID                 | Destination      | Description                               |

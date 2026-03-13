@@ -4,6 +4,17 @@ import { normalizeServoList } from '../utils/servoData';
 
 const CAMERA_BACKGROUND_STORAGE_KEY = 'walle.camera-background-enabled';
 
+const DEFAULT_FACE_TRACKING_STATE = {
+  enabled: false,
+  supported: true,
+  face_detected: false,
+  current_position: 500,
+  target_position: 500,
+  faces: [],
+  sequence_active: false,
+  error: null,
+};
+
 function getStoredCameraBackgroundEnabled() {
   if (typeof window === 'undefined') {
     return false;
@@ -16,6 +27,21 @@ function getStoredCameraBackgroundEnabled() {
   }
 }
 
+function normalizeFaceTrackingState(rawValue) {
+  if (Array.isArray(rawValue)) {
+    return normalizeFaceTrackingState(rawValue[0]);
+  }
+
+  if (!rawValue || typeof rawValue !== 'object') {
+    return DEFAULT_FACE_TRACKING_STATE;
+  }
+
+  return {
+    ...DEFAULT_FACE_TRACKING_STATE,
+    ...rawValue,
+  };
+}
+
 // Create the context
 const AppContext = createContext(null);
 
@@ -26,6 +52,7 @@ export function AppProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
   const [gamepadProfiles, setGamepadProfiles] = useState({});
   const [cameraBackgroundEnabled, setCameraBackgroundEnabled] = useState(() => getStoredCameraBackgroundEnabled());
+  const [faceTrackingState, setFaceTrackingState] = useState(DEFAULT_FACE_TRACKING_STATE);
   const [photos, setPhotos] = useState([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [photoCaptureFlashToken, setPhotoCaptureFlashToken] = useState(0);
@@ -124,6 +151,44 @@ export function AppProvider({ children }) {
     setCameraBackgroundEnabled((enabled) => !enabled);
   };
 
+  const refreshFaceTrackingState = async () => {
+    try {
+      const response = await fetch('/api/face-tracking');
+      if (!response.ok) {
+        throw new Error(`Failed to load face tracking state: ${response.status}`);
+      }
+      const payload = await response.json();
+      setFaceTrackingState(normalizeFaceTrackingState(payload));
+    } catch (error) {
+      console.error('Failed to load face tracking state', error);
+    }
+  };
+
+  const setFaceTrackingEnabled = async (enabled) => {
+    try {
+      const response = await fetch('/api/face-tracking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error || `Failed to update face tracking: ${response.status}`);
+      }
+
+      setFaceTrackingState(normalizeFaceTrackingState(payload?.state));
+      return true;
+    } catch (error) {
+      console.error('Failed to update face tracking state', error);
+      return false;
+    }
+  };
+
+  const toggleFaceTracking = () => setFaceTrackingEnabled(!faceTrackingState.enabled);
+
   const refreshPhotos = async () => {
     setPhotosLoading(true);
     try {
@@ -179,6 +244,18 @@ export function AppProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    refreshFaceTrackingState();
+
+    const unsubscribe = node.on('face_tracking_state', (event) => {
+      setFaceTrackingState(normalizeFaceTrackingState(event?.value));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     const handleGamepadFlash = (event) => {
       const control = event?.detail?.control;
       if (control !== 'FACE_1') {
@@ -231,11 +308,15 @@ export function AppProvider({ children }) {
     isConnected,
     gamepadProfiles,
     cameraBackgroundEnabled,
+    faceTrackingState,
     photos,
     photosLoading,
     photoCaptureFlashToken,
     setCameraBackgroundEnabled,
     toggleCameraBackground,
+    refreshFaceTrackingState,
+    setFaceTrackingEnabled,
+    toggleFaceTracking,
     refreshPhotos,
     capturePhoto,
     setServos: setAvailableServos,

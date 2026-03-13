@@ -8,7 +8,9 @@ Manages gamepad profiles and orchestrates data flow between the UI and backend n
 import asyncio
 import math
 import os
+import random
 import threading
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -34,15 +36,76 @@ from handlers.gamepad_profiles import (
 
 logging.basicConfig(level=logging.INFO)
 
+try:
+    import cv2
+    import numpy as np
+except Exception as error:  # pragma: no cover - runtime environment dependent
+    cv2 = None
+    np = None
+    FACE_TRACKING_IMPORT_ERROR = str(error)
+else:
+    FACE_TRACKING_IMPORT_ERROR = ''
+
 CAMERA_TTL_SECONDS = 0.25
 CAMERA_FETCH_TIMEOUT_SECONDS = 2.5
 GO2RTC_BASE_URL = os.environ.get('GO2RTC_BASE_URL', 'http://127.0.0.1:1984')
 GO2RTC_STREAM_SRC = os.environ.get('GO2RTC_STREAM_SRC', 'walle_camera')
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PHOTO_GALLERY_DIR = REPO_ROOT / 'out' / 'photos'
+FACE_TRACKING_MODEL_DIR = REPO_ROOT / 'out' / 'models'
+FACE_TRACKING_MODEL_PATH = Path(
+    os.environ.get(
+        'FACE_TRACKING_MODEL_PATH',
+        str(FACE_TRACKING_MODEL_DIR / 'face_detection_yunet_2023mar.onnx'),
+    )
+)
+FACE_TRACKING_MODEL_URL = os.environ.get(
+    'FACE_TRACKING_MODEL_URL',
+    'https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx',
+)
+FACE_TRACKING_SERVO_ID = int(os.environ.get('FACE_TRACKING_SERVO_ID', '14'))
+FACE_TRACKING_CENTER_POSITION = int(os.environ.get('FACE_TRACKING_CENTER_POSITION', '500'))
+FACE_TRACKING_MIN_POSITION = int(os.environ.get('FACE_TRACKING_MIN_POSITION', '220'))
+FACE_TRACKING_MAX_POSITION = int(os.environ.get('FACE_TRACKING_MAX_POSITION', '780'))
+FACE_TRACKING_DETECTION_INTERVAL_SECONDS = 0.18
+FACE_TRACKING_COMMAND_INTERVAL_SECONDS = 0.12
+FACE_TRACKING_RETURN_DELAY_SECONDS = 1.0
+FACE_TRACKING_MAX_STEP = 30
+FACE_TRACKING_SEARCH_STEP = 28
+FACE_TRACKING_RETURN_STEP = 12
+FACE_TRACKING_MOVE_TOLERANCE = 4
+FACE_TRACKING_DEADZONE = 0.06
+FACE_TRACKING_FACE_SWITCH_INTERVAL_SECONDS = 1.1
+FACE_TRACKING_FACE_RANDOM_SWITCH_CHANCE = 0.24
+FACE_TRACKING_LOCK_RETENTION_SECONDS = 0.45
+FACE_TRACKING_PREDICTION_SECONDS = 0.22
+FACE_TRACKING_SMOOTHING_ALPHA = 0.46
+FACE_TRACKING_SEARCH_DELAY_SECONDS = 0.7
+FACE_TRACKING_SEARCH_INTERVAL_SECONDS = 1.5
 camera_snapshot_lock = threading.Lock()
 camera_snapshot_bytes = None
 camera_snapshot_taken_at = 0.0
+face_tracking_state_lock = threading.Lock()
+face_tracking_detector = None
+face_tracking_enabled = False
+face_tracking_supported = cv2 is not None and np is not None
+face_tracking_face_detected = False
+face_tracking_current_position = FACE_TRACKING_CENTER_POSITION
+face_tracking_target_position = FACE_TRACKING_CENTER_POSITION
+face_tracking_faces = []
+face_tracking_last_detection_at = 0.0
+face_tracking_last_face_at = 0.0
+face_tracking_last_move_at = 0.0
+face_tracking_last_face_switch_at = 0.0
+face_tracking_last_search_at = 0.0
+face_tracking_search_target_position = FACE_TRACKING_CENTER_POSITION
+face_tracking_locked_center_x = 0.5
+face_tracking_locked_velocity_x = 0.0
+face_tracking_locked_area = 0.0
+face_tracking_last_observation_at = 0.0
+face_tracking_recenter_pending = False
+face_tracking_sequence_active = False
+face_tracking_state_signature = None
 
 # Global variables (consider refactoring into a class or context)
 global_web_inputs = []  # Queue for events received from WebSocket clients
@@ -50,13 +113,566 @@ ws_clients = set()      # Set of active WebSocket client connections
 web_loop = None         # asyncio event loop for the web server thread
 
 
-async def fetch_go2rtc_frame() -> bytes | None:
+def clamp_face_tracking_position(position: int) -> int:
+    """Clamp a servo target into the safe head-pivot range."""
+    return max(FACE_TRACKING_MIN_POSITION, min(FACE_TRACKING_MAX_POSITION, int(position)))
+
+
+FACE_TRACKING_SEARCH_POSITIONS = (
+    clamp_face_tracking_position(FACE_TRACKING_MIN_POSITION + 18),
+    clamp_face_tracking_position(FACE_TRACKING_MAX_POSITION - 18),
+)
+
+
+def compute_face_tracking_target(frame_width: int, face_center_x: float) -> int:
+    """Map a detected face center to the head pivot position."""
+    if frame_width <= 0:
+        return FACE_TRACKING_CENTER_POSITION
+
+    normalized_offset = (face_center_x - (frame_width / 2)) / (frame_width / 2)
+    if abs(normalized_offset) <= FACE_TRACKING_DEADZONE:
+        return FACE_TRACKING_CENTER_POSITION
+
+    active_range = 1.0 - FACE_TRACKING_DEADZONE
+    if normalized_offset < 0:
+        strength = (abs(normalized_offset) - FACE_TRACKING_DEADZONE) / active_range
+        return clamp_face_tracking_position(
+            round(FACE_TRACKING_CENTER_POSITION - (FACE_TRACKING_CENTER_POSITION - FACE_TRACKING_MIN_POSITION) * strength)
+        )
+
+    strength = (normalized_offset - FACE_TRACKING_DEADZONE) / active_range
+    return clamp_face_tracking_position(
+        round(FACE_TRACKING_CENTER_POSITION + (FACE_TRACKING_MAX_POSITION - FACE_TRACKING_CENTER_POSITION) * strength)
+    )
+
+
+def compute_next_face_tracking_step(current_position: int, target_position: int, *, max_step: int = FACE_TRACKING_MAX_STEP) -> int:
+    """Move smoothly toward a face target without twitching."""
+    delta = target_position - current_position
+    if abs(delta) <= FACE_TRACKING_MOVE_TOLERANCE:
+        return clamp_face_tracking_position(target_position)
+
+    step = round(delta * 0.4)
+    if step == 0:
+        step = 1 if delta > 0 else -1
+    step = max(-max_step, min(max_step, step))
+    return clamp_face_tracking_position(current_position + step)
+
+
+def compute_face_tracking_face_area(face: dict[str, float | bool]) -> float:
+    """Return a normalized face box area for candidate scoring."""
+    return max(0.0, float(face.get('width', 0.0)) * float(face.get('height', 0.0)))
+
+
+def select_face_tracking_face(
+    detected_faces: list[dict[str, float | bool]],
+    reference_center_x: float,
+    reference_area: float,
+    *,
+    now: float,
+    last_face_switch_at: float,
+) -> tuple[int, float]:
+    """Prefer a stable face lock, but occasionally swap between equally good faces."""
+    if len(detected_faces) == 1:
+        return 0, last_face_switch_at
+
+    ranked_candidates = []
+    for index, face in enumerate(detected_faces):
+        area = compute_face_tracking_face_area(face)
+        center_x = float(face.get('center_x', 0.5))
+        score = (
+            (float(face.get('score', 0.0)) * 1.8)
+            + min(0.28, area * 3.2)
+            - (abs(center_x - reference_center_x) * 1.65)
+        )
+        if reference_area > 0:
+            score -= abs(area - reference_area) * 0.55
+        ranked_candidates.append((score, index))
+
+    ranked_candidates.sort(reverse=True)
+    selected_index = ranked_candidates[0][1]
+
+    if now - last_face_switch_at < FACE_TRACKING_FACE_SWITCH_INTERVAL_SECONDS:
+        return selected_index, last_face_switch_at
+
+    top_score = ranked_candidates[0][0]
+    switchable_indices = [
+        index for score, index in ranked_candidates
+        if score >= top_score - 0.16
+    ]
+    if len(switchable_indices) > 1 and random.random() < FACE_TRACKING_FACE_RANDOM_SWITCH_CHANCE:
+        return random.choice(switchable_indices), now
+
+    return selected_index, last_face_switch_at
+
+
+def blend_face_tracking_observation(
+    observed_center_x: float,
+    observed_area: float,
+    previous_center_x: float,
+    previous_velocity_x: float,
+    previous_area: float,
+    *,
+    delta_time: float,
+) -> tuple[float, float, float]:
+    """Blend the new face observation into a smoother tracked target."""
+    clamped_observed_center = max(0.0, min(1.0, observed_center_x))
+    if delta_time <= 0:
+        return clamped_observed_center, 0.0, observed_area
+
+    observed_velocity_x = (clamped_observed_center - previous_center_x) / max(delta_time, 1e-3)
+    blended_velocity_x = (previous_velocity_x * 0.4) + (observed_velocity_x * 0.6)
+    predicted_center_x = max(
+        0.0,
+        min(
+            1.0,
+            clamped_observed_center + (blended_velocity_x * min(delta_time, FACE_TRACKING_PREDICTION_SECONDS)),
+        ),
+    )
+    smoothed_center_x = (
+        (previous_center_x * (1.0 - FACE_TRACKING_SMOOTHING_ALPHA))
+        + (predicted_center_x * FACE_TRACKING_SMOOTHING_ALPHA)
+    )
+    smoothed_area = (previous_area * 0.55) + (observed_area * 0.45)
+    return max(0.0, min(1.0, smoothed_center_x)), blended_velocity_x, max(0.0, smoothed_area)
+
+
+def project_face_tracking_center(center_x: float, velocity_x: float, *, elapsed: float) -> float:
+    """Project the current face lock forward briefly between detections."""
+    return max(
+        0.0,
+        min(
+            1.0,
+            center_x + (velocity_x * min(elapsed, FACE_TRACKING_PREDICTION_SECONDS)),
+        ),
+    )
+
+
+def select_next_face_tracking_search_target(current_target_position: int) -> int:
+    """Sweep wider left/right while searching instead of hovering near center."""
+    left_edge = FACE_TRACKING_SEARCH_POSITIONS[0]
+    right_edge = FACE_TRACKING_SEARCH_POSITIONS[1]
+
+    if current_target_position <= FACE_TRACKING_CENTER_POSITION:
+        return right_edge
+
+    return left_edge
+
+
+def ensure_face_tracking_model() -> Path | None:
+    """Ensure the YuNet model exists locally."""
+    global face_tracking_supported
+
+    if FACE_TRACKING_MODEL_PATH.exists():
+        return FACE_TRACKING_MODEL_PATH
+
+    try:
+        FACE_TRACKING_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(FACE_TRACKING_MODEL_URL, FACE_TRACKING_MODEL_PATH)
+        logging.info('Downloaded YuNet face model to %s', FACE_TRACKING_MODEL_PATH)
+        return FACE_TRACKING_MODEL_PATH
+    except Exception as error:
+        logging.error('Failed to download YuNet face model: %s', error)
+        face_tracking_supported = False
+        return None
+
+
+def get_face_tracking_detector():
+    """Load the OpenCV YuNet detector lazily."""
+    global face_tracking_detector, face_tracking_supported
+
+    if not face_tracking_supported:
+        return None
+
+    if face_tracking_detector is not None:
+        return face_tracking_detector
+
+    model_path = ensure_face_tracking_model()
+    if model_path is None:
+        return None
+
+    try:
+        detector = cv2.FaceDetectorYN_create(
+            str(model_path),
+            '',
+            (320, 320),
+            0.7,
+            0.3,
+            5000,
+        )
+    except Exception as error:
+        logging.error('Failed to create YuNet face detector: %s', error)
+        face_tracking_supported = False
+        return None
+
+    face_tracking_detector = detector
+    return face_tracking_detector
+
+
+def serialize_face_tracking_state() -> dict:
+    """Return the face tracking state for API/UI consumers."""
+    with face_tracking_state_lock:
+        return {
+            'enabled': face_tracking_enabled,
+            'supported': face_tracking_supported,
+            'face_detected': face_tracking_face_detected,
+            'current_position': face_tracking_current_position,
+            'target_position': face_tracking_target_position,
+            'faces': list(face_tracking_faces),
+            'sequence_active': face_tracking_sequence_active,
+            'error': None if face_tracking_supported else (FACE_TRACKING_IMPORT_ERROR or 'OpenCV unavailable'),
+        }
+
+
+def broadcast_face_tracking_state() -> None:
+    """Broadcast face tracking state updates to all connected WebSocket clients."""
+    global face_tracking_state_signature
+
+    state = serialize_face_tracking_state()
+    signature = json.dumps(state, sort_keys=True)
+    if signature == face_tracking_state_signature:
+        return
+
+    face_tracking_state_signature = signature
+    if web_loop is None:
+        return
+
+    payload = json.dumps({
+        'id': 'face_tracking_state',
+        'value': state,
+        'type': 'EVENT',
+    }).encode('utf-8')
+    asyncio.run_coroutine_threadsafe(broadcast_bytes(payload), web_loop)
+
+
+def detect_primary_face(frame_bytes: bytes) -> tuple[float | None, int | None, list[dict[str, float | bool]]]:
+    """Return the primary face center and normalized face boxes."""
+    detector = get_face_tracking_detector()
+    if detector is None or np is None:
+        return None, None, []
+
+    frame_buffer = np.frombuffer(frame_bytes, dtype=np.uint8)
+    frame = cv2.imdecode(frame_buffer, cv2.IMREAD_COLOR)
+    if frame is None:
+        return None, None, []
+
+    frame_height = int(frame.shape[0])
+    frame_width = int(frame.shape[1])
+    detector.setInputSize((frame_width, frame_height))
+
+    try:
+        _, faces = detector.detect(frame)
+    except Exception as error:
+        logging.debug('YuNet detection failed: %s', error)
+        return None, frame_width, []
+
+    if faces is None or len(faces) == 0:
+        return None, frame_width, []
+
+    primary_face = max(faces, key=lambda face: float(face[14]) * float(face[2]) * float(face[3]))
+    px, py, pwidth, pheight = [float(value) for value in primary_face[:4]]
+
+    normalized_faces = []
+    for face in faces:
+        x, y, width, height = [float(value) for value in face[:4]]
+        normalized_faces.append({
+            'x': x / frame_width,
+            'y': y / frame_height,
+            'width': width / frame_width,
+            'height': height / frame_height,
+            'center_x': (x + (width / 2)) / frame_width,
+            'center_y': (y + (height / 2)) / frame_height,
+            'score': float(face[14]),
+            'primary': x == px and y == py and width == pwidth and height == pheight,
+        })
+
+    return float(px + (pwidth / 2)), frame_width, normalized_faces
+
+
+def annotate_face_tracking_frame(frame_bytes: bytes) -> bytes:
+    """Draw detected face boxes directly onto a JPEG frame."""
+    if not frame_bytes or cv2 is None or np is None:
+        return frame_bytes
+
+    with face_tracking_state_lock:
+        faces = list(face_tracking_faces)
+
+    if not faces:
+        return frame_bytes
+
+    frame_buffer = np.frombuffer(frame_bytes, dtype=np.uint8)
+    frame = cv2.imdecode(frame_buffer, cv2.IMREAD_COLOR)
+    if frame is None:
+        return frame_bytes
+
+    frame_height, frame_width = frame.shape[:2]
+    for face in faces:
+        x = max(0, min(frame_width - 1, int(float(face.get('x', 0)) * frame_width)))
+        y = max(0, min(frame_height - 1, int(float(face.get('y', 0)) * frame_height)))
+        width = max(1, int(float(face.get('width', 0)) * frame_width))
+        height = max(1, int(float(face.get('height', 0)) * frame_height))
+        color = (0, 210, 255) if face.get('primary') else (255, 255, 255)
+        cv2.rectangle(frame, (x, y), (min(frame_width - 1, x + width), min(frame_height - 1, y + height)), color, 2)
+
+    success, encoded = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 84])
+    if not success:
+        return frame_bytes
+    return encoded.tobytes()
+
+
+def update_face_tracking_head_position(payload: list | dict | None) -> None:
+    """Keep the tracker in sync with the actual head pivot position."""
+    global face_tracking_current_position
+
+    if payload is None:
+        return
+
+    if isinstance(payload, dict):
+        items = [payload]
+    elif isinstance(payload, list):
+        items = payload
+    else:
+        return
+
+    for item in items:
+        if not isinstance(item, dict) or item.get('id') != FACE_TRACKING_SERVO_ID:
+            continue
+        position = item.get('position')
+        if position is None:
+            continue
+        with face_tracking_state_lock:
+            try:
+                face_tracking_current_position = clamp_face_tracking_position(int(position))
+            except (TypeError, ValueError):
+                return
+        return
+
+
+def update_face_tracking_sequence_state(payload: list | dict | None) -> None:
+    """Pause face tracking while a scene/action sequence is running."""
+    global face_tracking_sequence_active, face_tracking_face_detected, face_tracking_faces
+    global face_tracking_last_search_at, face_tracking_search_target_position
+    global face_tracking_locked_center_x, face_tracking_locked_velocity_x
+    global face_tracking_locked_area, face_tracking_last_observation_at
+
+    if payload is None:
+        return
+
+    if isinstance(payload, dict):
+        items = [payload]
+    elif isinstance(payload, list):
+        items = payload
+    else:
+        return
+
+    changed = False
+    with face_tracking_state_lock:
+        current_value = face_tracking_sequence_active
+        next_value = current_value
+        for item in items:
+            if isinstance(item, dict) and 'active' in item:
+                next_value = bool(item.get('active'))
+        if next_value != current_value:
+            face_tracking_sequence_active = next_value
+            face_tracking_face_detected = False
+            face_tracking_faces = []
+            face_tracking_last_search_at = 0.0
+            face_tracking_search_target_position = FACE_TRACKING_CENTER_POSITION
+            face_tracking_locked_center_x = 0.5
+            face_tracking_locked_velocity_x = 0.0
+            face_tracking_locked_area = 0.0
+            face_tracking_last_observation_at = 0.0
+            changed = True
+
+    if changed:
+        broadcast_face_tracking_state()
+
+
+def process_face_tracking(node: Node) -> None:
+    """Run one face tracking update and emit head-pivot commands if needed."""
+    global face_tracking_last_detection_at, face_tracking_last_face_at
+    global face_tracking_face_detected, face_tracking_target_position
+    global face_tracking_current_position, face_tracking_last_move_at
+    global face_tracking_recenter_pending, face_tracking_faces
+    global face_tracking_last_face_switch_at, face_tracking_last_search_at
+    global face_tracking_search_target_position
+    global face_tracking_locked_center_x, face_tracking_locked_velocity_x
+    global face_tracking_locked_area, face_tracking_last_observation_at
+
+    if web_loop is None or not face_tracking_supported:
+        return
+
+    now = time.monotonic()
+    state_changed = False
+
+    with face_tracking_state_lock:
+        enabled = face_tracking_enabled
+        paused_for_sequence = face_tracking_sequence_active
+        last_detection_at = face_tracking_last_detection_at
+        last_face_at = face_tracking_last_face_at
+        last_move_at = face_tracking_last_move_at
+        current_position = face_tracking_current_position
+        target_position = face_tracking_target_position
+        last_face_switch_at = face_tracking_last_face_switch_at
+        last_search_at = face_tracking_last_search_at
+        search_target_position = face_tracking_search_target_position
+        recenter_pending = face_tracking_recenter_pending
+        face_detected = face_tracking_face_detected
+        locked_center_x = face_tracking_locked_center_x
+        locked_velocity_x = face_tracking_locked_velocity_x
+        locked_area = face_tracking_locked_area
+        last_observation_at = face_tracking_last_observation_at
+
+    if enabled and not paused_for_sequence and face_detected and last_observation_at > 0:
+        time_since_observation = now - last_observation_at
+        if 0 < time_since_observation <= FACE_TRACKING_LOCK_RETENTION_SECONDS:
+            projected_center_x = project_face_tracking_center(
+                locked_center_x,
+                locked_velocity_x,
+                elapsed=time_since_observation,
+            )
+            projected_target = compute_face_tracking_target(1000, projected_center_x * 1000.0)
+            if projected_target != target_position:
+                with face_tracking_state_lock:
+                    face_tracking_target_position = projected_target
+                    target_position = projected_target
+                state_changed = True
+
+    if enabled and not paused_for_sequence and now - last_detection_at >= FACE_TRACKING_DETECTION_INTERVAL_SECONDS:
+        frame = None
+        try:
+            frame = asyncio.run_coroutine_threadsafe(
+                fetch_go2rtc_frame(force_refresh=True),
+                web_loop,
+            ).result(timeout=0.75)
+        except Exception as error:
+            logging.debug('Face tracking frame fetch skipped: %s', error)
+
+        detected = False
+        next_target = target_position
+        detected_faces = []
+        if frame:
+            _, frame_width, detected_faces = detect_primary_face(frame)
+            if detected_faces and frame_width is not None:
+                selected_index, last_face_switch_at = select_face_tracking_face(
+                    detected_faces,
+                    locked_center_x,
+                    locked_area,
+                    now=now,
+                    last_face_switch_at=last_face_switch_at,
+                )
+                selected_face = detected_faces[selected_index]
+                selected_center_x = float(selected_face['center_x'])
+                selected_area = compute_face_tracking_face_area(selected_face)
+                observation_delta = now - last_observation_at if last_observation_at > 0 else 0.0
+                locked_center_x, locked_velocity_x, locked_area = blend_face_tracking_observation(
+                    selected_center_x,
+                    selected_area,
+                    locked_center_x,
+                    locked_velocity_x,
+                    locked_area,
+                    delta_time=observation_delta,
+                )
+                next_target = compute_face_tracking_target(frame_width, locked_center_x * frame_width)
+
+                for index, face in enumerate(detected_faces):
+                    face['primary'] = index == selected_index
+                detected = True
+
+        with face_tracking_state_lock:
+            face_tracking_last_detection_at = now
+            face_tracking_faces = detected_faces
+            if detected:
+                face_tracking_last_face_at = now
+                face_tracking_face_detected = True
+                face_tracking_target_position = next_target
+                face_tracking_last_face_switch_at = last_face_switch_at
+                face_tracking_search_target_position = next_target
+                face_tracking_locked_center_x = locked_center_x
+                face_tracking_locked_velocity_x = locked_velocity_x
+                face_tracking_locked_area = locked_area
+                face_tracking_last_observation_at = now
+            elif face_tracking_face_detected:
+                face_tracking_face_detected = False
+                face_tracking_locked_velocity_x = 0.0
+            state_changed = True
+            last_face_at = face_tracking_last_face_at
+            current_position = face_tracking_current_position
+            target_position = face_tracking_target_position
+            last_move_at = face_tracking_last_move_at
+            search_target_position = face_tracking_search_target_position
+            last_search_at = face_tracking_last_search_at
+            recenter_pending = face_tracking_recenter_pending
+            face_detected = face_tracking_face_detected
+            locked_center_x = face_tracking_locked_center_x
+            locked_velocity_x = face_tracking_locked_velocity_x
+            locked_area = face_tracking_locked_area
+            last_observation_at = face_tracking_last_observation_at
+
+    if now - last_move_at < FACE_TRACKING_COMMAND_INTERVAL_SECONDS:
+        if state_changed:
+            broadcast_face_tracking_state()
+        return
+
+    next_position = None
+    if enabled and not paused_for_sequence:
+        if face_detected:
+            next_position = compute_next_face_tracking_step(current_position, target_position)
+        else:
+            if now - last_face_at >= FACE_TRACKING_SEARCH_DELAY_SECONDS and now - last_search_at >= FACE_TRACKING_SEARCH_INTERVAL_SECONDS:
+                face_tracking_search_target_position = select_next_face_tracking_search_target(search_target_position)
+                face_tracking_last_search_at = now
+                search_target_position = face_tracking_search_target_position
+                last_search_at = face_tracking_last_search_at
+                state_changed = True
+
+            if now - last_face_at >= FACE_TRACKING_SEARCH_DELAY_SECONDS:
+                next_position = compute_next_face_tracking_step(
+                    current_position,
+                    search_target_position,
+                    max_step=FACE_TRACKING_SEARCH_STEP,
+                )
+            elif now - last_face_at >= FACE_TRACKING_RETURN_DELAY_SECONDS and abs(current_position - FACE_TRACKING_CENTER_POSITION) > FACE_TRACKING_MOVE_TOLERANCE:
+                next_position = compute_next_face_tracking_step(
+                    current_position,
+                    FACE_TRACKING_CENTER_POSITION,
+                    max_step=FACE_TRACKING_RETURN_STEP,
+                )
+    elif recenter_pending and abs(current_position - FACE_TRACKING_CENTER_POSITION) > FACE_TRACKING_MOVE_TOLERANCE:
+        next_position = compute_next_face_tracking_step(
+            current_position,
+            FACE_TRACKING_CENTER_POSITION,
+            max_step=FACE_TRACKING_RETURN_STEP,
+        )
+    elif recenter_pending:
+        with face_tracking_state_lock:
+            face_tracking_recenter_pending = False
+        state_changed = True
+
+    if next_position is not None and next_position != current_position:
+        node.send_output(
+            'move_servo',
+            pa.array([{'id': FACE_TRACKING_SERVO_ID, 'position': next_position}]),
+            metadata={},
+        )
+        with face_tracking_state_lock:
+            face_tracking_current_position = next_position
+            face_tracking_last_move_at = now
+            if not face_tracking_enabled and abs(next_position - FACE_TRACKING_CENTER_POSITION) <= FACE_TRACKING_MOVE_TOLERANCE:
+                face_tracking_recenter_pending = False
+        state_changed = True
+
+    if state_changed:
+        broadcast_face_tracking_state()
+
+
+async def fetch_go2rtc_frame(*, force_refresh: bool = False) -> bytes | None:
     """Fetch a recent JPEG frame through go2rtc and cache it briefly."""
     global camera_snapshot_bytes, camera_snapshot_taken_at
 
     now = time.monotonic()
     with camera_snapshot_lock:
-        if camera_snapshot_bytes and now - camera_snapshot_taken_at <= CAMERA_TTL_SECONDS:
+        if not force_refresh and camera_snapshot_bytes and now - camera_snapshot_taken_at <= CAMERA_TTL_SECONDS:
             return camera_snapshot_bytes
 
     frame_url = f'{GO2RTC_BASE_URL}/api/frame.jpeg?src={GO2RTC_STREAM_SRC}'
@@ -89,6 +705,9 @@ async def camera_snapshot(request: web.Request):
     if not frame:
         return web.Response(text='Camera unavailable', status=503)
 
+    if request.query.get('annotated') == '1':
+        frame = annotate_face_tracking_frame(frame)
+
     return web.Response(
         body=frame,
         content_type='image/jpeg',
@@ -102,6 +721,45 @@ async def camera_snapshot(request: web.Request):
 
 async def camera_stream(request: web.Request):
     """Proxy the go2rtc MJPEG stream through the existing HTTPS web node."""
+    if request.query.get('annotated') == '1':
+        response = web.StreamResponse(
+            status=200,
+            headers={
+                'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Access-Control-Allow-Origin': '*',
+            },
+        )
+        await response.prepare(request)
+
+        try:
+            while True:
+                frame = await fetch_go2rtc_frame()
+                if frame:
+                    annotated_frame = annotate_face_tracking_frame(frame)
+                    part = (
+                        b'--frame\r\n'
+                        b'Content-Type: image/jpeg\r\n'
+                        + f'Content-Length: {len(annotated_frame)}\r\n\r\n'.encode('ascii')
+                        + annotated_frame
+                        + b'\r\n'
+                    )
+                    await response.write(part)
+
+                await asyncio.sleep(0.12)
+        except (asyncio.CancelledError, ConnectionResetError):
+            logging.debug('Annotated camera stream client disconnected')
+        except Exception as error:
+            logging.warning('Annotated camera stream failed: %s', error)
+        finally:
+            try:
+                await response.write_eof()
+            except Exception:
+                pass
+
+        return response
+
     stream_url = f'{GO2RTC_BASE_URL}/api/stream.mjpeg?src={GO2RTC_STREAM_SRC}'
     timeout = aiohttp.ClientTimeout(total=None, sock_connect=CAMERA_FETCH_TIMEOUT_SECONDS, sock_read=None)
 
@@ -190,6 +848,55 @@ async def capture_photo(request: web.Request):
         'ok': True,
         'photo': serialize_photo_path(photo_path),
     })
+
+
+async def get_face_tracking_state(request: web.Request):
+    """Return the current face tracking state."""
+    return web.json_response(serialize_face_tracking_state())
+
+
+async def set_face_tracking_state(request: web.Request):
+    """Enable or disable server-side face-follow mode."""
+    global face_tracking_enabled, face_tracking_face_detected, face_tracking_target_position
+    global face_tracking_recenter_pending, face_tracking_last_detection_at, face_tracking_faces
+    global face_tracking_last_face_switch_at, face_tracking_last_search_at
+    global face_tracking_search_target_position
+    global face_tracking_locked_center_x, face_tracking_locked_velocity_x
+    global face_tracking_locked_area, face_tracking_last_observation_at
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    requested_enabled = bool(payload.get('enabled'))
+    if requested_enabled and not face_tracking_supported:
+        return web.json_response(
+            {
+                'ok': False,
+                'error': FACE_TRACKING_IMPORT_ERROR or 'OpenCV face tracking unavailable',
+                'state': serialize_face_tracking_state(),
+            },
+            status=503,
+        )
+
+    with face_tracking_state_lock:
+        face_tracking_enabled = requested_enabled
+        face_tracking_face_detected = False
+        face_tracking_last_detection_at = 0.0
+        face_tracking_target_position = face_tracking_current_position
+        face_tracking_recenter_pending = not requested_enabled
+        face_tracking_faces = []
+        face_tracking_last_face_switch_at = 0.0
+        face_tracking_last_search_at = 0.0
+        face_tracking_search_target_position = FACE_TRACKING_CENTER_POSITION
+        face_tracking_locked_center_x = 0.5
+        face_tracking_locked_velocity_x = 0.0
+        face_tracking_locked_area = 0.0
+        face_tracking_last_observation_at = 0.0
+
+    broadcast_face_tracking_state()
+    return web.json_response({'ok': True, 'state': serialize_face_tracking_state()})
 
 
 
@@ -348,6 +1055,11 @@ async def websocket_handler(request: web.Request):
             "type": "EVENT"
         }
         await ws.send_str(json.dumps(welcome_msg))
+        await ws.send_str(json.dumps({
+            'id': 'face_tracking_state',
+            'value': serialize_face_tracking_state(),
+            'type': 'EVENT',
+        }))
 
         # Process incoming messages
         async for msg in ws:
@@ -461,6 +1173,8 @@ def start_background_webserver():
         app.router.add_get('/camera/stream.mjpeg', camera_stream)
         app.router.add_get('/api/photos', list_photos)
         app.router.add_post('/api/photos/capture', capture_photo)
+        app.router.add_get('/api/face-tracking', get_face_tracking_state)
+        app.router.add_post('/api/face-tracking', set_face_tracking_state)
         app.router.add_static('/resources/', path=template_path, name='resources')
         app.router.add_static('/photos/', path=str(PHOTO_GALLERY_DIR), name='photos', show_index=False, append_version=False)
         
@@ -692,6 +1406,7 @@ def main():
             if event["type"] == "INPUT" and "id" in event and (event["id"] == "tick"):
                 # Process all pending web inputs
                 flush_web_inputs(node, profile_manager)
+                process_face_tracking(node)
 
                 # Periodically broadcast gamepad profiles list
                 current_time = time.time()
@@ -719,6 +1434,11 @@ def main():
             elif event["type"] == "INPUT":
                 logging.info(f"Received input event: {event['id']}")
                 event_value = event['value'].to_pylist()
+
+                if event["id"] in ("waveshare_servo/servo_status", "servo_status", "waveshare_servo/servos_list", "servos_list"):
+                    update_face_tracking_head_position(event_value)
+                elif event["id"] in ("sequence/sequence_state", "sequence_state"):
+                    update_face_tracking_sequence_state(event_value)
 
                 # Handle gamepad profile events
                 if event["id"] == "save_gamepad_profile":
