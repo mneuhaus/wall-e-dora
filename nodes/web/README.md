@@ -149,6 +149,6 @@ python3 -m compileall nodes/web/web
 ## Publishing / Support Notes
 
 - Keep this README in sync when the web UI surface changes
-- Use English in docs, Issues, and Discussions
+- Use English in docs and Discussions
 - Direct questions, build help, and showcase posts to GitHub Discussions
-- Use GitHub Issues for concrete repo bugs or actionable implementation tasks
+- The public support channel for now is Discussions, not Issues

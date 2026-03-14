@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Questions, build help, mods, and showcase posts
-    url: https://github.com/mneuhaus/wall-e-dora/discussions
-    about: Use Discussions for build questions, wiring help, troubleshooting, remix ideas, and community exchange.
-  - name: Support policy
-    url: https://github.com/mneuhaus/wall-e-dora/blob/main/SUPPORT.md
-    about: Read the support expectations before opening an issue. This repository is English-only and community-support-oriented.

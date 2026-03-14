@@ -97,6 +97,6 @@ When the reference battery changes, update all three of these together:
 
 ## Documentation Expectations
 
-- Use English in docs, Issues, and Discussions
+- Use English in docs and Discussions
 - Keep the battery assumptions explicit
 - Treat this node as safety-relevant documentation, not just implementation detail

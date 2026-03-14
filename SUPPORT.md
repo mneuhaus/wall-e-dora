@@ -21,23 +21,21 @@ Discussion link:
 
 - <https://github.com/mneuhaus/wall-e-dora/discussions>
 
-### Use GitHub Issues for:
-
-- reproducible bugs in this repository
-- concrete implementation tasks
-- documentation problems that should be fixed here
-- clear feature requests tied to the codebase
+GitHub Issues are currently disabled. If something looks like a real repository
+bug, start a Discussion thread with enough context so it can be understood
+first.
 
 ## Language
 
-Please use **English only** in Issues and Discussions so the project stays
-understandable to the widest possible set of builders.
+Please use **English only** in Discussions and project-facing docs so the
+project stays understandable to the widest possible set of builders.
 
 ## Support Expectations
 
 - Community help is welcome and encouraged
 - I may answer when I can
 - Please do not expect guaranteed turnaround or one-on-one support
+- Public outside contributions / pull requests are not the focus right now
 
 ## If You Need Help
 

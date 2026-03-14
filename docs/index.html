@@ -13,7 +13,7 @@
       <div class="header-inner">
         <a class="site-brand" href="#top">WALL-E-DORA</a>
         <nav class="header-nav">
-          <a href="#architecture">Architecture</a>
+          <a href="nodes/">Nodes</a>
           <a href="#hardware">Hardware</a>
           <a href="#getting-started">Get started</a>
           <a href="#community">Community</a>
@@ -39,6 +39,7 @@
             </p>
             <div class="hero-links">
               <a class="link-primary" href="#demo">Watch demo</a>
+              <a class="link-secondary" href="nodes/">Node reference</a>
               <a class="link-secondary" href="https://cad.onshape.com/documents/e2006a749194244a0138595b/w/b0c916bba4469b0d0f3203c4/e/2251efc11f608df0d03058cb?renderMode=0&uiState=69b5abb2c2106f6b72489059" target="_blank" rel="noopener">CAD model</a>
               <a class="link-secondary" href="https://photos.app.goo.gl/1A5Kd7atVTiV76d67" target="_blank" rel="noopener">Build photos</a>
               <a class="link-secondary" href="https://github.com/mneuhaus/wall-e-dora" target="_blank" rel="noopener">Source code</a>
@@ -58,24 +59,16 @@
           </div>
         </div>
 
-        <dl class="quick-specs">
-          <div class="quick-spec">
-            <dt>Compute</dt>
-            <dd>Raspberry Pi CM4</dd>
+        <div class="info-callout">
+          <p class="info-callout-label">Need the real thing?</p>
+          <div class="info-callout-copy">
+            <div>
+              <h2>Open the node reference instead of reading vague summary boxes.</h2>
+              <p>The landing page stays compact. The actual per-node details, responsibilities, I/O, and hardware assumptions now live in a dedicated node docs page.</p>
+            </div>
+            <a class="link-primary info-callout-action" href="nodes/">Node reference</a>
           </div>
-          <div class="quick-spec">
-            <dt>Drive</dt>
-            <dd>RP2040 + tracked differential</dd>
-          </div>
-          <div class="quick-spec">
-            <dt>Servos</dt>
-            <dd>SC-series bus (head, arms, door)</dd>
-          </div>
-          <div class="quick-spec">
-            <dt>Interface</dt>
-            <dd>HTTPS web UI on port 8443</dd>
-          </div>
-        </dl>
+        </div>
 
         <div class="video-wrap hero-video" id="demo">
           <video
@@ -128,12 +121,15 @@
       <section class="section page" id="architecture">
         <div class="section-head">
           <p class="section-label">Architecture</p>
-          <h2 class="section-title">Dora nodes</h2>
+          <h2 class="section-title">Node overview</h2>
           <p class="section-desc">
             The system is split into focused nodes wired together in
             <code>dataflow.yml</code>. Each node owns one hardware area or concern.
+            For the fuller reference, use the dedicated node docs page.
           </p>
         </div>
+
+        <p class="section-linkline"><a href="nodes/">Open node reference &rarr;</a></p>
 
         <div class="table-wrap">
           <table class="node-table">
@@ -334,8 +330,8 @@
           </a>
           <article class="link-card" style="cursor: default;">
             <p class="link-card-label">Guideline</p>
-            <h3>Discussions for community, Issues for bugs</h3>
-            <p>Use Discussions for maker conversation and community support. Use GitHub Issues for clear repository bugs, concrete tasks, or code problems. Please keep both in English.</p>
+            <h3>Discussions only, in English</h3>
+            <p>Discussions are the current public place for maker conversation, troubleshooting, and support around the project. Please keep them in English.</p>
           </article>
           <article class="link-card" style="cursor: default;">
             <p class="link-card-label">Optional</p>
@@ -401,6 +397,7 @@
       <div class="footer-links">
         <a href="https://github.com/mneuhaus/wall-e-dora">Repository</a>
         <a href="https://github.com/mneuhaus/wall-e-dora/discussions">Discussions</a>
+        <a href="nodes/">Node reference</a>
         <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/README.md">README</a>
       </div>
     </footer>

@@ -97,4 +97,4 @@ python3 -m compileall nodes/tracks/tracks
 
 - Keep this README aligned with the actual serial protocol and hardware pinout
 - Document any changes to joystick mapping or sequence movement semantics
-- Use English in docs, Issues, and Discussions
+- Use English in docs and Discussions

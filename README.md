@@ -11,6 +11,8 @@
 <p align="center">
   <a href="docs/media/wall-e-mini-demo.mp4">Mini demo video</a>
   ·
+  <a href="https://mneuhaus.github.io/wall-e-dora/nodes/">Node reference</a>
+  ·
   <a href="https://photos.app.goo.gl/1A5Kd7atVTiV76d67">Build log photos</a>
   ·
   <a href="https://github.com/mneuhaus/wall-e-dora/discussions">GitHub Discussions</a>
@@ -23,6 +25,10 @@ WALL-E-DORA is a Dora-based robot control stack for a WALL-E-inspired build runn
 > This is not a polished general-purpose robotics kit. It is my firmware/software stack for my own WALL-E build. You are absolutely welcome to use it, study it, fork it, and adapt it for your own robot, but please do not expect product-level support, hand-holding, or guaranteed compatibility from me.
 
 The project is organized as a set of small Dora nodes wired together in [`dataflow.yml`](dataflow.yml). The web node is the main user-facing entry point, but each hardware area stays isolated in its own node so the system is easier to understand, test, and evolve.
+
+For a practical per-node overview with responsibilities, I/O, and hardware assumptions, use the dedicated node reference:
+
+- <https://mneuhaus.github.io/wall-e-dora/nodes/>
 
 ## What It Does
 
@@ -60,9 +66,9 @@ That is the right place for:
 - showcase posts, photos, and experiments
 - community help between builders
 
-Please use English in both Issues and Discussions so the project stays useful to the widest possible builder community.
+Please use English in Discussions and public project-facing docs so the project stays useful to the widest possible builder community.
 
-Please use Issues for concrete repository bugs/tasks, and Discussions for the broader maker conversation around the project. The support policy lives in [SUPPORT.md](SUPPORT.md).
+GitHub Discussions is currently the public place for questions, troubleshooting, and community exchange around the project. Issues are disabled for now. The support policy lives in [SUPPORT.md](SUPPORT.md).
 
 If this project saved you time and you want to say thanks, you can also send a small PayPal tip to `apocalip@gmail.com`.
 

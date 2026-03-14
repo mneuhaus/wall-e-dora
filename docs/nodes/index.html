@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Node reference for WALL-E-DORA: active Dora nodes, responsibilities, data flow, and hardware assumptions."
+    />
+    <title>WALL-E-DORA Node Reference</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="site-brand" href="../">WALL-E-DORA</a>
+        <nav class="header-nav">
+          <a href="../">Overview</a>
+          <a href="#web">web</a>
+          <a href="#tracks">tracks</a>
+          <a href="#power">power</a>
+          <a href="https://github.com/mneuhaus/wall-e-dora/discussions">Discussions</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page docs-page">
+      <section class="section docs-hero">
+        <div class="section-head">
+          <p class="section-label">Node reference</p>
+          <h1 class="docs-title">The active Dora graph, with actual useful information.</h1>
+          <p class="section-desc">
+            This is the practical reference for the active nodes in
+            <code>dataflow.yml</code>. It is intentionally more concrete than the
+            landing page and focused on what each node is responsible for right now.
+          </p>
+        </div>
+
+        <div class="docs-layout">
+          <aside class="docs-sidebar">
+            <div class="docs-sidebar-box">
+              <p class="docs-sidebar-label">Active nodes</p>
+              <nav class="docs-sidebar-nav">
+                <a href="#web">web</a>
+                <a href="#sequence">sequence</a>
+                <a href="#waveshare-servo">waveshare_servo</a>
+                <a href="#tracks">tracks</a>
+                <a href="#audio">audio</a>
+                <a href="#eyes">eyes</a>
+                <a href="#power">power</a>
+                <a href="#config">config</a>
+              </nav>
+              <p class="docs-sidebar-note">
+                Questions and build help live in
+                <a href="https://github.com/mneuhaus/wall-e-dora/discussions">GitHub Discussions</a>.
+              </p>
+            </div>
+          </aside>
+
+          <div class="docs-content">
+            <article class="docs-card" id="web">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Interface / media hub</p>
+                  <h2>web</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/web/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                The web node is the front door of the robot. It serves the
+                HTTPS UI, bridges browser input into Dora, fans live state back
+                out over WebSocket, proxies the camera service, manages the photo
+                gallery, and runs the lightweight face-follow logic.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/web/web/main.py</code></span>
+                <span>Consumes power, audio, servo, eyes, config, sequence</span>
+                <span>Publishes UI/gamepad/audio/servo/sequence events</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>Key responsibilities</h3>
+                  <ul class="docs-list">
+                    <li>Serve `Home / Showtime / Gallery` over HTTPS on port `8443`</li>
+                    <li>Push live robot state to connected browsers</li>
+                    <li>Proxy `go2rtc` as `/camera/snapshot.jpg` and `/camera/stream.mjpeg`</li>
+                    <li>Expose `/api/photos` and `/api/face-tracking` endpoints</li>
+                    <li>Forward gamepad and UI events into Dora outputs</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>When to touch it</h3>
+                  <ul class="docs-list">
+                    <li>UI flows, camera behavior, gallery, or Discussions links</li>
+                    <li>Gamepad handling or web-to-node event routing</li>
+                    <li>Face-follow logic or mobile layout behavior</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="sequence">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Choreography</p>
+                  <h2>sequence</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/sequence/sequence/runtime.py">runtime.py</a>
+              </div>
+              <p class="docs-card-text">
+                The sequence node turns a single scene trigger into a timed plan
+                across audio, servos, eyes, and tracks. It is responsible for the
+                robot's gestures, dances, showtime actions, and interruptible
+                scene behavior.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/sequence/sequence/main.py</code></span>
+                <span>Input: `trigger` from web</span>
+                <span>Outputs: `play_sound_sequence`, `move_servo_sequence`, `move_tracks_sequence`, `play_gif_sequence`, `stop_sequence`, `sequence_state`</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>What matters</h3>
+                  <ul class="docs-list">
+                    <li>Scenes are timed plans, not blocking sleeps</li>
+                    <li>New triggers can interrupt active scenes</li>
+                    <li>Track movement can be part of a scene, not just servos and sound</li>
+                    <li>Scenes should return the robot to a neutral pose when finished</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>Good places to edit</h3>
+                  <ul class="docs-list">
+                    <li>Add or tune scenes in `runtime.py`</li>
+                    <li>Keep scene durations and sound timing aligned</li>
+                    <li>Use tests in `nodes/sequence/tests/test_runtime.py` as the safety net</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="waveshare-servo">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Actuation / diagnostics</p>
+                  <h2>waveshare_servo</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/waveshare_servo/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                This node owns the SC-series servo bus. It discovers servos,
+                moves them, maps settings, exposes live diagnostics, clones
+                EEPROM settings, factory-resets hardware, and handles
+                auto-calibration.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/waveshare_servo/entrypoint.py</code></span>
+                <span>Main UI inputs: move, wiggle, calibrate, diagnostics, clone, reset</span>
+                <span>Outputs: `servo_status`, `servos_list`, `servo_diagnostics`</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>Current capabilities</h3>
+                  <ul class="docs-list">
+                    <li>Periodic discovery of attached SC-series servos</li>
+                    <li>Single-servo control plus per-servo settings</li>
+                    <li>Bulk diagnostics reads for status, model, and config</li>
+                    <li>Clone and factory-reset operations</li>
+                    <li>Arrow-structured outputs for the web UI</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>Why it matters</h3>
+                  <ul class="docs-list">
+                    <li>This is where robot personality meets hardware reality</li>
+                    <li>Servo IDs, limits, inversion, and calibration all live here</li>
+                    <li>Most "why does the pose feel wrong?" questions end up here</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="tracks">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Drive</p>
+                  <h2>tracks</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/tracks/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                The tracks node converts browser/gamepad movement into serial
+                commands for the RP2040 controller and also accepts short
+                `move_tracks_sequence` overrides from the sequence node.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/tracks/tracks/main.py</code></span>
+                <span>Inputs: left-stick X/Y, `heartbeat`, `move_tracks_sequence`</span>
+                <span>Talks to the RP2040 over serial at `115200` baud</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>Current behavior</h3>
+                  <ul class="docs-list">
+                    <li>Differential drive from manual stick input</li>
+                    <li>Smoothing / easing before commands are sent</li>
+                    <li>Regular heartbeat traffic to keep the controller alive</li>
+                    <li>Timed scene overrides for spins, wiggles, and turns</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>Boundary of responsibility</h3>
+                  <ul class="docs-list">
+                    <li>Python side: intent, scaling, timing, serial output</li>
+                    <li>Firmware side: PWM, direction, safety timeout, motor behavior</li>
+                    <li>Motor-driver specifics stay hidden behind the RP2040 firmware</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="audio">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Sound</p>
+                  <h2>audio</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/audio/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                The audio node handles sound playback, available-sound discovery,
+                volume persistence, and sequence interruption via `stop_sequence`.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/audio/audio/main.py</code></span>
+                <span>Inputs: `play_sound`, `play_sound_sequence`, `set_volume`, `stop`, `stop_sequence`</span>
+                <span>Outputs: `available_sounds`, `volume`</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>Current setup</h3>
+                  <ul class="docs-list">
+                    <li>Pygame-based playback of local MP3 assets</li>
+                    <li>Current build prefers the Pi headphones audio device</li>
+                    <li>Sound list is refreshed periodically for the UI</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>What to remember</h3>
+                  <ul class="docs-list">
+                    <li>Sequence interruption should stop scene audio cleanly</li>
+                    <li>Volume state persists across restarts</li>
+                    <li>Real hardware audio device assumptions matter on boot</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="eyes">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Display / expression</p>
+                  <h2>eyes</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/eyes/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                The eyes node syncs GIF/JPG assets to the eye displays and
+                exposes a simple play interface so the web UI and sequence node
+                can switch the robot's eye state.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/eyes/entrypoint.py</code></span>
+                <span>Inputs: `play_gif`, `play_gif_sequence`, `list_images`, `TICK`</span>
+                <span>Output: `available_images`</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>Current behavior</h3>
+                  <ul class="docs-list">
+                    <li>Periodic asset sync to networked eye displays</li>
+                    <li>Image discovery for the web UI</li>
+                    <li>Real-time image changes from UI and sequences</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>Hardware assumption</h3>
+                  <ul class="docs-list">
+                    <li>Network-addressable ESP32S3-based eye displays</li>
+                    <li>Longer timeouts are tolerated because the devices are resource-constrained</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="power">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Monitoring / safety</p>
+                  <h2>power</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/power/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                The power node converts INA226 readings into battery telemetry
+                that is actually useful while driving the robot: voltage, current,
+                power draw, state of charge, runtime, and low-battery shutdown.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/power/power/main.py</code></span>
+                <span>Input: `tick` every 10 seconds</span>
+                <span>Outputs: `voltage`, `current`, `power`, `soc`, `runtime`, `capacity`, `discharge_rate`, `shutdown`</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>Battery model</h3>
+                  <ul class="docs-list">
+                    <li>Reference pack: `HOOVO 3S LiPo 2200mAh 11.1V 50C`</li>
+                    <li>Uses a LiPo-aware voltage curve instead of a naive linear guess</li>
+                    <li>Applies smoothing and light load compensation</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>Why it matters</h3>
+                  <ul class="docs-list">
+                    <li>This node is safety-relevant, not just cosmetic telemetry</li>
+                    <li>Bad battery assumptions here can lead to misleading runtime and shutdown behavior</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+
+            <article class="docs-card" id="config">
+              <div class="docs-card-head">
+                <div>
+                  <p class="docs-card-kicker">Settings</p>
+                  <h2>config</h2>
+                </div>
+                <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/nodes/config/README.md">README</a>
+              </div>
+              <p class="docs-card-text">
+                The config node provides shared settings persistence across the
+                system. Other nodes update values through `update_setting`, and
+                the config node broadcasts both point changes and periodic full
+                settings snapshots.
+              </p>
+              <div class="docs-meta-row">
+                <span><code>nodes/config/config/main.py</code></span>
+                <span>Inputs: `update_setting`, `tick`</span>
+                <span>Outputs: `setting_updated`, `settings`</span>
+              </div>
+              <div class="docs-two-col">
+                <section>
+                  <h3>What it is good for</h3>
+                  <ul class="docs-list">
+                    <li>Persisting cross-node settings in one place</li>
+                    <li>Broadcasting setting changes to interested nodes</li>
+                    <li>Keeping robot behavior stable across restarts</li>
+                  </ul>
+                </section>
+                <section>
+                  <h3>Typical consumers</h3>
+                  <ul class="docs-list">
+                    <li>Servo settings and aliases</li>
+                    <li>Web-exposed configuration</li>
+                    <li>Any future node that needs durable shared state</li>
+                  </ul>
+                </section>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer page">
+      <span class="footer-text">WALL-E-DORA node reference</span>
+      <div class="footer-links">
+        <a href="../">Overview</a>
+        <a href="https://github.com/mneuhaus/wall-e-dora/discussions">Discussions</a>
+        <a href="https://github.com/mneuhaus/wall-e-dora">Repository</a>
+      </div>
+    </footer>
+  </body>
+</html>
