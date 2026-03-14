@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="WALL-E-DORA is a Dora-based control stack for a custom WALL-E robot with tracked drive, SC-series servos, camera features, diagnostics, and a mobile-first web UI."
+    />
+    <title>WALL-E-DORA</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="#top">WALL-E-DORA</a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#overview">Overview</a>
+          <a href="#features">Features</a>
+          <a href="#hardware">Hardware</a>
+          <a href="#software">Software</a>
+          <a href="#origins">Origins</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero" id="overview">
+          <div class="hero-copy">
+            <p class="eyebrow">Personal robot build, not a product</p>
+            <h1>One custom WALL-E robot, one opinionated software stack.</h1>
+            <p class="hero-text">
+              WALL-E-DORA is a Dora-based control system for a custom
+              WALL-E-inspired robot built around a Raspberry Pi CM4, tracked
+              drive, SC-series serial servos, a mobile-first HTTPS UI, on-board
+              audio, a live USB camera, diagnostics, snapshots, and face-follow
+              behavior.
+            </p>
+
+            <div class="hero-actions">
+              <a class="button button-primary" href="media/wall-e-mini-demo.mp4">Watch Mini Demo</a>
+              <a class="button button-secondary" href="https://cad.onshape.com/documents/e2006a749194244a0138595b/w/b0c916bba4469b0d0f3203c4/e/2251efc11f608df0d03058cb?renderMode=0&uiState=69b5abb2c2106f6b72489059">Open CAD</a>
+              <a class="button button-secondary" href="https://photos.app.goo.gl/1A5Kd7atVTiV76d67">Build Log Photos</a>
+              <a class="button button-secondary" href="https://github.com/mneuhaus/wall-e-dora">GitHub Repo</a>
+            </div>
+
+            <aside class="disclaimer-card">
+              <strong>Blunt disclaimer.</strong> This is my firmware/software
+              stack for my own WALL-E build. You are welcome to use it, fork
+              it, and adapt it, but please do not expect product-level support,
+              polished general-purpose hardware docs, or guaranteed drop-in
+              compatibility.
+            </aside>
+
+            <dl class="hero-stats">
+              <div>
+                <dt>Compute</dt>
+                <dd>Raspberry Pi CM4</dd>
+              </div>
+              <div>
+                <dt>Motion</dt>
+                <dd>Tracks + SC bus servos</dd>
+              </div>
+              <div>
+                <dt>Interface</dt>
+                <dd>Phone-first web UI</dd>
+              </div>
+              <div>
+                <dt>Presence</dt>
+                <dd>Camera, audio, eyes, face follow</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="hero-media">
+            <figure class="media-card render-card">
+              <img
+                src="media/wall-e-cad-render.png"
+                alt="CAD render of the WALL-E robot project"
+              />
+              <figcaption>CAD reference render</figcaption>
+            </figure>
+
+            <figure class="media-card video-card">
+              <video
+                src="media/wall-e-mini-demo.mp4"
+                controls
+                muted
+                playsinline
+                preload="metadata"
+                poster="media/wall-e-cad-render.png"
+              ></video>
+              <figcaption>Mini demo of the robot in motion</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section class="feature-strip" id="features">
+          <div class="section-heading">
+            <p class="eyebrow">What it does</p>
+            <h2>A robot stack built for personality, not just control.</h2>
+          </div>
+
+          <div class="card-grid feature-grid">
+            <article class="feature-card">
+              <h3>Drive and steer</h3>
+              <p>
+                Browser and gamepad control for tracked movement, plus timed
+                sequence-driven overrides for dance moves, spins, and scene
+                choreography.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>Animate expression</h3>
+              <p>
+                SC-series servos drive head, arms, door, and other character
+                motion while animated eye displays keep the robot readable and
+                lively.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>Run showtime scenes</h3>
+              <p>
+                The web UI exposes scenes, gestures, reactions, and idle
+                behavior so the robot can feel playful instead of remote
+                controlled in the boring sense.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>See and react</h3>
+              <p>
+                The camera stack powers a live background feed, snapshots, a
+                gallery, and optional face-follow behavior for head tracking.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>Inspect hardware</h3>
+              <p>
+                Servo diagnostics go beyond simple movement and expose live
+                status, model data, configuration, cloning, reset, and
+                calibration workflows.
+              </p>
+            </article>
+            <article class="feature-card">
+              <h3>Monitor power</h3>
+              <p>
+                INA226-based telemetry reports voltage, current, power, state
+                of charge, runtime, and low-battery shutdown thresholds.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="stack-overview" id="software">
+          <div class="section-heading">
+            <p class="eyebrow">Software split</p>
+            <h2>Dora nodes keep the robot understandable.</h2>
+            <p class="section-text">
+              The system is intentionally split into focused nodes so robot
+              control, media, diagnostics, and hardware interfaces do not all
+              collapse into one giant script.
+            </p>
+          </div>
+
+          <div class="card-grid stack-grid">
+            <article class="stack-card stack-card-accent">
+              <span class="stack-tag">Web</span>
+              <h3>web</h3>
+              <p>
+                HTTPS app, WebSocket bridge, camera proxy, photo gallery,
+                gamepad bridge, and face-follow coordination.
+              </p>
+            </article>
+            <article class="stack-card">
+              <span class="stack-tag">Choreography</span>
+              <h3>sequence</h3>
+              <p>
+                Coordinates timed movement, sound, eyes, and track actions into
+                scenes, dances, and small character beats.
+              </p>
+            </article>
+            <article class="stack-card">
+              <span class="stack-tag">Actuation</span>
+              <h3>waveshare_servo</h3>
+              <p>
+                Discovery, movement, diagnostics, calibration, cloning, and
+                config access for the SC-series servo bus.
+              </p>
+            </article>
+            <article class="stack-card">
+              <span class="stack-tag">Drive</span>
+              <h3>tracks</h3>
+              <p>
+                Manual and sequence-driven differential drive through a serially
+                connected RP2040 motor controller.
+              </p>
+            </article>
+            <article class="stack-card">
+              <span class="stack-tag">Presence</span>
+              <h3>audio + eyes</h3>
+              <p>
+                Sound playback and eye-image control give the robot most of its
+                personality layer.
+              </p>
+            </article>
+            <article class="stack-card">
+              <span class="stack-tag">Safety</span>
+              <h3>power + config</h3>
+              <p>
+                Shared settings persistence, power monitoring, and low-battery
+                shutdown behavior keep the robot usable in the real world.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="hardware-section" id="hardware">
+          <div class="section-heading">
+            <p class="eyebrow">Reference hardware / BOM</p>
+            <h2>Not a universal shopping list. The actual hardware this stack is built around.</h2>
+            <p class="section-text">
+              Some parts are flexible, but the list below captures the concrete
+              hardware choices that shape this build and its packaging.
+            </p>
+          </div>
+
+          <div class="card-grid hardware-grid">
+            <article class="hardware-card">
+              <h3>Compute & control</h3>
+              <ul>
+                <li><strong>Raspberry Pi Compute Module 4</strong> as the main Linux computer</li>
+                <li><strong>Waveshare CM4-NANO-B</strong> carrier board</li>
+                <li><strong>Seeed XIAO RP2040</strong> style pinout for track firmware</li>
+                <li><strong>2 × AXFEE mini USB hubs</strong>, stripped down to save space</li>
+                <li><strong>QIANRENON 180° USB adapter</strong>, plastic housing removed to fit</li>
+              </ul>
+            </article>
+
+            <article class="hardware-card">
+              <h3>Motion & expression</h3>
+              <ul>
+                <li><strong>Cytron MD13S</strong> single-channel 30V / 13A motor driver</li>
+                <li><strong>Tracked differential drive</strong> with RP2040-managed low-level control</li>
+                <li><strong>Waveshare SC-series servo controller</strong> over USB serial</li>
+                <li><strong>SC09-class SC servos</strong> for head, arms, door, and articulation</li>
+                <li><strong>Seeed XIAO ESP32S3</strong> eye display controllers</li>
+              </ul>
+            </article>
+
+            <article class="hardware-card">
+              <h3>Power & audio</h3>
+              <ul>
+                <li><strong>HOOVO 3S LiPo</strong> 2200 mAh, 11.1V, 50C softcase pack with XT60</li>
+                <li><strong>INA226</strong> current/voltage monitor with <strong>0.002 Ohm</strong> shunt</li>
+                <li><strong>Pololu S8V9F7</strong> 7.5V / 1.5A step-up / step-down regulator</li>
+                <li><strong>Garosa TPA3110</strong> 2 × 15W stereo amplifier</li>
+                <li><strong>MMOBIEL MacBook Pro A1706</strong> replacement speaker pair</li>
+              </ul>
+            </article>
+
+            <article class="hardware-card">
+              <h3>Sensing & media</h3>
+              <ul>
+                <li>
+                  <strong>USB camera module</strong> with OV5693 / IMX258 CMOS options,
+                  3840×2160 @ 30fps, AF/FF, 75°, UVC, MJPEG/YUY2
+                </li>
+                <li><strong>go2rtc</strong> used for local camera streaming</li>
+                <li><strong>Phone-first HTTPS UI</strong> as the main operator surface</li>
+                <li><strong>8BitDo Ultimate Mobile Gaming Controller for Android</strong> as the current reference gamepad</li>
+              </ul>
+              <p class="hardware-linkline">
+                <a href="https://de.aliexpress.com/item/1005007270781304.html?spm=a2g0o.order_detail.order_detail_item.3.603f6368a6dsNk&amp;gatewayAdapt=glo2deu">Camera listing</a>
+              </p>
+            </article>
+          </div>
+
+          <div class="notes-grid">
+            <article class="note-card">
+              <h3>What is pretty hard-coded in practice</h3>
+              <p>
+                SC-series serial servos, the RP2040 drive protocol, INA226
+                telemetry, the camera flow, and network-addressable eye
+                displays are the parts most tightly baked into the current
+                stack.
+              </p>
+            </article>
+            <article class="note-card">
+              <h3>What is still fairly flexible</h3>
+              <p>
+                Exact motors, chassis geometry, gearboxes, servo count, gamepad
+                choice, and even the exact USB camera can change as long as the
+                surrounding interfaces stay compatible.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="reference-section">
+          <div class="section-heading">
+            <p class="eyebrow">References</p>
+            <h2>Three useful ways to understand the build.</h2>
+          </div>
+
+          <div class="card-grid reference-grid">
+            <a class="reference-card" href="media/wall-e-mini-demo.mp4">
+              <span class="reference-label">Mini demo</span>
+              <h3>See what the robot feels like in motion.</h3>
+              <p>
+                Quick video reference for posture, movement, and general
+                personality.
+              </p>
+            </a>
+            <a class="reference-card" href="https://photos.app.goo.gl/1A5Kd7atVTiV76d67">
+              <span class="reference-label">Build log</span>
+              <h3>See the messy real-world assembly process.</h3>
+              <p>
+                Wiring, experiments, printed parts, test setups, and
+                in-progress snapshots from the actual build.
+              </p>
+            </a>
+            <a class="reference-card" href="https://cad.onshape.com/documents/e2006a749194244a0138595b/w/b0c916bba4469b0d0f3203c4/e/2251efc11f608df0d03058cb?renderMode=0&uiState=69b5abb2c2106f6b72489059">
+              <span class="reference-label">Onshape CAD</span>
+              <h3>See how the robot is packaged mechanically.</h3>
+              <p>
+                The best place to inspect body layout, arm geometry, eye
+                assembly, and how the electronics physically fit together.
+              </p>
+            </a>
+          </div>
+        </section>
+
+        <section class="origins-section" id="origins">
+          <div class="section-heading">
+            <p class="eyebrow">Credits / origins</p>
+            <h2>This project absolutely stands on other people's work.</h2>
+          </div>
+
+          <div class="origins-layout">
+            <article class="origin-card">
+              <h3>Primary starting point</h3>
+              <p>
+                The overall build is heavily rooted in
+                <strong>chillibasket</strong> and the earlier public WALL-E
+                build work documented there.
+              </p>
+              <p>
+                <a href="https://wired.chillibasket.com/3d-printed-wall-e/">chillibasket: 3D Printed WALL-E</a>
+              </p>
+            </article>
+
+            <article class="origin-card">
+              <h3>Other references in the lineage</h3>
+              <p>
+                These are some of the public remix directions and mods that were
+                definitely part of the path. Some were tried directly, some
+                mainly informed ideas, and almost all of them were eventually
+                reworked further.
+              </p>
+              <ul class="link-list">
+                <li><a href="https://www.thingiverse.com/thing:4795733">Thingiverse #4795733</a></li>
+                <li><a href="https://www.thingiverse.com/thing:4285247">Thingiverse #4285247</a></li>
+                <li><a href="https://www.thingiverse.com/thing:4643715">Thingiverse #4643715</a></li>
+                <li><a href="https://www.thingiverse.com/thing:3955562">Thingiverse #3955562</a></li>
+              </ul>
+            </article>
+          </div>
+
+          <aside class="thanks-card">
+            A large thank-you to chillibasket and to the broader WALL-E maker
+            community. The public prototypes, remixes, experiments, failures,
+            and weird little ideas that came before this build made it possible
+            to take this version as far as it has gone.
+          </aside>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>
+          Built as a static GitHub Pages-friendly project site from the same
+          repository as the robot code.
+        </p>
+        <p>
+          <a href="https://github.com/mneuhaus/wall-e-dora">Repository</a>
+          ·
+          <a href="https://github.com/mneuhaus/wall-e-dora/blob/main/README.md">README</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
