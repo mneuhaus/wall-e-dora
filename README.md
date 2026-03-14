@@ -28,6 +28,58 @@ The project is organized as a set of small Dora nodes wired together in [`datafl
 - Self-hosted HTTPS UI on port `8443`
 - Systemd-friendly startup via [`service_runner.sh`](service_runner.sh)
 
+## Reference Hardware / BOM
+
+This repository is built around one very specific WALL-E robot, so the most useful hardware section is a **reference build BOM**, not a universal shopping list. In other words: these are the parts and hardware assumptions the software is written around today. Some areas are tightly coupled to the code, others are deliberately flexible.
+
+### Core Electronics
+
+| Area | Reference Part / Family | Notes |
+| --- | --- | --- |
+| Main compute | Raspberry Pi | Runs Dora, the HTTPS web UI, config, power monitoring, audio, camera proxying, face tracking, and the higher-level robot logic. The README intentionally says "Raspberry Pi" rather than locking this to one exact model. |
+| Drive microcontroller | RP2040 board, currently a **Seeed XIAO RP2040** style pinout | The track firmware under [`nodes/tracks/firmware`](nodes/tracks/firmware) is currently wired for a XIAO RP2040 pinout. This controller handles the low-level motor driving and safety timeout behavior. |
+| Track drive | Differential track motors plus external motor driver stage | The software assumes skid-steer / differential drive. The exact motor driver hardware is abstracted behind the RP2040 firmware, so this is one of the more flexible parts of the build. |
+| Servo bus controller | Waveshare SC-series serial servo controller | Connected over USB serial to the Raspberry Pi. This is the hub for all bus servos used for head, arms, door, and similar articulated parts. |
+| Bus servos | SC-series serial servos, currently tuned around **SC09-class** hardware | The servo node is built around the SC-series protocol and tooling. Diagnostics, EEPROM config reads, cloning, reset, and calibration all assume that family. |
+| Eye display controllers | **Seeed XIAO ESP32S3** based eye-display boards | The eye firmware Makefile targets `esp32:esp32:XIAO_ESP32S3`. The eyes node treats these as small networked displays that receive GIF/JPG assets and display commands. |
+| Battery monitor | **INA226** current/voltage sensor + **0.002 Ohm** shunt | Wired over I2C bus 1. The power node uses this for voltage, current, power, SoC, runtime estimation, and low-battery shutdown decisions. |
+| Battery pack | **3S LiPo**, reference pack **2200 mAh** | The current power model assumes `11.1V` nominal, `12.6V` full, and roughly `9.9V` as the practical empty floor. |
+| Camera | USB webcam exposed as `/dev/video0` | Live video is handled by `go2rtc`, then proxied through the existing HTTPS web node. The current config expects MJPEG-capable USB camera hardware. |
+| Audio output | Raspberry Pi analog headphones output feeding a speaker/amplifier chain | The audio node currently prefers `plughw:CARD=Headphones,DEV=0`, so the build is presently biased toward the Pi's headphone output path rather than HDMI audio. |
+| Operator input | Browser UI plus optional gamepad, currently an **8BitDo Ultimate MG** profile | The web UI is the primary control surface. A saved controller profile exists under [`config/gamepad_profiles`](config/gamepad_profiles) for an 8BitDo Ultimate MG. |
+
+### What The Software Assumes Pretty Hard
+
+These pieces are not impossible to change, but swapping them usually means touching code, config, or both:
+
+- **SC-series servo bus hardware** rather than hobby PWM servos
+- **An RP2040-based drive controller** that speaks the existing serial command protocol
+- **INA226-based battery telemetry** on I2C
+- **A USB camera** handled by `go2rtc`
+- **Network-addressable eye displays** that accept synced image assets
+
+### What Is More Flexible
+
+These parts can vary more without forcing a major rewrite:
+
+- the exact Raspberry Pi model
+- the exact tracked chassis, gearboxes, and motor drivers behind the RP2040
+- the exact number of servos on the bus
+- the exact USB camera model, as long as Linux + `go2rtc` can use it
+- the exact gamepad model, as long as the browser can map it
+
+### Scope Of This BOM
+
+This section is intentionally focused on the **electronics / control BOM** that the repository actually knows about. It is **not yet** a full mechanical shopping list for every printed part, bearing, screw, cosmetic shell piece, or custom bracket in the robot body. If this project ever grows a full reproducible hardware package, that would deserve its own dedicated document.
+
+### CAD / Mechanical Reference
+
+The robot body itself is custom and easier to understand from the CAD than from prose alone. The current design reference lives in Onshape:
+
+- [WALL-E CAD in Onshape](https://cad.onshape.com/documents/e2006a749194244a0138595b/w/b0c916bba4469b0d0f3203c4/e/2251efc11f608df0d03058cb?renderMode=0&uiState=69b5abb2c2106f6b72489059)
+
+That CAD is the right place to look for the physical packaging of the tracks, body shell, eye assembly, arm geometry, and the custom fit between electronics and structure. The BOM section above intentionally stays focused on the hardware interfaces the software cares about most directly.
+
 ## Architecture
 
 ```mermaid
