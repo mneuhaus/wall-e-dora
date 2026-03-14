@@ -13,6 +13,8 @@
   ·
   <a href="https://photos.app.goo.gl/1A5Kd7atVTiV76d67">Build log photos</a>
   ·
+  <a href="https://github.com/mneuhaus/wall-e-dora/discussions">GitHub Discussions</a>
+  ·
   <a href="https://cad.onshape.com/documents/e2006a749194244a0138595b/w/b0c916bba4469b0d0f3203c4/e/2251efc11f608df0d03058cb?renderMode=0&uiState=69b5abb2c2106f6b72489059">Onshape CAD</a>
 </p>
 
@@ -43,6 +45,26 @@ The project is organized as a set of small Dora nodes wired together in [`datafl
 - Separate firmware for the RP2040 track controller
 - Self-hosted HTTPS UI on port `8443`
 - Systemd-friendly startup via [`service_runner.sh`](service_runner.sh)
+
+## Community / Discussions
+
+If you are building your own version, adapting parts of this project, or just trying to get unstuck, the best public place for questions and community exchange is:
+
+- [GitHub Discussions](https://github.com/mneuhaus/wall-e-dora/discussions)
+
+That is the right place for:
+
+- build questions
+- hardware and wiring comparisons
+- mods and remix ideas
+- showcase posts, photos, and experiments
+- community help between builders
+
+Please use English in both Issues and Discussions so the project stays useful to the widest possible builder community.
+
+Please use Issues for concrete repository bugs/tasks, and Discussions for the broader maker conversation around the project. The support policy lives in [SUPPORT.md](SUPPORT.md).
+
+If this project saved you time and you want to say thanks, you can also send a small PayPal tip to `apocalip@gmail.com`.
 
 ## Reference Hardware / BOM
 

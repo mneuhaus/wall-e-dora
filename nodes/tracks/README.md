@@ -1,160 +1,100 @@
 # Tracks Node
 
 ## Purpose
-The Tracks Node controls the robot's movement by interfacing with motor controllers to drive the tracks, translating joystick inputs into appropriate motor commands.
 
-## Overview
-The tracks node manages Wall-E's mobility system by communicating with a Raspberry Pi Pico (RP2040) microcontroller that directly controls the track motors. It converts high-level joystick inputs into differential drive commands suitable for controlling the robot's movement and also accepts short sequence-driven overrides for on-the-spot dance moves.
+The tracks node turns high-level movement intent into low-level serial commands
+for the RP2040 drive controller. It is responsible for manual browser/gamepad
+driving, heartbeat traffic to the motor controller, and short sequence-driven
+movement overrides used by scenes and dance actions.
 
-```mermaid
-graph TD
-    subgraph "Tracks Node Architecture"
-        TracksNode[Tracks Node]
-        SerialInterface[Serial Interface]
-        JoystickHandler[Joystick Handler]
-        SequenceOverride[Sequence Override]
-        CommandConverter[Command Converter]
-        HeartbeatMonitor[Heartbeat Monitor]
-    end
+## What It Currently Does
 
-    subgraph "External Communication"
-        WebNode[Web Node]
-        SequenceNode[Sequence Node]
-        DoraTimer[Dora Timer]
-    end
+- Reads left-stick X/Y movement input from the web node
+- Converts joystick input into differential drive commands
+- Applies smoothing / easing before sending commands
+- Sends regular heartbeat traffic to the RP2040
+- Accepts temporary `move_tracks_sequence` overrides from the sequence node
+- Keeps the actual motor driver details hidden behind the RP2040 firmware
 
-    subgraph "Hardware"
-        RP2040[Raspberry Pi Pico]
-        MotorDrivers[Motor Drivers]
-        TrackMotors[Track Motors]
-    end
+## Hardware Context
 
-    WebNode -- "LEFT_ANALOG_STICK_X/Y" --> TracksNode
-    SequenceNode -- "move_tracks_sequence" --> TracksNode
-    DoraTimer -- "tick, heartbeat" --> TracksNode
+The current robot drive stack is built around:
 
-    TracksNode --> JoystickHandler
-    TracksNode --> SequenceOverride
-    JoystickHandler --> CommandConverter
-    SequenceOverride --> CommandConverter
-    TracksNode --> HeartbeatMonitor
-    CommandConverter --> SerialInterface
-    HeartbeatMonitor --> SerialInterface
-    SerialInterface <--> RP2040
-    RP2040 --> MotorDrivers
-    MotorDrivers --> TrackMotors
+- a Raspberry Pi as the high-level controller
+- an RP2040-based drive controller board with a XIAO RP2040-style pinout
+- Cytron MD13S motor driver hardware
+- differential tracked movement
+
+## Dora Integration
+
+### Inputs
+
+| Input ID | Source | Description |
+| --- | --- | --- |
+| `tick` | `dora/timer/millis/33` | Main control update tick |
+| `heartbeat` | `dora/timer/secs/1` | Keepalive for the RP2040 link |
+| `GAMEPAD_LEFT_ANALOG_STICK_X` | `web/GAMEPAD_LEFT_ANALOG_STICK_X` | Turn input |
+| `GAMEPAD_LEFT_ANALOG_STICK_Y` | `web/GAMEPAD_LEFT_ANALOG_STICK_Y` | Forward / reverse input |
+| `move_tracks_sequence` | `sequence/move_tracks_sequence` | Timed sequence override payload |
+| `setting_updated` | `config/setting_updated` | Future-facing config change hook |
+
+### Sequence Override Payload
+
+The sequence node can temporarily take over track motion with a structured
+payload:
+
+```json
+{
+  "linear": 30,
+  "angular": -70,
+  "duration": 0.8
+}
 ```
 
-## Functional Requirements
+This is what powers on-the-spot turns, spins, and short dance beats.
 
-### Movement Control
-- Translate joystick X/Y inputs to differential drive commands
-- Support variable speed control for both tracks
-- Implement smooth acceleration and deceleration
-- Provide emergency stop functionality
-- Support precise turning and movement control
-- Allow short sequence-controlled overrides for choreographed moves
+## Serial Protocol
 
-### Hardware Interface
-- Communicate with RP2040 (Raspberry Pi Pico) microcontroller via serial
-- Send regular heartbeat signals to ensure connection
-- Process movement commands with appropriate timing
-- Handle feedback from motor controllers
-- Support firmware updates to the microcontroller
+The RP2040 firmware currently understands simple line-based commands such as:
 
-## Technical Requirements
-
-### Communications
-- Use serial communication at 115200 baud
-- Implement reliable command protocol with error checking
-- Support bidirectional communication with microcontroller
-- Handle communication errors gracefully
-- Implement asynchronous serial reading for status updates
-
-### Movement Algorithms
-- Convert joystick inputs to linear and angular velocity
-- Implement proper scaling for smooth control
-- Apply acceleration limits for smooth movement
-- Ensure safe movement speed limits
-- Support differential steering algorithms
-
-### Firmware Integration
-- Provide compatible firmware for RP2040 microcontroller
-- Implement robust hardware control on microcontroller
-- Support over-the-wire firmware updates
-- Include motor safety limits in firmware
-- Ensure reliable startup sequence
-
-### Dora Node Integration
-
-The tracks node connects to the Dora framework with these data flows:
-
-#### Inputs
-| Input ID                    | Source                           | Description                                |
-|----------------------------|----------------------------------|--------------------------------------------|
-| tick                       | dora/timer/millis/33             | Regular update trigger                     |
-| heartbeat                  | dora/timer/secs/1                | Connection maintenance signal              |
-| GAMEPAD_LEFT_ANALOG_STICK_X| web/GAMEPAD_LEFT_ANALOG_STICK_X  | Joystick X-axis input (-1 to 1)            |
-| GAMEPAD_LEFT_ANALOG_STICK_Y| web/GAMEPAD_LEFT_ANALOG_STICK_Y  | Joystick Y-axis input (-1 to 1)            |
-| move_tracks_sequence       | sequence/move_tracks_sequence    | Timed sequence override `{linear, angular, duration}` |
-| setting_updated            | config/setting_updated           | Setting update notification                |
-
-## Firmware Architecture
-
-The RP2040 firmware implements:
-- Serial communication protocol
-- PWM motor control
-- Safety timeout mechanism
-- Differential drive calculation
-- Current monitoring
-
-### Command Protocol
-Commands sent to the RP2040 follow this format:
-```
-command <param1> <param2>...
+```text
+move 100 50
+heartbeat
+stop
 ```
 
-Examples:
-- `move 100 50` - Move with linear velocity 100, angular velocity 50
-- `heartbeat` - Connection maintenance signal
-- `stop` - Emergency stop
+That keeps the Python side easy to reason about and makes firmware debugging
+fairly straightforward.
 
-## Getting Started
+## Firmware Responsibilities
 
-- Install dependencies:
-```bash
-pip install -e .
-```
+The firmware under `nodes/tracks/firmware` is responsible for:
 
-- Build and flash firmware:
+- PWM motor output
+- direction control
+- command parsing
+- safety timeout handling
+- translating `move <linear> <angular>` into actual motor behavior
+
+## Development Notes
+
+### Build / Flash
+
 ```bash
 make tracks/build
 make tracks/flash
+make tracks/update
 ```
 
-## Contribution Guide
+### Tests / Validation
 
-- Format code:
 ```bash
-ruff format .
+pytest nodes/tracks/tests -q
+python3 -m compileall nodes/tracks/tracks
 ```
 
-- Lint code:
-```bash
-ruff check .
-```
+## Documentation Expectations
 
-- Test with [pytest](https://docs.pytest.org/):
-```bash
-pytest .
-```
-
-## Future Enhancements
-1. Autonomous navigation capabilities
-2. Path planning and execution
-3. Obstacle detection and avoidance
-4. Speed governor based on battery level
-5. Support for different drive modes (precision, sport, etc.)
-
-## License
-Tracks node's code is released under the MIT License.
+- Keep this README aligned with the actual serial protocol and hardware pinout
+- Document any changes to joystick mapping or sequence movement semantics
+- Use English in docs, Issues, and Discussions
