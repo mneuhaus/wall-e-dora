@@ -2,6 +2,8 @@
 
 WALL-E-DORA is a Dora-based robot control stack for a WALL-E-inspired build running on a Raspberry Pi and an RP2040 motor controller. It combines a mobile-friendly web UI, audio playback, eye animations, tracked movement, servo animation, battery monitoring, camera features, and choreographed action sequences into one modular system.
 
+> This is not a polished general-purpose robotics kit. It is my firmware/software stack for my own WALL-E build. You are absolutely welcome to use it, study it, fork it, and adapt it for your own robot, but please do not expect product-level support, hand-holding, or guaranteed compatibility from me.
+
 The project is organized as a set of small Dora nodes wired together in [`dataflow.yml`](dataflow.yml). The web node is the main user-facing entry point, but each hardware area stays isolated in its own node so the system is easier to understand, test, and evolve.
 
 ## What It Does
