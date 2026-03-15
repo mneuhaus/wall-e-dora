@@ -50,6 +50,7 @@ nodes:
       - play_sound
       - set_volume
       - stop
+      - emergency_stop
       - play_gif
       - list_images
       - sequence_trigger
@@ -103,6 +104,7 @@ nodes:
       volume_tick: dora/timer/secs/1
       set_volume: web/set_volume
       stop: web/stop
+      emergency_stop: web/emergency_stop
       stop_sequence: sequence/stop_sequence
       setting_updated: config/setting_updated
     outputs:
@@ -116,6 +118,7 @@ nodes:
       heartbeat: dora/timer/secs/1
       GAMEPAD_LEFT_ANALOG_STICK_X: web/GAMEPAD_LEFT_ANALOG_STICK_X
       GAMEPAD_LEFT_ANALOG_STICK_Y: web/GAMEPAD_LEFT_ANALOG_STICK_Y
+      emergency_stop: web/emergency_stop
       setting_updated: config/setting_updated
       move_tracks_sequence: sequence/move_tracks_sequence
 
@@ -191,6 +194,7 @@ nodes:
     inputs:
       tick: dora/timer/millis/50
       trigger: web/sequence_trigger
+      emergency_stop: web/emergency_stop
     outputs:
       - stop_sequence
       - play_sound_sequence

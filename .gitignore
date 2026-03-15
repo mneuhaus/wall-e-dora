@@ -21,3 +21,4 @@ nodes/web/resources/scripts/**/*.vue
 
 # User data files
 config/servo.json
+nodes/audio/soundtrack/

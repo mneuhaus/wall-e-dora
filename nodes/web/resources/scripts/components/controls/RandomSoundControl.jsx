@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ActionIcon, Tooltip } from '@mantine/core';
 import node from '../../Node';
+import { useAppContext } from '../../contexts/AppContext';
 import { controlStyles } from '../status/controls';
 
 const AMBIENT_SEQUENCE_IDS = ['idle-listen', 'idle-peek', 'idle-fidget'];
@@ -19,6 +20,7 @@ const randomDelay = (minDelay, maxDelay) => (
  * @component
  */
 const RandomSoundControl = () => {
+  const { emotionMode } = useAppContext();
   const [isActive, setIsActive] = useState(false);
   const [sounds, setSounds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,8 @@ const RandomSoundControl = () => {
   const pulseTimeoutRef = useRef(null);
   const isActiveRef = useRef(false);
   const sequenceActiveRef = useRef(false);
+  const emotionModeActive = Boolean(emotionMode && emotionMode !== 'neutral');
+  const emotionModeActiveRef = useRef(emotionModeActive);
 
   const clearAmbientTimer = () => {
     if (timeoutRef.current) {
@@ -53,11 +57,19 @@ const RandomSoundControl = () => {
       return;
     }
 
+    if (emotionModeActiveRef.current) {
+      return;
+    }
+
     const delay = randomDelay(minDelay, maxDelay);
     timeoutRef.current = window.setTimeout(() => {
       timeoutRef.current = null;
 
       if (!isActiveRef.current) {
+        return;
+      }
+
+      if (emotionModeActiveRef.current) {
         return;
       }
 
@@ -79,6 +91,19 @@ const RandomSoundControl = () => {
   useEffect(() => {
     isActiveRef.current = isActive;
   }, [isActive]);
+
+  useEffect(() => {
+    emotionModeActiveRef.current = emotionModeActive;
+  }, [emotionModeActive]);
+
+  useEffect(() => {
+    if (!emotionModeActive) {
+      return;
+    }
+
+    setIsActive(false);
+    stopAmbientMode();
+  }, [emotionModeActive]);
 
   useEffect(() => {
     const cachedSequenceState = node.getLastEvent?.('sequence_state');
@@ -105,6 +130,13 @@ const RandomSoundControl = () => {
       sequenceActiveRef.current = Boolean(payload?.active);
     });
 
+    const handleEmergencyStop = () => {
+      setIsActive(false);
+      stopAmbientMode();
+    };
+
+    window.addEventListener('emergency_stop_triggered', handleEmergencyStop);
+
     const timeout = window.setTimeout(() => {
       setLoading(false);
     }, 3000);
@@ -113,6 +145,7 @@ const RandomSoundControl = () => {
       unsubscribeSounds();
       unsubscribeActivity();
       unsubscribeSequenceState();
+      window.removeEventListener('emergency_stop_triggered', handleEmergencyStop);
       clearAmbientTimer();
       if (pulseTimeoutRef.current) {
         window.clearTimeout(pulseTimeoutRef.current);
@@ -134,6 +167,10 @@ const RandomSoundControl = () => {
   };
 
   const toggleActive = () => {
+    if (emotionModeActive) {
+      return;
+    }
+
     const nextActive = !isActiveRef.current;
     setIsActive(nextActive);
 
@@ -145,7 +182,7 @@ const RandomSoundControl = () => {
     }
   };
 
-  const isDisabled = loading || sounds.length === 0;
+  const isDisabled = loading || sounds.length === 0 || emotionModeActive;
 
   const styles = `
     @keyframes glow {
@@ -163,7 +200,13 @@ const RandomSoundControl = () => {
 
   return (
     <Tooltip
-      label={isActive ? 'Zufallsmodus aus' : 'Zufallsmodus an'}
+      label={
+        emotionModeActive
+          ? 'Emotionsmodus aktiv'
+          : isActive
+            ? 'Zufallsmodus aus'
+            : 'Zufallsmodus an'
+      }
       withArrow
       position="bottom"
     >

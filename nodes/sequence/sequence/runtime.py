@@ -601,6 +601,16 @@ class SequenceScheduler:
         self.emit_due_steps(node)
         return True
 
+    def cancel_active(self, node: OutputNode, *, reason: str = 'cancel') -> bool:
+        if self._active is None:
+            return False
+
+        seq_id = self._active.seq_id
+        print(f'Sequence: {reason} -> {seq_id}')
+        self._active = None
+        self._emit_sequence_state(node, seq_id, False)
+        return True
+
     def emit_due_steps(self, node: OutputNode) -> None:
         if self._active is None:
             return

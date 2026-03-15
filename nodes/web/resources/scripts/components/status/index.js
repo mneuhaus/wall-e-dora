@@ -10,9 +10,19 @@ import GamepadStatus from './GamepadStatus';
 import PowerStatus from './PowerStatus';
 import DoorStatus from './DoorStatus';
 import CameraStatus from './CameraStatus';
+import EmergencyStopStatus from './EmergencyStopStatus';
 import FaceTrackingStatus from './FaceTrackingStatus';
 
-export { ConnectionStatus, ServoStatus, GamepadStatus, PowerStatus, DoorStatus, CameraStatus, FaceTrackingStatus };
+export {
+  ConnectionStatus,
+  ServoStatus,
+  GamepadStatus,
+  PowerStatus,
+  DoorStatus,
+  CameraStatus,
+  EmergencyStopStatus,
+  FaceTrackingStatus,
+};
 
 export default {
   ConnectionStatus,
@@ -21,5 +31,6 @@ export default {
   PowerStatus,
   DoorStatus,
   CameraStatus,
+  EmergencyStopStatus,
   FaceTrackingStatus,
 };

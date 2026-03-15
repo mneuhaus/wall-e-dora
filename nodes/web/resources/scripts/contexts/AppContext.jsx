@@ -3,6 +3,8 @@ import node from '../Node';
 import { normalizeServoList } from '../utils/servoData';
 
 const CAMERA_BACKGROUND_STORAGE_KEY = 'walle.camera-background-enabled';
+const EMOTION_MODE_STORAGE_KEY = 'walle.emotion-mode';
+const DEFAULT_EMOTION_MODE = 'neutral';
 
 const DEFAULT_FACE_TRACKING_STATE = {
   enabled: false,
@@ -24,6 +26,18 @@ function getStoredCameraBackgroundEnabled() {
     return window.localStorage.getItem(CAMERA_BACKGROUND_STORAGE_KEY) === '1';
   } catch (error) {
     return false;
+  }
+}
+
+function getStoredEmotionMode() {
+  if (typeof window === 'undefined') {
+    return DEFAULT_EMOTION_MODE;
+  }
+
+  try {
+    return window.localStorage.getItem(EMOTION_MODE_STORAGE_KEY) || DEFAULT_EMOTION_MODE;
+  } catch (error) {
+    return DEFAULT_EMOTION_MODE;
   }
 }
 
@@ -52,10 +66,12 @@ export function AppProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
   const [gamepadProfiles, setGamepadProfiles] = useState({});
   const [cameraBackgroundEnabled, setCameraBackgroundEnabled] = useState(() => getStoredCameraBackgroundEnabled());
+  const [emotionMode, setEmotionMode] = useState(() => getStoredEmotionMode());
   const [faceTrackingState, setFaceTrackingState] = useState(DEFAULT_FACE_TRACKING_STATE);
   const [photos, setPhotos] = useState([]);
   const [photosLoading, setPhotosLoading] = useState(false);
   const [photoCaptureFlashToken, setPhotoCaptureFlashToken] = useState(0);
+  const [emergencyStopFlashToken, setEmergencyStopFlashToken] = useState(0);
   const captureInFlightRef = useRef(false);
   const lastCaptureAtRef = useRef(0);
 
@@ -69,6 +85,14 @@ export function AppProvider({ children }) {
       // Ignore storage issues on restricted browsers.
     }
   }, [cameraBackgroundEnabled]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(EMOTION_MODE_STORAGE_KEY, emotionMode || DEFAULT_EMOTION_MODE);
+    } catch (error) {
+      // Ignore storage issues on restricted browsers.
+    }
+  }, [emotionMode]);
   
   // Listen for connection status
   useEffect(() => {
@@ -189,6 +213,13 @@ export function AppProvider({ children }) {
 
   const toggleFaceTracking = () => setFaceTrackingEnabled(!faceTrackingState.enabled);
 
+  const triggerEmergencyStop = () => {
+    setEmotionMode(DEFAULT_EMOTION_MODE);
+    setEmergencyStopFlashToken((token) => token + 1);
+    window.dispatchEvent(new CustomEvent('emergency_stop_triggered'));
+    node.emit('emergency_stop', []);
+  };
+
   const refreshPhotos = async () => {
     setPhotosLoading(true);
     try {
@@ -308,15 +339,19 @@ export function AppProvider({ children }) {
     isConnected,
     gamepadProfiles,
     cameraBackgroundEnabled,
+    emotionMode,
     faceTrackingState,
     photos,
     photosLoading,
     photoCaptureFlashToken,
+    emergencyStopFlashToken,
     setCameraBackgroundEnabled,
+    setEmotionMode,
     toggleCameraBackground,
     refreshFaceTrackingState,
     setFaceTrackingEnabled,
     toggleFaceTracking,
+    triggerEmergencyStop,
     refreshPhotos,
     capturePhoto,
     setServos: setAvailableServos,

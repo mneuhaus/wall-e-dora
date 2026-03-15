@@ -77,3 +77,19 @@ def test_setup_hardware_can_fall_back_to_dummy(monkeypatch):
     audio_main.setup_hardware()
 
     assert attempts[-1] == ("dummy", None, None)
+
+
+def test_play_emergency_stop_sound_uses_dedicated_clip(monkeypatch):
+    """Emergency stop should route to the dedicated stop clip."""
+    from audio import main as audio_main
+
+    calls = []
+
+    def fake_play_sound(sounds_dir, filename, node=None):
+        calls.append((sounds_dir, filename, node))
+        return True
+
+    monkeypatch.setattr(audio_main, "play_sound", fake_play_sound)
+
+    assert audio_main.play_emergency_stop_sound("/tmp/sounds", node="node") is True
+    assert calls == [("/tmp/sounds", audio_main.EMERGENCY_STOP_SOUND, "node")]

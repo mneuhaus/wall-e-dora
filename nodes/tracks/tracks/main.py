@@ -18,6 +18,7 @@ COMMAND_SCALE = 100.0  # Scale joystick (-1..1) to Pico command range (-100..100
 INVERT_Y_AXIS = False
 INVERT_X_AXIS = False
 JOYSTICK_DEADZONE = 0.0
+EMERGENCY_STOP_HOLD_SECONDS = 2.2
 
 # --- Easing Configuration ---
 EASING_ENABLED = True
@@ -190,6 +191,7 @@ def main() -> None:
     sequence_linear = 0
     sequence_angular = 0
     sequence_override_until = 0.0
+    emergency_stop_until = 0.0
 
     print('Waiting for Dora events...')
     try:
@@ -202,7 +204,14 @@ def main() -> None:
                     flush_serial_buffer()
                     now = time.monotonic()
 
-                    if now < sequence_override_until:
+                    if now < emergency_stop_until:
+                        linear = 0
+                        angular = 0
+                        current_linear = 0
+                        current_angular = 0
+                        target_linear = 0
+                        target_angular = 0
+                    elif now < sequence_override_until:
                         linear = sequence_linear
                         angular = sequence_angular
                         current_linear = linear
@@ -231,6 +240,10 @@ def main() -> None:
                         print(f'ERROR: Failed to write heartbeat: {error}')
 
                 elif event_id == 'move_tracks_sequence':
+                    if time.monotonic() < emergency_stop_until:
+                        print('Ignoring sequence track move during emergency-stop hold')
+                        continue
+
                     move = extract_sequence_move(event['value'])
                     if move is None:
                         continue
@@ -251,6 +264,20 @@ def main() -> None:
 
                 elif event_id == 'GAMEPAD_LEFT_ANALOG_STICK_Y':
                     latest_joystick_y = extract_axis_value(event['value'], 'Y')
+
+                elif event_id == 'emergency_stop':
+                    emergency_stop_until = time.monotonic() + EMERGENCY_STOP_HOLD_SECONDS
+                    sequence_override_until = 0.0
+                    sequence_linear = 0
+                    sequence_angular = 0
+                    current_linear = 0
+                    current_angular = 0
+                    target_linear = 0
+                    target_angular = 0
+                    print(
+                        f'Emergency stop engaged for {EMERGENCY_STOP_HOLD_SECONDS:.1f}s; halting tracks'
+                    )
+                    last_command_sent = send_command(ser, 'move 0 0', last_command_sent)
 
             elif event_type == 'STOP':
                 print('Received STOP event. Exiting.')

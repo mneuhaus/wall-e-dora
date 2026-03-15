@@ -9,6 +9,7 @@
 import DashboardView from './DashboardView';
 import GalleryView from './GalleryView';
 import GamepadView from './GamepadView';
+import MoodView from './MoodView';
 import ServoDebugView from './ServoDebugView';
 import ServoDiagnosticsOverviewView from './ServoDiagnosticsOverviewView';
 import ShowtimeView from './ShowtimeView';
@@ -18,6 +19,7 @@ export {
   DashboardView,
   GalleryView,
   GamepadView,
+  MoodView,
   ServoDebugView,
   ServoDiagnosticsOverviewView,
   ShowtimeView,
@@ -28,6 +30,7 @@ export default {
   DashboardView,
   GalleryView,
   GamepadView,
+  MoodView,
   ServoDebugView,
   ServoDiagnosticsOverviewView,
   ShowtimeView,

@@ -30,9 +30,11 @@ import {
   PowerStatus,
   DoorStatus,
   CameraStatus,
+  EmergencyStopStatus,
   FaceTrackingStatus,
 } from './components/status';
 import {
+  EmotionModeControl as EmotionModeEngine,
   VolumeControl as Volume,
   RandomSoundControl as RandomSound,
 } from './components/controls';
@@ -43,6 +45,7 @@ import {
   DashboardView as Dashboard,
   GalleryView,
   GamepadView,
+  MoodView,
   ServoDebugView as ServoDebug,
   ServoDiagnosticsOverviewView as ServoDiagnosticsOverview,
   ShowtimeView,
@@ -53,12 +56,13 @@ const TopNav = () => {
 
   const navItems = [
     { to: '/', label: 'Home', active: location.pathname === '/' },
+    { to: '/mood', label: 'Mood', active: location.pathname.startsWith('/mood') },
     { to: '/showtime', label: 'Showtime', active: location.pathname.startsWith('/showtime') },
     { to: '/gallery', label: 'Gallery', active: location.pathname.startsWith('/gallery') },
   ];
 
   return (
-    <Group gap={2} wrap="nowrap">
+    <Group gap={1} wrap="nowrap">
       {navItems.map((item) => (
         <Box
           key={item.to}
@@ -70,8 +74,8 @@ const TopNav = () => {
             background: item.active ? 'rgba(255, 191, 0, 0.14)' : 'transparent',
             border: item.active ? '1px solid rgba(255, 191, 0, 0.28)' : '1px solid transparent',
             borderRadius: rem(999),
-            padding: `${rem(4)} ${rem(6)}`,
-            fontSize: rem(11),
+            padding: `${rem(4)} ${rem(5)}`,
+            fontSize: rem(10.5),
             fontWeight: 700,
             lineHeight: 1,
             whiteSpace: 'nowrap',
@@ -149,7 +153,12 @@ const CameraBackground = ({ enabled, faceTrackingState }) => {
 };
 
 const AppFrame = () => {
-  const { cameraBackgroundEnabled, photoCaptureFlashToken, faceTrackingState } = useAppContext();
+  const {
+    cameraBackgroundEnabled,
+    photoCaptureFlashToken,
+    emergencyStopFlashToken,
+    faceTrackingState,
+  } = useAppContext();
 
   const appStyles = `
     .camera-app {
@@ -203,6 +212,30 @@ const AppFrame = () => {
       background: rgba(255, 255, 255, 0.07);
     }
 
+    .emergency-stop-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      animation: emergency-stop-flash 560ms ease-out forwards;
+    }
+
+    .emergency-stop-flash::before {
+      content: '';
+      position: absolute;
+      inset: 4px;
+      border-radius: 18px;
+      border: 3px solid rgba(255, 90, 90, 0.96);
+      box-shadow: 0 0 0 1px rgba(255, 120, 120, 0.24), 0 0 34px rgba(255, 72, 72, 0.95);
+    }
+
+    .emergency-stop-flash::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 40, 40, 0.08);
+    }
+
     @keyframes photo-capture-flash {
       0% {
         opacity: 0;
@@ -216,17 +249,39 @@ const AppFrame = () => {
         opacity: 0;
       }
     }
+
+    @keyframes emergency-stop-flash {
+      0% {
+        opacity: 0;
+      }
+
+      14% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+      }
+    }
   `;
 
   return (
     <Box className={`camera-app ${cameraBackgroundEnabled ? 'camera-live' : ''}`}>
       <style>{appStyles}</style>
       <CameraBackground enabled={cameraBackgroundEnabled} faceTrackingState={faceTrackingState} />
+      <EmotionModeEngine />
       {photoCaptureFlashToken > 0 ? (
         <Box
           key={photoCaptureFlashToken}
           aria-hidden="true"
           className="photo-capture-flash"
+        />
+      ) : null}
+      {emergencyStopFlashToken > 0 ? (
+        <Box
+          key={emergencyStopFlashToken}
+          aria-hidden="true"
+          className="emergency-stop-flash"
         />
       ) : null}
 
@@ -261,6 +316,7 @@ const AppFrame = () => {
                 </Group>
 
                 <Group gap={4} wrap="nowrap">
+                  <EmergencyStopStatus />
                   <Gamepad />
                   <CameraStatus />
                   <FaceTrackingStatus />
@@ -278,6 +334,7 @@ const AppFrame = () => {
           <AppShell.Main>
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/mood" element={<MoodView />} />
               <Route path="/showtime" element={<ShowtimeView />} />
               <Route path="/gallery" element={<GalleryView />} />
               <Route path="/gamepad/:index" element={<GamepadView />} />

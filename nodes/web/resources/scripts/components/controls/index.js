@@ -9,10 +9,18 @@ import { ServoSelector } from '../common/inputs';
 import GridLockControl from './GridLockControl';
 import AddWidgetControl from './AddWidgetControl';
 import VolumeControl from './VolumeControl';
+import EmotionModeControl from './EmotionModeControl';
 import RandomSoundControl from './RandomSoundControl';
 
 // Export components individually
-export { ServoSelector, GridLockControl, AddWidgetControl, VolumeControl, RandomSoundControl };
+export {
+  ServoSelector,
+  GridLockControl,
+  AddWidgetControl,
+  VolumeControl,
+  EmotionModeControl,
+  RandomSoundControl,
+};
 
 // Default export for importing all at once
 export default {
@@ -20,5 +28,6 @@ export default {
   GridLockControl,
   AddWidgetControl,
   VolumeControl,
+  EmotionModeControl,
   RandomSoundControl
 };

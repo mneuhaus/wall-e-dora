@@ -25,6 +25,8 @@ def main() -> None:
 
             if not scheduler.request_sequence(node, seq_id):
                 print(f"Sequence: unknown sequence '{seq_id}'")
+        elif event['id'] == 'emergency_stop':
+            scheduler.cancel_active(node, reason='emergency-stop')
         elif event['id'] == 'tick':
             scheduler.emit_due_steps(node)
 

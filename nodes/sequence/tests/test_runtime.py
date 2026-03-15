@@ -154,3 +154,15 @@ def test_unknown_sequence_is_rejected() -> None:
     assert scheduler.request_sequence(node, 'not-a-scene') is False
     assert scheduler.active_sequence_id is None
     assert node.outputs == []
+
+
+def test_cancel_active_sequence_emits_inactive_state() -> None:
+    scheduler = SequenceScheduler(clock=FakeClock())
+    node = FakeNode()
+
+    assert scheduler.request_sequence(node, 'party') is True
+    node.outputs.clear()
+
+    assert scheduler.cancel_active(node, reason='emergency-stop') is True
+    assert scheduler.active_sequence_id is None
+    assert node.outputs == [('sequence_state', [{'id': 'party', 'active': False}])]

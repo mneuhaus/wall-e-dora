@@ -6,12 +6,14 @@ and responds to Dora events for playing sounds and setting volume.
 
 import os
 import time
-import random
 from pathlib import Path
 
 import pygame
 import pyarrow as pa
 from dora import Node
+
+
+EMERGENCY_STOP_SOUND = "stopp.mp3"
 
 
 def _build_audio_init_attempts() -> list[tuple[str | None, str | None, str]]:
@@ -147,6 +149,12 @@ def play_sound(sounds_dir: str, filename: str, node=None):
         return False
 
 
+def play_emergency_stop_sound(sounds_dir: str, node=None) -> bool:
+    """Interrupt current playback and play the dedicated emergency stop clip."""
+    print("Emergency stop: interrupting current audio and playing stop clip")
+    return play_sound(sounds_dir, EMERGENCY_STOP_SOUND, node=node)
+
+
 def load_volume() -> float:
     """Load the volume setting from the configuration file."""
     # TODO: Refactor to use the config node instead of volume.cfg
@@ -214,6 +222,10 @@ def main():
                 # If a sound is playing, send it again to ensure the frontend knows about it
                 if current_sound:
                     node.send_output("current_sound", pa.array([current_sound]), metadata={})
+            elif event["id"] == "emergency_stop":
+                success = play_emergency_stop_sound(sounds_dir, node)
+                if success:
+                    current_sound = EMERGENCY_STOP_SOUND
             elif event["id"] in ("stop", "stop_sequence"):
                 print("Stopping all sounds")
                 pygame.mixer.stop()
