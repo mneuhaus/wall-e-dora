@@ -1,12 +1,14 @@
 from sequence.runtime import (
     ARM_LEFT_NEUTRAL,
     ARM_LEFT_UP,
+    DANCE_ARM_LEFT_MIN,
     HEAD_RIGHT_NEUTRAL,
     HEAD_RIGHT_UP,
     SequenceScheduler,
     amplify_left_dance_arm_position,
     build_dance_plan,
     build_sequence_plan,
+    left_arm_for,
 )
 
 
@@ -53,6 +55,12 @@ def test_amplify_left_dance_arm_position_clamps_to_calibrated_range() -> None:
     assert amplify_left_dance_arm_position(300) == 300
     assert amplify_left_dance_arm_position(ARM_LEFT_UP) == ARM_LEFT_UP
     assert amplify_left_dance_arm_position(600) == ARM_LEFT_UP
+
+
+def test_left_arm_for_skips_mechanical_dead_zone() -> None:
+    assert left_arm_for(0.0) == DANCE_ARM_LEFT_MIN
+    assert left_arm_for(1.0) == ARM_LEFT_UP
+    assert left_arm_for(0.0) >= 200
 
 
 def test_all_sequence_plans_start_with_audio_stop() -> None:

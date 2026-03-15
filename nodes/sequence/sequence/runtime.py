@@ -16,6 +16,7 @@ except ModuleNotFoundError:
 # Arms (position values provided by user)
 ARM_LEFT_NEUTRAL = 50     # servo #2 (down) - calibrated min
 ARM_LEFT_UP = 500         # servo #2 (up) - calibrated max
+DANCE_ARM_LEFT_MIN = 200  # lowest position that produces visible arm motion (dead zone below)
 ARM_RIGHT_NEUTRAL = 940   # servo #13 (down)
 ARM_RIGHT_UP = 640        # servo #13 (up)
 # Head sides (position values provided by user)
@@ -581,7 +582,7 @@ def head_pivot_for(offset: float) -> int:
 
 
 def left_arm_for(level: float) -> int:
-    return round(lerp(ARM_LEFT_NEUTRAL, ARM_LEFT_UP, level))
+    return round(lerp(DANCE_ARM_LEFT_MIN, ARM_LEFT_UP, level))
 
 
 def right_arm_for(level: float) -> int:
