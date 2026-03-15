@@ -675,7 +675,11 @@ def head_right_for(level: float) -> int:
 
 
 def dance_arm_levels(builder: SequenceBuilder, left: float, right: float) -> None:
-    dance_arm_pose(builder, left_arm_for(left), right_arm_for(right))
+    # Bypass dance_arm_pose to avoid double-remapping: left_arm_for already
+    # maps into the visible range, so amplify_left_dance_arm_position must
+    # not be applied a second time.
+    builder.move_servo(2, left_arm_for(left))
+    builder.move_servo(13, right_arm_for(right))
 
 
 def dance_head_levels(
@@ -905,7 +909,7 @@ def transition_breath(builder: SequenceBuilder, ctx: DanceContext, beat: float) 
     """Brief breathing moment between sections."""
     start = builder.elapsed
     dance_head_levels(builder, ctx.micro(0.0, 0.12), ctx.micro(0.3, 0.1), ctx.micro(0.3, 0.1))
-    dance_arm_levels(builder, ctx.micro(0.4, 0.08), ctx.micro(0.45, 0.08))
+    dance_arm_levels(builder, ctx.micro(0.42, 0.08), ctx.micro(0.42, 0.08))
     builder.wait(beat * clamp_float(ctx.rng.uniform(0.4, 0.7), 0.35, 0.75))
     return builder.elapsed - start
 
@@ -1827,24 +1831,24 @@ def style_opening_pose(builder: SequenceBuilder, *, style: str, beat: float, gif
 
     if style == 'imperial-march':
         dance_head_levels(builder, 0.0, 0.12, 0.12)
-        dance_arm_levels(builder, 0.32, 0.82)
+        dance_arm_levels(builder, 0.56, 0.56)
         builder.wait(beat * 2.0)
         return
 
     if style in {'cosmic-glide', 'ambient-glide'}:
         dance_head_levels(builder, -0.16, 0.18, 0.14)
-        dance_arm_levels(builder, 0.42, 0.54)
+        dance_arm_levels(builder, 0.48, 0.48)
         builder.wait(beat * 1.8)
         return
 
     if style in {'robotic-funk', 'hiphop'}:
         dance_head_levels(builder, 0.0, 0.12, 0.16)
-        dance_arm_levels(builder, 0.46, 0.7)
+        dance_arm_levels(builder, 0.58, 0.58)
         builder.wait(beat * 1.8)
         return
 
     dance_head_levels(builder, 0.0, 0.16, 0.16)
-    dance_arm_levels(builder, 0.55, 0.66)
+    dance_arm_levels(builder, 0.6, 0.6)
     builder.wait(beat * 1.8)
 
 
@@ -1949,16 +1953,22 @@ def phrase_glide_orbit(
 
     builder.play_gif(gif)
     dance_head_levels(builder, -0.26 * direction, 0.26, 0.2)
-    dance_arm_levels(builder, 0.42, 0.6)
+    if direction < 0:
+        dance_arm_levels(builder, 0.42, 0.6)
+    else:
+        dance_arm_levels(builder, 0.6, 0.42)
     dance_track_move(builder, linear=linear * direction, angular=turn * direction, duration=beat * 1.3)
     builder.wait(beat * 1.2)
 
     dance_head_levels(builder, 0.0, 0.36, 0.34)
-    dance_arm_levels(builder, 0.5, 0.52)
+    dance_arm_levels(builder, 0.5, 0.5)
     builder.wait(beat * 0.42)
 
     dance_head_levels(builder, 0.26 * direction, 0.2, 0.26)
-    dance_arm_levels(builder, 0.58, 0.42)
+    if direction < 0:
+        dance_arm_levels(builder, 0.58, 0.42)
+    else:
+        dance_arm_levels(builder, 0.42, 0.58)
     dance_track_move(builder, linear=-linear * direction, angular=-turn * direction, duration=beat * 1.3)
     builder.wait(beat * 1.2)
 
@@ -2047,16 +2057,25 @@ def phrase_march_command(
 
     builder.play_gif(gif)
     dance_head_levels(builder, -0.22 * direction, 0.12, 0.12)
-    dance_arm_levels(builder, 0.32, 0.86)
+    if direction < 0:
+        dance_arm_levels(builder, 0.32, 0.86)
+    else:
+        dance_arm_levels(builder, 0.86, 0.32)
     dance_track_move(builder, linear=linear * direction, angular=turn * direction, duration=beat * 0.72)
     builder.wait(beat * 0.7)
 
     dance_head_levels(builder, 0.0, 0.18, 0.18)
-    dance_arm_levels(builder, 0.4, 0.82)
+    if direction < 0:
+        dance_arm_levels(builder, 0.4, 0.82)
+    else:
+        dance_arm_levels(builder, 0.82, 0.4)
     builder.wait(beat * 0.35)
 
     dance_head_levels(builder, 0.22 * direction, 0.12, 0.12)
-    dance_arm_levels(builder, 0.26, 0.74)
+    if direction < 0:
+        dance_arm_levels(builder, 0.26, 0.74)
+    else:
+        dance_arm_levels(builder, 0.74, 0.26)
     dance_track_move(builder, linear=-linear * direction, angular=-turn * direction, duration=beat * 0.72)
     builder.wait(beat * 0.7)
 
@@ -2158,12 +2177,12 @@ def phrase_lift_drop(
     builder.wait(beat * 0.2)
 
     dance_head_levels(builder, -0.18 * direction, 0.2, 0.2)
-    dance_arm_levels(builder, 0.52, 0.62)
+    dance_arm_levels(builder, 0.57, 0.57)
     dance_track_move(builder, linear=-linear * direction, angular=-turn * direction, duration=beat * 0.62)
     builder.wait(beat * 0.58)
 
     dance_head_levels(builder, 0.0, 0.16, 0.16)
-    dance_arm_levels(builder, 0.38, 0.44)
+    dance_arm_levels(builder, 0.41, 0.41)
     builder.wait(beat * 0.34)
     return builder.elapsed - start
 
