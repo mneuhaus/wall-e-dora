@@ -716,15 +716,20 @@ def amplify_left_dance_arm_position(position: int) -> int:
     """Remap left arm positions from the full range into the visible range.
 
     The left arm linkage has a mechanical dead zone below DANCE_ARM_LEFT_MIN
-    where the servo moves but the arm doesn't visibly respond.  This rescales
-    any position in [ARM_LEFT_NEUTRAL .. ARM_LEFT_UP] into the narrower
-    [DANCE_ARM_LEFT_MIN .. ARM_LEFT_UP] so every value produces visible motion.
+    where the servo moves but the arm doesn't visibly respond.  The right arm
+    has a similar dead zone but its choreography values are already written in
+    the visible range, so the right arm naturally gets a ~1.5x amplification
+    (full_range / visible_range).  We apply the same scaling here so that
+    matching fractions of full range produce matching visible motion on both
+    arms.
     """
     full_range = ARM_LEFT_UP - ARM_LEFT_NEUTRAL
-    if full_range <= 0:
+    visible_range = ARM_LEFT_UP - DANCE_ARM_LEFT_MIN
+    if full_range <= 0 or visible_range <= 0:
         return DANCE_ARM_LEFT_MIN
     fraction = clamp_float((position - ARM_LEFT_NEUTRAL) / full_range, 0.0, 1.0)
-    return round(DANCE_ARM_LEFT_MIN + fraction * (ARM_LEFT_UP - DANCE_ARM_LEFT_MIN))
+    amplified = clamp_float(fraction * full_range / visible_range, 0.0, 1.0)
+    return round(DANCE_ARM_LEFT_MIN + amplified * visible_range)
 
 
 class DanceContext:
