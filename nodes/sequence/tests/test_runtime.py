@@ -49,12 +49,19 @@ def max_abs_track_components(steps) -> tuple[float, float]:
     return max_linear, max_angular
 
 
-def test_amplify_left_dance_arm_position_clamps_to_calibrated_range() -> None:
-    assert amplify_left_dance_arm_position(0) == ARM_LEFT_NEUTRAL
-    assert amplify_left_dance_arm_position(ARM_LEFT_NEUTRAL) == ARM_LEFT_NEUTRAL
-    assert amplify_left_dance_arm_position(300) == 300
+def test_amplify_left_dance_arm_position_remaps_to_visible_range() -> None:
+    # Below neutral clamps to visible minimum
+    assert amplify_left_dance_arm_position(0) == DANCE_ARM_LEFT_MIN
+    # Neutral remaps to visible minimum
+    assert amplify_left_dance_arm_position(ARM_LEFT_NEUTRAL) == DANCE_ARM_LEFT_MIN
+    # Full up stays at full up
     assert amplify_left_dance_arm_position(ARM_LEFT_UP) == ARM_LEFT_UP
+    # Above full up clamps to full up
     assert amplify_left_dance_arm_position(600) == ARM_LEFT_UP
+    # Mid-range values are remapped into the visible range, never below DANCE_ARM_LEFT_MIN
+    assert amplify_left_dance_arm_position(120) >= DANCE_ARM_LEFT_MIN
+    assert amplify_left_dance_arm_position(300) >= DANCE_ARM_LEFT_MIN
+    assert amplify_left_dance_arm_position(300) < ARM_LEFT_UP
 
 
 def test_left_arm_for_skips_mechanical_dead_zone() -> None:

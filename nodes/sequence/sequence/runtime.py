@@ -709,8 +709,18 @@ def dance_section_intensity(section: dict[str, Any], base_energy: float) -> floa
 
 
 def amplify_left_dance_arm_position(position: int) -> int:
-    """Clamp left arm dance positions to the calibrated servo range."""
-    return max(ARM_LEFT_NEUTRAL, min(ARM_LEFT_UP, position))
+    """Remap left arm positions from the full range into the visible range.
+
+    The left arm linkage has a mechanical dead zone below DANCE_ARM_LEFT_MIN
+    where the servo moves but the arm doesn't visibly respond.  This rescales
+    any position in [ARM_LEFT_NEUTRAL .. ARM_LEFT_UP] into the narrower
+    [DANCE_ARM_LEFT_MIN .. ARM_LEFT_UP] so every value produces visible motion.
+    """
+    full_range = ARM_LEFT_UP - ARM_LEFT_NEUTRAL
+    if full_range <= 0:
+        return DANCE_ARM_LEFT_MIN
+    fraction = clamp_float((position - ARM_LEFT_NEUTRAL) / full_range, 0.0, 1.0)
+    return round(DANCE_ARM_LEFT_MIN + fraction * (ARM_LEFT_UP - DANCE_ARM_LEFT_MIN))
 
 
 class DanceContext:
