@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import logging
+from pathlib import Path
 import random
 import time
 from typing import Any, Protocol
@@ -12,24 +15,98 @@ try:
 except ModuleNotFoundError:
     from soundtrack_analysis import load_soundtrack_analysis
 
-# Neutral/default positions (tune as needed)
-# Arms (position values provided by user)
-ARM_LEFT_NEUTRAL = 50     # servo #2 (down) - calibrated min
-ARM_LEFT_UP = 500         # servo #2 (up) - calibrated max
-DANCE_ARM_LEFT_MIN = 200  # lowest position that produces visible arm motion (dead zone below)
-ARM_RIGHT_NEUTRAL = 940   # servo #13 (down)
-ARM_RIGHT_UP = 640        # servo #13 (up)
-# Head sides (position values provided by user)
-HEAD_LEFT_NEUTRAL = 0     # servo #6 (down)
-HEAD_LEFT_UP = 120        # servo #6 (up)
-HEAD_RIGHT_NEUTRAL = 200  # servo #4 (down)
-HEAD_RIGHT_UP = 85        # servo #4 (up)
-# Head pivot (position values provided by user)
-HEAD_PIVOT_LEFT = 433     # servo #14 (left)
-HEAD_PIVOT_RIGHT = 580    # servo #14 (right)
-HEAD_PIVOT_CENTER = 500   # servo #14 (center)
-DOOR_CLOSED = 700         # servo #5 (matches UI toggle expectations)
-DOOR_OPEN = 1023          # servo #5 (fully open)
+# ---------------------------------------------------------------------------
+# Servo config loader — reads min_pulse / max_pulse from config/servo.json
+# so sequence positions stay in sync with calibration.
+# ---------------------------------------------------------------------------
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SERVO_CONFIG_PATH = REPO_ROOT / "config" / "servo.json"
+
+SERVO_ARM_LEFT = 2
+SERVO_ARM_RIGHT = 13
+SERVO_HEAD_LEFT = 6
+SERVO_HEAD_RIGHT = 4
+SERVO_HEAD_PIVOT = 14
+SERVO_DOOR = 5
+
+_DEFAULT_SERVO_RANGES: dict[int, tuple[int, int]] = {
+    SERVO_ARM_LEFT: (50, 500),
+    SERVO_ARM_RIGHT: (500, 940),
+    SERVO_HEAD_LEFT: (0, 200),
+    SERVO_HEAD_RIGHT: (0, 200),
+    SERVO_HEAD_PIVOT: (404, 660),
+    SERVO_DOOR: (700, 1023),
+}
+
+
+def _load_servo_ranges() -> dict[int, tuple[int, int]]:
+    """Load (min_pulse, max_pulse) per servo from config/servo.json."""
+    ranges = dict(_DEFAULT_SERVO_RANGES)
+    if not SERVO_CONFIG_PATH.exists():
+        return ranges
+    try:
+        data = json.loads(SERVO_CONFIG_PATH.read_text(encoding="utf-8"))
+        for key, entry in data.items():
+            if not isinstance(entry, dict):
+                continue
+            try:
+                servo_id = int(key)
+            except (TypeError, ValueError):
+                continue
+            ranges[servo_id] = (
+                int(entry.get("min_pulse", 0)),
+                int(entry.get("max_pulse", 1023)),
+            )
+    except Exception as exc:
+        logging.warning("Could not load servo config: %s", exc)
+    return ranges
+
+
+_SERVO_RANGES = _load_servo_ranges()
+
+
+def _servo_min(servo_id: int) -> int:
+    return _SERVO_RANGES.get(servo_id, (0, 1023))[0]
+
+
+def _servo_max(servo_id: int) -> int:
+    return _SERVO_RANGES.get(servo_id, (0, 1023))[1]
+
+
+def _servo_at(servo_id: int, fraction: float) -> int:
+    """Position at *fraction* between min_pulse (0.0) and max_pulse (1.0)."""
+    lo, hi = _SERVO_RANGES.get(servo_id, (0, 1023))
+    return round(lo + (hi - lo) * max(0.0, min(1.0, fraction)))
+
+
+# ---------------------------------------------------------------------------
+# Servo positions — derived from config/servo.json
+# ---------------------------------------------------------------------------
+
+# Arms
+ARM_LEFT_NEUTRAL = _servo_min(SERVO_ARM_LEFT)
+ARM_LEFT_UP = _servo_max(SERVO_ARM_LEFT)
+ARM_RIGHT_NEUTRAL = _servo_max(SERVO_ARM_RIGHT)
+ARM_RIGHT_UP = _servo_at(SERVO_ARM_RIGHT, 0.318)
+
+# Dance dead zone: bottom third of left arm range doesn't produce visible motion
+DANCE_ARM_LEFT_MIN = _servo_at(SERVO_ARM_LEFT, 1 / 3)
+
+# Head tilt
+HEAD_LEFT_NEUTRAL = _servo_min(SERVO_HEAD_LEFT)
+HEAD_LEFT_UP = _servo_at(SERVO_HEAD_LEFT, 0.6)
+HEAD_RIGHT_NEUTRAL = _servo_max(SERVO_HEAD_RIGHT)
+HEAD_RIGHT_UP = _servo_at(SERVO_HEAD_RIGHT, 0.425)
+
+# Head pivot
+HEAD_PIVOT_LEFT = _servo_at(SERVO_HEAD_PIVOT, 0.113)
+HEAD_PIVOT_RIGHT = _servo_at(SERVO_HEAD_PIVOT, 0.688)
+HEAD_PIVOT_CENTER = _servo_at(SERVO_HEAD_PIVOT, 0.375)
+
+# Door
+DOOR_CLOSED = _servo_min(SERVO_DOOR)
+DOOR_OPEN = _servo_max(SERVO_DOOR)
 DEFAULT_EYES = 'realistic-orange.gif'
 TRACK_TURN_FAST = 68
 TRACK_TURN_MEDIUM = 54
