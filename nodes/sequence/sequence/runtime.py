@@ -633,7 +633,16 @@ def build_idle_fidget(builder: SequenceBuilder) -> None:
 
 
 def dance_arm_pose(builder: SequenceBuilder, left: int, right: int) -> None:
-    builder.move_servo(2, amplify_left_dance_arm_position(left))
+    # The hardcoded left values are systematically lower than the right values
+    # because the choreographer wrote them as fractions of the full servo range
+    # while the right values are already in the visible range.  Blend the left
+    # arm toward the right arm's visual level so both arms look equally dynamic.
+    left_range = ARM_LEFT_UP - ARM_LEFT_NEUTRAL
+    right_range = ARM_RIGHT_NEUTRAL - ARM_RIGHT_UP
+    left_level = clamp_float((left - ARM_LEFT_NEUTRAL) / max(1, left_range), 0.0, 1.0)
+    right_level = clamp_float((ARM_RIGHT_NEUTRAL - right) / max(1, right_range), 0.0, 1.0)
+    blended = clamp_float(left_level * 0.15 + right_level * 0.85, 0.0, 1.0)
+    builder.move_servo(2, left_arm_for(blended))
     builder.move_servo(13, right)
 
 
