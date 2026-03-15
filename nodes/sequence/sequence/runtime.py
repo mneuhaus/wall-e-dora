@@ -14,11 +14,10 @@ except ModuleNotFoundError:
 
 # Neutral/default positions (tune as needed)
 # Arms (position values provided by user)
-ARM_LEFT_NEUTRAL = 0      # servo #2 (down)
-ARM_LEFT_UP = 350         # servo #2 (up)
+ARM_LEFT_NEUTRAL = 50     # servo #2 (down) - calibrated min
+ARM_LEFT_UP = 500         # servo #2 (up) - calibrated max
 ARM_RIGHT_NEUTRAL = 940   # servo #13 (down)
 ARM_RIGHT_UP = 640        # servo #13 (up)
-DANCE_ARM_LEFT_MAX = 450  # wider visible dance range for servo #2
 # Head sides (position values provided by user)
 HEAD_LEFT_NEUTRAL = 0     # servo #6 (down)
 HEAD_LEFT_UP = 120        # servo #6 (up)
@@ -632,15 +631,8 @@ def dance_section_intensity(section: dict[str, Any], base_energy: float) -> floa
 
 
 def amplify_left_dance_arm_position(position: int) -> int:
-    """Bias dance poses slightly upward so the left arm reads as strongly as the right one."""
-    if position <= ARM_LEFT_NEUTRAL:
-        return ARM_LEFT_NEUTRAL
-
-    choreography_span = ARM_LEFT_UP - ARM_LEFT_NEUTRAL
-    visible_span = DANCE_ARM_LEFT_MAX - ARM_LEFT_NEUTRAL
-    normalized = max(0.0, min(1.0, (position - ARM_LEFT_NEUTRAL) / choreography_span))
-    amplified = min(1.0, (normalized * 1.16) + 0.06)
-    return ARM_LEFT_NEUTRAL + round(visible_span * amplified)
+    """Clamp left arm dance positions to the calibrated servo range."""
+    return max(ARM_LEFT_NEUTRAL, min(ARM_LEFT_UP, position))
 
 
 class DanceContext:

@@ -1,5 +1,5 @@
 from sequence.runtime import (
-    DANCE_ARM_LEFT_MAX,
+    ARM_LEFT_NEUTRAL,
     ARM_LEFT_UP,
     HEAD_RIGHT_NEUTRAL,
     HEAD_RIGHT_UP,
@@ -47,12 +47,12 @@ def max_abs_track_components(steps) -> tuple[float, float]:
     return max_linear, max_angular
 
 
-def test_amplify_left_dance_arm_position_boosts_non_neutral_poses() -> None:
-    assert amplify_left_dance_arm_position(0) == 0
-    assert amplify_left_dance_arm_position(120) > 120
-    assert amplify_left_dance_arm_position(220) > 220
-    assert amplify_left_dance_arm_position(320) <= DANCE_ARM_LEFT_MAX
-    assert amplify_left_dance_arm_position(ARM_LEFT_UP) == DANCE_ARM_LEFT_MAX
+def test_amplify_left_dance_arm_position_clamps_to_calibrated_range() -> None:
+    assert amplify_left_dance_arm_position(0) == ARM_LEFT_NEUTRAL
+    assert amplify_left_dance_arm_position(ARM_LEFT_NEUTRAL) == ARM_LEFT_NEUTRAL
+    assert amplify_left_dance_arm_position(300) == 300
+    assert amplify_left_dance_arm_position(ARM_LEFT_UP) == ARM_LEFT_UP
+    assert amplify_left_dance_arm_position(600) == ARM_LEFT_UP
 
 
 def test_all_sequence_plans_start_with_audio_stop() -> None:
